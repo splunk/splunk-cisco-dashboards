@@ -29,7 +29,9 @@ import type {
   SignalTickerRows,
 } from "@/common/hooks/usePersistedSignalTicker";
 import { OneCdGlassCard } from "./OneCdPrimitives";
-import SignalRailShowcase, { SignalRailTrend } from "./SignalRailShowcase";
+import { SignalRailTrend } from "./SignalRailShowcase";
+import RefinedSignalRail from './RefinedSignalRail';
+import { isRetiredSignalRailStyle } from '@/common/lib/refinedSignalRail';
 import type { SignalRailPoint } from '@/common/lib/signalRailSeries';
 
 export type SignalRailStatus = MetricStatus;
@@ -40,9 +42,7 @@ export type SignalRailVariant =
   | "bloomberg"
   | "minimal-enterprise"
   | "telemetry-constellation"
-  | "prism-pulse"
-  | "signal-orbit"
-  | "event-horizon";
+  | "prism-pulse";
 
 export interface SignalRailKpi {
   id: string;
@@ -95,16 +95,14 @@ const VARIANT_OPTIONS: Array<{
   {
     id: "minimal-enterprise",
     label: "Minimal Enterprise",
-    description: "Theme-aware chip cards with status bars",
+    description: "Neutral cards with readable labels and explicit health badges",
   },
   {
     id: "telemetry-constellation",
     label: "Telemetry Constellation",
     description: "1CD glass rail with live signal paths",
   },
-  { id: "prism-pulse", label: "Prism Pulse", description: "Faceted glass with a leading critical signal and observed trends" },
-  { id: "signal-orbit", label: "Signal Orbit", description: "Precision signal halos with live values and observed trends" },
-  { id: "event-horizon", label: "Event Horizon", description: "A luminous trend ribbon with explicit signal health" },
+  { id: "prism-pulse", label: "Prism Pulse", description: "Quiet angled critical panel with observed trends" },
 ];
 
 const SignalRailControls = styled.div`
@@ -217,8 +215,6 @@ const SignalRailStyleSwatch = styled.span<{ $variant: SignalRailVariant }>`
             );
         `;
       case "prism-pulse":
-      case "signal-orbit":
-      case "event-horizon":
         return css`border: 1px solid #7bddff; background-color: #101c2a;`;
       default:
         return undefined;
@@ -237,6 +233,13 @@ const signalRailMarquee = keyframes`
 `;
 
 const SignalRailShell = styled.section`
+  &.scd-signal-rail-refined { padding: 4px 0; border: 0; }
+  &.scd-signal-rail-refined .scd-signal-rail-controls {
+    position: static; opacity: 1; pointer-events: auto; transform: none;
+    margin: 0; padding: 0; background: transparent; border: 0; box-shadow: none;
+  }
+  &.scd-signal-rail-refined .showcase-inline-summary { width: 100%; text-align: center; }
+
   &.scd-signal-rail-showcase { padding: 4px 0; border: 0; }
   &.scd-signal-rail-showcase .scd-signal-rail-controls {
     position: static; opacity: 1; pointer-events: auto; transform: none;
@@ -244,8 +247,8 @@ const SignalRailShell = styled.section`
   }
   &[data-variant="prism-pulse"] .scd-signal-rail-controls { flex-wrap: nowrap; flex: 0 1 auto; width: auto; gap: 4px; min-width: 0; max-width: 100%; justify-content: center; margin: 0; background: transparent; border: 0; padding: 0; box-shadow: none; }
   &[data-variant="prism-pulse"] .showcase-inline-summary { display: inline-flex; align-items: center; gap: 2px; width: auto; text-align: center; margin: 0 2px 0 0; }
-  &[data-variant="prism-pulse"] .scd-signal-rail-controls button { border: 1px solid #58707b; border-radius: 4px; min-height: 28px; height: 28px; padding: 2px 5px; background-color: #14242e; }
-  &[data-variant="prism-pulse"] .scd-signal-rail-controls button:hover { background-color: #263b47; }
+  &[data-variant="prism-pulse"] .scd-signal-rail-controls button { border: 1px solid #58707b; border-radius: 4px; min-height: 28px; height: 28px; padding: 2px 5px; background-color: ${variables.backgroundColorSection}; }
+  &[data-variant="prism-pulse"] .scd-signal-rail-controls button:hover { background-color: ${variables.backgroundColorHover}; }
   .showcase-inline-summary { padding: 0 3px; font-size: 11px; font-weight: 650; white-space: nowrap; }
   .scd-signal-rail-marquee-track {
     width: max-content;
@@ -463,12 +466,17 @@ const isSignalRailVariant = (
   value === "bloomberg" ||
   value === "minimal-enterprise" ||
   value === "telemetry-constellation" ||
-  value === "prism-pulse" || value === "signal-orbit" || value === "event-horizon";
+  value === "prism-pulse";
 
 const readStoredVariant = (storageKey = STORAGE_KEY, fallback: SignalRailVariant = DEFAULT_VARIANT): SignalRailVariant => {
   if (typeof window === "undefined") return fallback;
   try {
     const stored = readUserScopedStorageItem(userScopedStorageKey(storageKey));
+    if (isRetiredSignalRailStyle(stored)) {
+      // Only retired styles migrate; valid selections and the default stay intact.
+      try { window.localStorage.setItem(userScopedStorageKey(storageKey), 'minimal-enterprise'); } catch { /* Keep the in-session fallback when storage is read-only. */ }
+      return 'minimal-enterprise';
+    }
     return isSignalRailVariant(stored) ? stored : fallback;
   } catch {
     return fallback;
@@ -982,7 +990,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   }, [storageKey]);
 
   const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
-  const showcaseVariant = variant === 'prism-pulse' || variant === 'signal-orbit' || variant === 'event-horizon' ? variant : undefined;
+  const showcaseVariant = variant === 'prism-pulse' || variant === 'minimal-enterprise' ? variant : undefined;
   // Aileen's 1CD status overview is a static set of glass cards. Motion
   // belongs to the connector trails in the topology map, not this rail.
   // Retain marquee support only for the optional legacy rail variants.
@@ -1099,7 +1107,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     <SignalRailShell
       className={cn(
         "scd-signal-rail-ticker group/signal-rail relative z-40 flex w-full min-w-0 max-w-full flex-shrink-0 flex-col overflow-visible border-b",
-        showcaseVariant && "scd-signal-rail-showcase",
+        showcaseVariant && "scd-signal-rail-refined",
         variant === "one-cisco-glass" &&
           "sui-border-transparent sui-bg-transparent py-3  sui-color-active",
         variant === "original" &&
@@ -1149,7 +1157,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             density === "compact" ? "space-y-0.5" : "space-y-1",
           )}
         >
-          {showcaseVariant ? <SignalRailShowcase kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} onOverflowChange={setShowcaseCanMove} controls={variant === 'prism-pulse' ? railControls : undefined} /> : tickerRows.map((row, rowIndex) => (
+          {showcaseVariant ? <RefinedSignalRail kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} onOverflowChange={setShowcaseCanMove} controls={railControls} /> : tickerRows.map((row, rowIndex) => (
             <div
               key={`row-${rowIndex}`}
               className={cn(
@@ -1182,28 +1190,12 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
           ))}
         </div>
 
-        {variant !== 'prism-pulse' && railControls}
+        {!showcaseVariant && railControls}
       </div>
 
       {variant === "bloomberg" && (
         <div className="relative z-10 border-t sui-border-default px-8 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] sui-color-info">
           Signal Rail · Live · {kpis.length} KPIs Monitored
-        </div>
-      )}
-      {variant === "minimal-enterprise" && (
-        <div className="relative z-0 flex items-center justify-between border-t  px-8 py-2 text-xs font-black uppercase tracking-[0.12em]  sui-border-weak sui-bg-page sui-color-muted">
-          <span>Signal Rail · {kpis.length} KPIs</span>
-          <span className="normal-case tracking-normal">
-            <span className="sui-color-positive">
-              • {counts.healthy} Healthy
-            </span>
-            <span className="ml-3 sui-color-warning">
-              • {counts.warning} Warning
-            </span>
-            <span className="ml-3 sui-color-negative">
-              • {counts.critical} Critical
-            </span>
-          </span>
         </div>
       )}
       {variant === "telemetry-constellation" && (

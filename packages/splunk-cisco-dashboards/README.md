@@ -12,11 +12,11 @@ networking pillars and workplace scenarios.
 
 - Workspace headers now keep consistent spacing between the icon and title, with the subtitle aligned beneath the title.
 
-- Added Prism Pulse, Signal Orbit, and Event Horizon to the Signal Rail Style
-  menu. These optional looks retain live values and health states, and display
-  trends only when timestamped observations are available. Slim inline readouts,
-  miniature Orbit halos and a health summary beside the rail controls leave
-  more room for dashboard content.
+- Improved Minimal Enterprise and Prism Pulse Signal Rails with readable labels,
+  explicit health states, and layouts that adapt to the available width. Prism
+  retains its critical-signal emphasis and displays only observed trends.
+  Signal Orbit and Event Horizon selections now use Minimal Enterprise.
+  One Cisco Glass and the default style are unchanged.
 
 - DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view. The map focuses on up to three named Nexus Dashboard fabrics, ranked by observed active anomalies, with source details and Search access. Complete inventory stays available in the library. Overall health and inter-fabric connections remain unreported.
 
