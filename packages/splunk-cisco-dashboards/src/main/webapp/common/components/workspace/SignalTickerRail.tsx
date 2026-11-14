@@ -1214,7 +1214,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     }
                                 />
                                 <p className="mt-2 text-xs leading-snug  sui-color-muted">
-                                    One Cisco Glass stays static. Speed applies to the other styles; Prism Pulse, Signal Orbit, and Event Horizon move only when the signals do not fit.
+                                    One Cisco Glass stays static. Speed applies to the other styles; Minimal Enterprise and Prism Pulse move only when the signals do not fit.
                                 </p>
                             </div>
                         </div>
