@@ -3,7 +3,7 @@
 # Ensures stage exists (runs clean:build if not), then creates a tar.gz with the
 # correct top-level directory name for Splunk installation.
 set -euo pipefail
-export NODE_OPTIONS=--max-old-space-size=4096
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
