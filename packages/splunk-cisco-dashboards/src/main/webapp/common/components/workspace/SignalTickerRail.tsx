@@ -1177,7 +1177,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     id="signal-rail-speed-label"
                                     className="text-xs font-black uppercase tracking-[0.16em] sui-color-default"
                                 >
-                                    Legacy ticker speed
+                                    Rail speed
                                 </span>
                                 <span className="rounded-full  px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em]  sui-bg-section sui-color-default">
                                     {config.speed === 0
@@ -1214,7 +1214,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     }
                                 />
                                 <p className="mt-2 text-xs leading-snug  sui-color-muted">
-                                    One Cisco Glass stays static. Speed applies to the other styles; Minimal Enterprise and Prism Pulse move only when the signals do not fit.
+                                    One Cisco Glass stays static. A positive speed moves the other styles, including Minimal Enterprise and Prism Pulse, even when all signals fit. Set speed to Static to stop movement.
                                 </p>
                             </div>
                         </div>

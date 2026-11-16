@@ -1054,7 +1054,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
               }
               label={
                 showcaseVariant && durationSeconds > 0 && !showcaseCanMove
-                  ? "All signals fit; rail motion is unnecessary"
+                  ? "Rail motion is disabled by your reduced-motion preference"
                   : staticMode
                   ? "Signal rail is static; configure speed to enable motion"
                   : manualPaused
@@ -1157,7 +1157,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             density === "compact" ? "space-y-0.5" : "space-y-1",
           )}
         >
-          {showcaseVariant ? <RefinedSignalRail kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} onOverflowChange={setShowcaseCanMove} controls={railControls} /> : tickerRows.map((row, rowIndex) => (
+          {showcaseVariant ? <RefinedSignalRail kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} onMotionAvailabilityChange={setShowcaseCanMove} controls={railControls} /> : tickerRows.map((row, rowIndex) => (
             <div
               key={`row-${rowIndex}`}
               className={cn(

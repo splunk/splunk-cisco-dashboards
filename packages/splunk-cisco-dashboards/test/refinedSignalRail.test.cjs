@@ -54,7 +54,7 @@ test('both refined styles retain measured zero, full escaped labels, unknowns, a
         {id:'c',label:'Attention',category:'Category',value:57,status:'critical'},
     ];
     for (const variant of ['minimal-enterprise', 'prism-pulse']) {
-        const html = renderToStaticMarkup(React.createElement(Component, {kpis,variant,fontSize:'standard',density:'comfortable',rows:1,durationSeconds:0,paused:false,onOverflowChange:()=>{},controls:React.createElement('button',null,'Style')}));
+        const html = renderToStaticMarkup(React.createElement(Component, {kpis,variant,fontSize:'standard',density:'comfortable',rows:1,durationSeconds:0,paused:false,onMotionAvailabilityChange:()=>{},controls:React.createElement('button',null,'Style')}));
         assert.equal((html.match(/<article /g)||[]).length,3);
         assert.match(html,/A full label &lt;script&gt;/);
         assert.match(html,/>0<\/span>/); assert.match(html,/>Unknown<\/span>/);
@@ -80,9 +80,42 @@ test('overflow duplicates are inaccessible while reduced-motion layouts stay scr
             return require(id);
         }).default;
         const kpis = Array.from({length:6}, (_,i)=>({id:String(i),label:'Signal '+i,category:'Source',value:i,status:'healthy',href:'/search'}));
-        const html=renderToStaticMarkup(React.createElement(Rail,{kpis,variant:'prism-pulse',fontSize:'standard',density:'comfortable',rows:1,durationSeconds:60,paused:true,onOverflowChange:()=>{},controls:null}));
+        const html=renderToStaticMarkup(React.createElement(Rail,{kpis,variant:'prism-pulse',fontSize:'standard',density:'comfortable',rows:1,durationSeconds:60,paused:true,onMotionAvailabilityChange:()=>{},controls:null}));
         assert.equal((html.match(/<article /g)||[]).length,reduced?6:12);
         if(reduced){assert.doesNotMatch(html,/scd-signal-rail-marquee-track/);assert.match(html,/tabindex="0" role="region"/);}
         else {assert.match(html,/data-paused="true"/);assert.equal((html.match(/tabindex="-1"/g)||[]).length,6);}
+    }
+});
+
+test('Minimal and Prism move at positive speed on wide and narrow rails, respecting Static, Pause and reduced motion', () => {
+    const kpis = Array.from({length:6}, (_,i)=>({id:String(i),label:'Signal '+i,category:'Source',value:i,status:'healthy',href:'/search'}));
+    for (const variant of ['minimal-enterprise','prism-pulse']) {
+        for (const width of [1440,900,300]) {
+            for (const {duration,reduced,paused} of [
+                {duration:60,reduced:false,paused:false},
+                {duration:30,reduced:false,paused:true},
+                {duration:0,reduced:false,paused:false},
+                {duration:60,reduced:true,paused:false},
+            ]) {
+                const Rail = load(read('common/components/workspace/RefinedSignalRail.tsx'), id => {
+                    if(id==='react') return {...React,useState:initial=>[typeof initial==='number'?width:reduced,()=>{}]};
+                    if(id==='@/common/lib/refinedSignalRail') return helpers;
+                    if(id==='@/common/icons/SuiIcon') return {ExternalLink:props=>React.createElement('span',props)};
+                    if(id==='./SignalRailShowcase') return {SignalRailTrend:()=>null};
+                    return require(id);
+                }).default;
+                const html=renderToStaticMarkup(React.createElement(Rail,{kpis,variant,fontSize:'standard',density:'comfortable',rows:1,durationSeconds:duration,paused,onMotionAvailabilityChange:()=>{},controls:null}));
+                const moving=duration>0&&!reduced;
+                assert.equal((html.match(/<article /g)||[]).length,moving?12:6,`${variant}, width ${width}, duration ${duration}, reduced ${reduced}`);
+                if(moving){
+                    assert.match(html,/scd-signal-rail-marquee-track/);
+                    assert.match(html,new RegExp(`animation-duration:${duration}s`));
+                    assert.match(html,new RegExp(`data-paused="${paused}"`));
+                    assert.equal((html.match(/tabindex="-1"/g)||[]).length,6);
+                    assert.match(html,/aria-hidden="true"/);
+                    if(width===1440) assert.match(html,/width:1440px/,'Fitted rows still get a real animation width');
+                } else assert.doesNotMatch(html,/scd-signal-rail-marquee-track/);
+            }
+        }
     }
 });

@@ -10,6 +10,8 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Fixed Minimal Enterprise and Prism Pulse movement when all signals fit. A positive Rail speed enables movement; Static, Pause, and reduced-motion preferences remain supported.
+
 - Minimal Enterprise and Prism Pulse rail controls float over the cards on hover or keyboard focus without reserving an empty column. They stay visible while the style menu is open and appear below the cards on touch devices.
 
 - Command maps keep controls and summary counts outside the diagram so fabric labels stay clear. Map headings and view controls wrap to fit narrow panels.

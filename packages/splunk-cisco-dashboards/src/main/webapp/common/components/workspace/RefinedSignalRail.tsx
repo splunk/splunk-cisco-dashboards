@@ -17,7 +17,7 @@ const Rail = styled.div`
     .refined-signals[data-moving="true"] { overflow: hidden; }
     .refined-row + .refined-row { margin-top: 8px; }
     .refined-grid { display: grid; gap: 8px; width: 100%; }
-    .refined-grid[data-moving="true"] { flex: 0 0 auto; }
+    .refined-grid[data-moving="true"] { flex: 0 0 auto; padding-inline-end: 8px; box-sizing: content-box; }
     article { position: relative; isolation: isolate; min-width: 0; padding: var(--refined-padding); border: 1px solid ${variables.borderColorWeak}; border-radius: 6px; background: ${variables.backgroundColorSection}; }
     .refined-label { display: block; min-height: 2.4em; padding-right: 17px; font-size: var(--refined-label); font-weight: 650; line-height: 1.2; overflow-wrap: anywhere; }
     .refined-category { display: block; margin: 3px 0 4px; color: ${variables.contentColorMuted}; font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
@@ -63,17 +63,19 @@ const Rail = styled.div`
 
 const statusLabels = { healthy: 'Healthy', warning: 'Warning', critical: 'Critical', unknown: 'Unknown' };
 
-export default function RefinedSignalRail({ kpis, variant, fontSize, density, rows, durationSeconds, paused, onOverflowChange, controls }: {
+export default function RefinedSignalRail({ kpis, variant, fontSize, density, rows, durationSeconds, paused, onMotionAvailabilityChange, controls }: {
     kpis: SignalRailKpi[]; variant: 'minimal-enterprise' | 'prism-pulse'; fontSize: string;
     density: string; rows: number; durationSeconds: number; paused: boolean;
-    onOverflowChange: (overflow: boolean) => void; controls: React.ReactNode;
+    onMotionAvailabilityChange: (available: boolean) => void; controls: React.ReactNode;
 }) {
     const viewport = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(0);
     const [reducedMotion, setReducedMotion] = useState(false);
     const minimum = fontSize === 'large' ? 240 : fontSize === 'small' ? 196 : 208;
     const layout = refinedSignalRailLayout(kpis.length, width, minimum, rows);
-    const moving = layout.overflow && durationSeconds > 0 && !reducedMotion;
+    const motionAvailable = kpis.length > 0 && !reducedMotion;
+    const moving = durationSeconds > 0 && motionAvailable;
+    const gridWidth = Math.max(width, layout.columns * minimum + (layout.columns - 1) * 8);
     useEffect(() => {
         const node = viewport.current;
         if (!node) return;
@@ -89,7 +91,7 @@ export default function RefinedSignalRail({ kpis, variant, fontSize, density, ro
         update(); media.addEventListener('change', update);
         return () => media.removeEventListener('change', update);
     }, []);
-    useEffect(() => onOverflowChange(layout.overflow && !reducedMotion), [layout.overflow, reducedMotion, onOverflowChange]);
+    useEffect(() => onMotionAvailabilityChange(motionAvailable), [motionAvailable, onMotionAvailabilityChange]);
     const ordered = useMemo(() => {
         if (variant !== 'prism-pulse') return kpis;
         const firstCritical = kpis.findIndex(kpi => kpi.status === 'critical');
@@ -97,7 +99,7 @@ export default function RefinedSignalRail({ kpis, variant, fontSize, density, ro
     }, [kpis, variant]);
     const groups = Array.from({ length: layout.rowCount }, (_, i) => ordered.slice(i * layout.columns, (i + 1) * layout.columns)).filter(group => group.length);
     const renderGrid = (group: SignalRailKpi[], duplicate: boolean) => <div className="refined-grid" data-moving={moving} aria-hidden={duplicate || undefined}
-        style={{ gridTemplateColumns: `repeat(${layout.columns}, minmax(${layout.overflow ? `${minimum}px` : '0'}, 1fr))`, width: layout.overflow ? layout.columns * minimum + (layout.columns - 1) * 8 : undefined }}>
+        style={{ gridTemplateColumns: `repeat(${layout.columns}, minmax(${layout.overflow || moving ? `${minimum}px` : '0'}, 1fr))`, width: moving || layout.overflow ? gridWidth : undefined }}>
         {group.map(kpi => <article key={kpi.id} data-status={kpi.status} data-featured={variant === 'prism-pulse' && kpi === ordered[0] && kpi.status === 'critical' || undefined}>
             <span className="refined-label">{kpi.label}</span>
             {kpi.canOpen !== false && isSignalRailSearchHref(kpi.href) && <a className="refined-search" href={kpi.href} target="_blank" rel="noopener noreferrer" tabIndex={duplicate ? -1 : 0} aria-label={`Open ${kpi.label} in Search`} title={`Open ${kpi.label} in Search`}><ExternalLink style={{ width: 13, height: 13 }} aria-hidden="true" /></a>}
