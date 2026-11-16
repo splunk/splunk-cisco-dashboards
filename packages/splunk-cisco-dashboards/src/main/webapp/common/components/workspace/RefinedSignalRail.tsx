@@ -7,7 +7,7 @@ import type { SignalRailKpi } from './SignalRailTicker';
 import { SignalRailTrend } from './SignalRailShowcase';
 
 const Rail = styled.div`
-    display: flex; align-items: stretch; gap: 10px; width: 100%; min-width: 0;
+    position: relative; display: flex; align-items: stretch; gap: 10px; width: 100%; min-width: 0;
     color: ${variables.contentColorActive};
     &[data-refined-style="prism-pulse"] {
         padding: 8px; border: 1px solid color-mix(in srgb, ${variables.severityColorInfo} 35%, ${variables.borderColor});
@@ -40,14 +40,22 @@ const Rail = styled.div`
         background: color-mix(in srgb, ${variables.severityColorAlert} 12%, ${variables.backgroundColorSection});
         clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); border-radius: inherit;
     }
-    .refined-controls { flex: 0 0 84px; align-self: center; max-width: 84px; opacity: 0; pointer-events: none; }
+    .refined-controls {
+        position: absolute; top: 50%; right: ${variables.spacingSmall}; z-index: 2;
+        transform: translateY(-50%); width: 84px; max-width: 100%; box-sizing: border-box;
+        padding: ${variables.spacingXSmall}; border: 1px solid ${variables.borderColorWeak};
+        border-radius: ${variables.borderRadius}; background: ${variables.backgroundColorPopup};
+        box-shadow: ${variables.overlayShadow}; opacity: 0; pointer-events: none;
+    }
     &:hover .refined-controls,
     &:focus-within .refined-controls,
     .refined-controls:has([aria-expanded="true"]) { opacity: 1; pointer-events: auto; }
     @media (any-hover: none), (any-pointer: coarse) {
-        .refined-controls { opacity: 1; pointer-events: auto; }
+        flex-direction: column;
+        .refined-signals { width: 100%; }
+        .refined-controls { position: static; align-self: flex-end; transform: none; opacity: 1; pointer-events: auto; }
     }
-    && .refined-controls .scd-signal-rail-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+    && .refined-controls .scd-signal-rail-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; pointer-events: inherit; }
     && .refined-controls .showcase-inline-summary { flex: 0 0 100%; width: 100%; justify-content: center; }
     @media (prefers-reduced-motion: reduce) { .scd-signal-rail-marquee-track { animation: none; transform: none; } }
     @media (forced-colors: active) { article { border: 1px solid CanvasText; } article::before { display: none; } .refined-status { color: CanvasText; border-color: CanvasText; } }
