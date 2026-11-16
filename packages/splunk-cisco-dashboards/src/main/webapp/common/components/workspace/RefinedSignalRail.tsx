@@ -40,7 +40,13 @@ const Rail = styled.div`
         background: color-mix(in srgb, ${variables.severityColorAlert} 12%, ${variables.backgroundColorSection});
         clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); border-radius: inherit;
     }
-    .refined-controls { flex: 0 0 84px; align-self: center; max-width: 84px; }
+    .refined-controls { flex: 0 0 84px; align-self: center; max-width: 84px; opacity: 0; pointer-events: none; }
+    &:hover .refined-controls,
+    &:focus-within .refined-controls,
+    .refined-controls:has([aria-expanded="true"]) { opacity: 1; pointer-events: auto; }
+    @media (any-hover: none), (any-pointer: coarse) {
+        .refined-controls { opacity: 1; pointer-events: auto; }
+    }
     && .refined-controls .scd-signal-rail-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
     && .refined-controls .showcase-inline-summary { flex: 0 0 100%; width: 100%; justify-content: center; }
     @media (prefers-reduced-motion: reduce) { .scd-signal-rail-marquee-track { animation: none; transform: none; } }

@@ -10,6 +10,8 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Minimal Enterprise and Prism Pulse rail controls appear on hover or keyboard focus, stay visible while the style menu is open, and remain visible on touch devices.
+
 - Command maps keep controls and summary counts outside the diagram so fabric labels stay clear. Map headings and view controls wrap to fit narrow panels.
 
 - Workspace headers now keep consistent spacing between the icon and title, with the subtitle aligned beneath the title.
