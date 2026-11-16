@@ -19,9 +19,13 @@
         "test": "node --test packages/splunk-cisco-dashboards/test/*.test.cjs && node scripts/test_build_deploy_contract.cjs && python3 -m unittest discover -s scripts -p 'test_*build*.py'"
     },
     "resolutions": {
+        "@splunk/react-ui": "5.18.0",
+        "@splunk/react-icons": "5.17.0",
+        "@splunk/themes": "1.13.1",
+        "@splunk/ui-utils": "1.15.0",
         "qs": "^6.16.0",
         "form-data": "^2.5.4",
-        "dompurify": "^3.4.16",
+        "dompurify": "^3.4.18",
         "fast-uri": "^3.1.8",
         "brace-expansion": "^1.1.21",
         "braces": "3.0.3",

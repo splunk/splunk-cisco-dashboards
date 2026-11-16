@@ -1781,12 +1781,12 @@
     "@splunk/ui-utils" "^1.14.0"
     prop-types "^15.8.1"
 
-"@splunk/react-icons@5.15.0", "@splunk/react-icons@^5.0.0", "@splunk/react-icons@^5.10.0", "@splunk/react-icons@^5.12.0", "@splunk/react-icons@^5.13.0", "@splunk/react-icons@^5.14.0":
-  version "5.15.0"
-  resolved "https://registry.npmjs.org/@splunk/react-icons/-/react-icons-5.15.0.tgz#79a5867237a3567c01949f2cce33f08de672e880"
-  integrity sha512-xuskaIsho1e9+q90WkbopQxIQikF4iygPKXsDwfiTp5X2vmh9t3Hq2S8wsfcoOCrrsOkofjtsvufAsQ7Og1r9w==
+"@splunk/react-icons@5.17.0", "@splunk/react-icons@^5.0.0", "@splunk/react-icons@^5.10.0", "@splunk/react-icons@^5.12.0", "@splunk/react-icons@^5.13.0", "@splunk/react-icons@^5.17.0":
+  version "5.17.0"
+  resolved "https://registry.yarnpkg.com/@splunk/react-icons/-/react-icons-5.17.0.tgz#47c310b8d4cc4460d6ca0418860084150ad56e8b"
+  integrity sha512-6+1l6GUR39qvqQ0JZzFCwSBRPnN11yU/Mtt2kc8ZHYS5udOiCIeacArFYk5Su5g/IzB9VlyrJxKsIoa6Yo1uNQ==
   dependencies:
-    "@splunk/ui-utils" "^1.14.1"
+    "@splunk/ui-utils" "^1.15.0"
     lodash "^4.18.1"
     prop-types "^15.6.2"
 
@@ -1849,24 +1849,26 @@
     prop-types "^15.6.2"
     react-flip-move "^3.0.1"
 
-"@splunk/react-ui@5.13.0", "@splunk/react-ui@^5.0.0", "@splunk/react-ui@^5.10.0", "@splunk/react-ui@^5.11.1", "@splunk/react-ui@^5.12.0", "@splunk/react-ui@^5.13.0":
-  version "5.13.0"
-  resolved "https://registry.npmjs.org/@splunk/react-ui/-/react-ui-5.13.0.tgz#4894b2d8dea23d17375a0a733831fab1fe334f42"
-  integrity sha512-kx5ClDkMsFHduEiFra0aSF2o2dZJyB+DWd2Nojboyz50tL3lcpfCYZi16CAf21N41loVF7/aQv8Czid6NozReA==
+"@splunk/react-ui@5.18.0", "@splunk/react-ui@^5.0.0", "@splunk/react-ui@^5.10.0", "@splunk/react-ui@^5.11.1", "@splunk/react-ui@^5.12.0", "@splunk/react-ui@^5.13.0":
+  version "5.18.0"
+  resolved "https://registry.yarnpkg.com/@splunk/react-ui/-/react-ui-5.18.0.tgz#1cceb12e7fe234fcd3ce976118b74c1f67bd619b"
+  integrity sha512-GcLBogVVzeuZub6emHch+IwJBc+hko9t2rWgDNvyRV31Jin3xreQmUVyKHgFrHQh3vEj7t+PYpjXO0ZBlZ5uDA==
   dependencies:
     "@dnd-kit/core" "^6.1.0"
     "@dnd-kit/modifiers" "^7.0.0"
     "@dnd-kit/sortable" "^8.0.0"
     "@dnd-kit/utilities" "^3.2.2"
     "@react-spring/web" "^9.7.5"
-    "@splunk/react-icons" "^5.14.0"
-    "@splunk/themes" "^1.10.0"
-    "@splunk/ui-utils" "^1.14.0"
+    "@splunk/react-icons" "^5.17.0"
+    "@splunk/themes" "^1.13.1"
+    "@splunk/ui-utils" "^1.15.0"
+    colorjs.io "^0.6.1"
     decimal.js-light "^2.5.1"
+    diff "^8.0.4"
     intl-tel-input "^25.3.2"
     lodash "^4.18.1"
     moment "^2.29.4"
-    prop-types "^15.6.2"
+    prop-types "^15.8.0"
     react-markdown "^8.0.7"
     remark-gfm "^1.0.0"
     use-sync-external-store "^1.6.0"
@@ -1908,12 +1910,12 @@
     postcss-styled-syntax "^0.6.4"
     stylelint-config-standard "^34.0.0"
 
-"@splunk/themes@1.10.0", "@splunk/themes@^1.0.0", "@splunk/themes@^1.10.0", "@splunk/themes@^1.7.1", "@splunk/themes@^1.8.0", "@splunk/themes@^1.9.0":
-  version "1.10.0"
-  resolved "https://registry.npmjs.org/@splunk/themes/-/themes-1.10.0.tgz#efb4c86e5106d8d1ca95b504781b0476b44e630a"
-  integrity sha512-ysvcbUQ6tHRrWniJ8MiR20IP0W7AEV6vbO6elPpu/s6PhpBFkxxtHiXybcxItuPnRQXFq4lddrAYeEY/MsTsMg==
+"@splunk/themes@1.13.1", "@splunk/themes@^1.0.0", "@splunk/themes@^1.10.0", "@splunk/themes@^1.13.1", "@splunk/themes@^1.7.1", "@splunk/themes@^1.8.0", "@splunk/themes@^1.9.0":
+  version "1.13.1"
+  resolved "https://registry.yarnpkg.com/@splunk/themes/-/themes-1.13.1.tgz#af9726f690fbc1161eba832691d6c5a4d9e042b3"
+  integrity sha512-Xx60xFM8G505eJejFuq9BRHILoGFK9NVTWcEwNgRAjl0sdVTd5PEsaWKjJu8H3YME6JxhycEOv3gA/TEupIUvQ==
   dependencies:
-    "@splunk/ui-utils" "^1.14.0"
+    "@splunk/ui-utils" "^1.15.0"
     color-blend "^2.0.9"
     colorjs.io "^0.6.1"
     lodash "^4.18.1"
@@ -1929,18 +1931,10 @@
     "@splunk/ui-utils" "^1.8.0"
     lodash "^4.17.21"
 
-"@splunk/ui-utils@1.14.0", "@splunk/ui-utils@^1.12.0", "@splunk/ui-utils@^1.14.0", "@splunk/ui-utils@^1.6.0", "@splunk/ui-utils@^1.8.0", "@splunk/ui-utils@^1.9.0":
-  version "1.14.0"
-  resolved "https://registry.npmjs.org/@splunk/ui-utils/-/ui-utils-1.14.0.tgz#55dd037b9301aa5d9bf7e1fa607674c7534fbc61"
-  integrity sha512-X0Vu0UJFE+34a/OKRxp2ReEiQo7viVKcfSP3s8+dAT39KmveGRYAM4NtNISuzUudS2bNQe2hlGTfW5d9zR4gPw==
-  dependencies:
-    keycode "^2.1.9"
-    lodash "^4.18.1"
-
-"@splunk/ui-utils@^1.14.1":
-  version "1.14.1"
-  resolved "https://registry.yarnpkg.com/@splunk/ui-utils/-/ui-utils-1.14.1.tgz#0862110b04155e1e2495ecab646d62e6cd2de3f9"
-  integrity sha512-sr67renHKlIPkTtNAJ1Eg3dP2+/4kQU4oK+Csuwm0aakMWtEqccODij1gLtdYXJihkNdtxfTCMqNcMwe/NN2cA==
+"@splunk/ui-utils@1.15.0", "@splunk/ui-utils@^1.12.0", "@splunk/ui-utils@^1.14.0", "@splunk/ui-utils@^1.15.0", "@splunk/ui-utils@^1.6.0", "@splunk/ui-utils@^1.8.0", "@splunk/ui-utils@^1.9.0":
+  version "1.15.0"
+  resolved "https://registry.yarnpkg.com/@splunk/ui-utils/-/ui-utils-1.15.0.tgz#98db8932ed3bbb0d3a952f2fc741963a183c2fcd"
+  integrity sha512-/YD3Tp5+yLRT2f2kH17ewss5aX9kOJPzVMBVTn+esuPAPQQT0Xt+ts7NuzqyOnz7J2A56MmAFioegUzXF09T9w==
   dependencies:
     keycode "^2.1.9"
     lodash "^4.18.1"
@@ -3828,6 +3822,11 @@ diff@^5.0.0:
   resolved "https://registry.npmjs.org/diff/-/diff-5.2.2.tgz#0a4742797281d09cfa699b79ea32d27723623bad"
   integrity sha512-vtcDfH3TOjP8UekytvnHH1o1P4FcUdt4eQ1Y+Abap1tk/OB2MWQvcwS2ClCd1zuIhc3JKOx6p3kod8Vfys3E+A==
 
+diff@^8.0.4:
+  version "8.0.4"
+  resolved "https://registry.yarnpkg.com/diff/-/diff-8.0.4.tgz#4f5baf3188b9b2431117b962eb20ba330fadf696"
+  integrity sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw==
+
 dir-glob@^3.0.1:
   version "3.0.1"
   resolved "https://registry.npmjs.org/dir-glob/-/dir-glob-3.0.1.tgz#56dbf73d992a4a93ba1584f4534063fd2e41717f"
@@ -3914,10 +3913,10 @@ domhandler@^4.0.0, domhandler@^4.2.0, domhandler@^4.3.1:
   dependencies:
     domelementtype "^2.2.0"
 
-dompurify@^3.3.1, dompurify@^3.4.11, dompurify@^3.4.16, dompurify@^3.4.17:
-  version "3.4.17"
-  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.4.17.tgz#074bbb24eaa419535ac19ffe7f663104b0e1543d"
-  integrity sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==
+dompurify@^3.3.1, dompurify@^3.4.11, dompurify@^3.4.18:
+  version "3.4.18"
+  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.4.18.tgz#82161003672c8780ad1db0335787e6aa6587e5d2"
+  integrity sha512-ofe3wI/uNm68HInABYFJYqQxRw1EaKAjNdrFVKqjUY+UZurvNd2L/HuQe097s/4RivWiZyP6tT7aoT8atjfhwg==
   optionalDependencies:
     "@types/trusted-types" "^2.0.7"
 
@@ -4472,21 +4471,21 @@ fast-uri@^3.0.1, fast-uri@^3.1.8:
   resolved "https://registry.yarnpkg.com/fast-uri/-/fast-uri-3.1.9.tgz#f1deba822b1d6ac79da2f860e872a63470cff203"
   integrity sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ==
 
-fast-xml-builder@^1.3.1:
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/fast-xml-builder/-/fast-xml-builder-1.3.1.tgz#ef05b353b45597483dfb09d450a062a2baec3a82"
-  integrity sha512-pIM/1n3ntFXKYrUZwW7QCK0gAW7XY+wzj1YMIV3tLDvPj/V+zTGJK5e3/4WJfwj0qWw2ElNXiTixda/R+3YSug==
+fast-xml-builder@^1.3.2:
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/fast-xml-builder/-/fast-xml-builder-1.3.2.tgz#08837335066983b7659f342ce1559869c068192e"
+  integrity sha512-OX91VSlShLPDgRZV7tk/YQ4l8tT75QziF5Ixg8g4PFbCVPjuTWwN+yQfAxLJ0dufJpprdOd6HlM74Jhd39TcBQ==
   dependencies:
     path-expression-matcher "^1.6.2"
     xml-naming "^0.3.0"
 
-fast-xml-parser@^5.12.0:
-  version "5.12.0"
-  resolved "https://registry.yarnpkg.com/fast-xml-parser/-/fast-xml-parser-5.12.0.tgz#f8212b65fa5f7d227e67c387e874c7857751fa64"
-  integrity sha512-/pXxRBtwxY9w8z7YbgsvIPPcPvFDsTbIkWwTQJhzNJPokj+TbN6ftmcv4j/pEQDvOCNnKGDzuk5Bo2oogIOiFg==
+fast-xml-parser@^5.12.1:
+  version "5.12.1"
+  resolved "https://registry.yarnpkg.com/fast-xml-parser/-/fast-xml-parser-5.12.1.tgz#a0f3ebed7a1107db9456c0dd0ed233cbc00ae709"
+  integrity sha512-wR8dO/fx+z8C5exuem1e7BKOWvjsuzvjS/tvA/Xu3Z1zQqJGcXrPzXbcAiaMgp2KjreEROcTkmnnisrcmJ2hYQ==
   dependencies:
     "@nodable/entities" "^3.1.0"
-    fast-xml-builder "^1.3.1"
+    fast-xml-builder "^1.3.2"
     is-unsafe "^2.0.3"
     path-expression-matcher "^1.6.2"
     strnum "^2.5.1"
@@ -7518,7 +7517,7 @@ pretty-error@^4.0.0:
     lodash "^4.17.20"
     renderkid "^3.0.0"
 
-prop-types@^15.0.0, prop-types@^15.6.0, prop-types@^15.6.2, prop-types@^15.7.2, prop-types@^15.8.1:
+prop-types@^15.0.0, prop-types@^15.6.0, prop-types@^15.6.2, prop-types@^15.7.2, prop-types@^15.8.0, prop-types@^15.8.1:
   version "15.8.1"
   resolved "https://registry.npmjs.org/prop-types/-/prop-types-15.8.1.tgz#67d87bf1a694f48435cf332c24af10214a3140b5"
   integrity sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==
