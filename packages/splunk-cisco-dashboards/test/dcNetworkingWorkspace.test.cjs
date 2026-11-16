@@ -463,3 +463,50 @@ test('small fabric layouts fit readable peers and preserve connected or other pr
     assert.equal(isolatedFabricLayout(Array.from({length:4},(_,i)=>({id:String(i),role:'fabric'})),0,true),null);
     assert.equal(isolatedFabricLayout([{id:'office',role:'branch'}],0,true),null);
 });
+
+test('Command map reserves separate flow rows for controls, fitted nodes and summary', () => {
+    const source = fs.readFileSync(path.join(root, 'src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx'), 'utf8');
+    const ast = ts.createSourceFile('CustomerTopologyMap.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const elements = [];
+    function visit(node) {
+        if (ts.isJsxElement(node)) elements.push(node);
+        ts.forEachChild(node, visit);
+    }
+    visit(ast);
+    const tag = node => node.openingElement.tagName.getText(ast);
+    const canvas = elements.find(node => tag(node) === 'CommandCanvas');
+    assert.ok(canvas, 'The diagram needs a reserved canvas');
+    const siblings = canvas.parent.children.filter(ts.isJsxElement);
+    assert.deepEqual(siblings.map(tag), ['style', 'CommandToolbar', 'CommandCanvas', 'CommandSummary']);
+    assert.ok(canvas.children.some(node => ts.isJsxElement(node) && tag(node) === 'svg'));
+    const toolbar = siblings.find(node => tag(node) === 'CommandToolbar');
+    assert.match(toolbar.getText(ast), /\{actions\}/);
+    assert.match(toolbar.getText(ast), /Fit command topology to view/);
+    assert.doesNotMatch(toolbar.getText(ast), /absolute right-3 top-14/);
+    const summary = siblings.find(node => tag(node) === 'CommandSummary');
+    assert.doesNotMatch(summary.getText(ast), /absolute|bottom-3/);
+    for (const name of ['CommandToolbar', 'CommandSummary']) {
+        const declaration = source.slice(source.indexOf(`const ${name} =`)).split('`;')[0];
+        assert.match(declaration, /flex: 0 0 auto/);
+        assert.doesNotMatch(declaration, /position: absolute/);
+    }
+});
+
+test('three fabric labels fit clear of separate controls and footer in narrow and wide panels', () => {
+    const {isolatedFabricLayout} = load('src/main/webapp/common/lib/topologyCommandLayout.ts');
+    const sites = ['KRK-CSS-EMEA-FAB1', 'KRK-CSS-EMEA-FAB2', 'KRK-IXN-Monitor'].map(id => ({id, role:'fabric'}));
+    for (const viewport of [{width:527,height:650}, {width:1840,height:250}]) {
+        const layout = isolatedFabricLayout(sites,0,viewport.width >= viewport.height);
+        const [x,y,width,height] = layout.viewBox.split(' ').map(Number);
+        const scale = Math.min(viewport.width/width,viewport.height/height);
+        const offsetX = (viewport.width-width*scale)/2;
+        const offsetY = (viewport.height-height*scale)/2;
+        for (const point of layout.points.values()) {
+            assert.ok(offsetX+(point.x-70-x)*scale>=0);
+            assert.ok(offsetX+(point.x+70-x)*scale<=viewport.width);
+            assert.ok(offsetY+(point.y-37-y)*scale>=0);
+            assert.ok(offsetY+(point.y+84-y)*scale<=viewport.height);
+        }
+        assert.ok(12*scale >= 12, 'Fabric name text remains readable in the reported panel shapes');
+    }
+});

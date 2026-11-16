@@ -10,6 +10,8 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Command maps keep controls and summary counts outside the diagram so fabric labels stay clear. Map headings and view controls wrap to fit narrow panels.
+
 - Workspace headers now keep consistent spacing between the icon and title, with the subtitle aligned beneath the title.
 
 - Improved Minimal Enterprise and Prism Pulse Signal Rails with readable labels,

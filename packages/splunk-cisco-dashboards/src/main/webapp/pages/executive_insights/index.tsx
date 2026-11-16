@@ -5981,8 +5981,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   mapHeightMode === "match-workspace" && "flex-1 min-h-0",
                 )}
               >
-                <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-[12rem] flex-1">
+                <TopologyPanelHeader>
+                  <div>
                     <Heading
                       level={2}
                       variant="title3"
@@ -6000,7 +6000,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       onChange={updateRegionalView}
                     />
                   </div>
-                </div>
+                </TopologyPanelHeader>
 
                 {regionalView === "map" ? (
                   <MapViewport>
@@ -7529,6 +7529,26 @@ const SplitSeparator = styled.hr<{ $horizontal: boolean }>`
 const MapViewport = styled.div`
   flex: 1 0 400px;
   min-height: 400px;
+`;
+
+const TopologyPanelHeader = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${variables.spacingSmall};
+  margin-bottom: ${variables.spacingSmall};
+
+  > div:first-child {
+    flex: 1 1 14rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  h2 {
+    margin: 0;
+  }
 `;
 
 interface KpiCardProps {
