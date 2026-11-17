@@ -656,7 +656,6 @@ assert.deepEqual(
     "Data Center Security",
     "Runtime Security",
     "Runtime Investigation",
-    "SAN and fabric investigations",
   ],
   "Secure Data Center Operations must use the standard story-card dashboard journey",
 );
