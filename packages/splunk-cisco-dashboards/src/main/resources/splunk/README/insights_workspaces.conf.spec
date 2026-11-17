@@ -17,6 +17,11 @@ Stanza families:
 
   [layout.<workspace_id>.<section_id>]
     Ordered tiles, Searchbase additions, and the shared visible tile count.
+    viz_overrides = <JSON object>
+      Optional tile-ID to visualization-type map, scoped to this workspace/section.
+      Personal visualization preferences take precedence. Empty object inherits
+      each search default. Supports area, line, column, bar, singlevalue, table,
+      barbreakdown, pie, singlevalueradial, fillergauge, markergauge.
 
   [signal_item.<item_id>]
     Search, label, value field, warning/critical thresholds, direction, and unit.

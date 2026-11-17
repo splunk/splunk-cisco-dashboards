@@ -1,3 +1,4 @@
+import { resolveWorkspaceVisualization } from "@/common/config/workspaceVisualizations";
 import WorkspaceDefaultIcon from "@/common/components/workspace/WorkspaceDefaultIcon";
 import { dcScopeDashboardUrl } from "@/common/lib/dcNetworkingScope";
 import React, {
@@ -4496,6 +4497,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         thresholdUnit: current?.unit,
         usedSavedSearches,
         currentVizOverride: ov?.vizOverride,
+        currentSharedVizOverride: current?.section ? workspaceLayout[current.section]?.vizOverrides?.[tileId] : undefined,
         currentHidePeak: ov?.hidePeak,
         currentHideDelta: ov?.hideDelta,
         currentHideOverlay: ov?.hideOverlay,
@@ -4506,10 +4508,38 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           : undefined,
       });
     },
-    [effectiveSectionMeta, overrides, usedSavedSearches],
+    [effectiveSectionMeta, overrides, usedSavedSearches, workspaceLayout],
   );
 
   const closePicker = useCallback(() => setPickerContext(null), []);
+
+  const [sharedVisualizationStatus, setSharedVisualizationStatus] = useState<"idle" | "saving" | "error">("idle");
+  useEffect(() => setSharedVisualizationStatus("idle"), [pickerContext?.tileId]);
+  const handleSaveSharedVisualization = async (viz: MetricOverride["vizOverride"] | null): Promise<void> => {
+    const section = insightsWorkspace.sections.find(item => item.id === pickerContext?.sectionId)?.id;
+    if (!canManageWorkspaceConfig || !section || !pickerContext) return;
+    const tileId = pickerContext.tileId;
+    const existing = workspaceLayout[section] ?? {
+      tiles: getFactoryTileOrder(section, baseMetricConfig.filter(metric => metric.section === section)),
+      visibleCount: sectionTileCounts[section],
+    };
+    const vizOverrides = {...existing.vizOverrides};
+    if (viz) vizOverrides[tileId] = viz;
+    else delete vizOverrides[tileId];
+    const next = {...existing, vizOverrides};
+    setSharedVisualizationStatus("saving");
+    try {
+      await saveWorkspaceLayout(insightsWorkspace, {[section]: next}, workspaceLayout);
+      setWorkspaceLayout(previous => ({...previous, [section]: next}));
+      const personal = {...overrides[tileId]};
+      delete personal.vizOverride;
+      setOverride(tileId, personal);
+      setSharedVisualizationStatus("idle");
+      setPickerContext(null);
+    } catch {
+      setSharedVisualizationStatus("error");
+    }
+  };
 
   const handlePickerApply = useCallback(
     (tileId: string, override: MetricOverride) => {
@@ -4841,6 +4871,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         Math.min(sectionTileBounds.maxCount, sectionMetrics.length),
       );
       next[section] = {
+        vizOverrides: workspaceLayout[section]?.vizOverrides,
         tiles: effectiveOrder,
         visibleCount,
         searchbaseAdditions: Array.from(
@@ -5887,7 +5918,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                     ? "right"
                                     : "auto"
                                 }
-                                override={overrides[cfg.id]}
+                                override={resolveWorkspaceVisualization(overrides[cfg.id], workspaceLayout[section]?.vizOverrides?.[cfg.id])}
                                 searchbaseByName={runtimeSearchbaseByName}
                                 searchbaseById={runtimeSearchbaseById}
                                 searchbaseDrilldowns={searchbaseDrilldowns}
@@ -6270,6 +6301,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         onPublishWorkspaceLayout={
           canManageWorkspaceConfig ? handlePublishWorkspaceLayout : undefined
         }
+        onSaveSharedVisualization={canManageWorkspaceConfig ? handleSaveSharedVisualization : undefined}
+        sharedVisualizationStatus={sharedVisualizationStatus}
         workspaceLayoutStatus={workspaceLayoutStatus}
         canManageFactoryConfig={canManageFactoryConfig}
         onSaveFactoryTileConfig={handleSaveFactoryTileConfig}

@@ -1,3 +1,4 @@
+import { parseWorkspaceVisualizations } from "@/common/config/workspaceVisualizations";
 import { createFetchInit } from "@splunk/splunk-utils/fetch";
 
 import {
@@ -43,6 +44,8 @@ const getWorkspaceSignalRailFallback = (
 
 export interface WorkspaceLayoutSection {
   tiles: string[];
+  /** Per-tile defaults scoped to this workspace, below personal preferences. */
+  vizOverrides?: Record<string, string>;
   visibleCount?: number;
   /** Searchbase stanza IDs intentionally added to this shared workspace section. */
   searchbaseAdditions?: string[];
@@ -373,6 +376,7 @@ export const parseInsightsWorkspaceEntries = (
     const config = layouts[workspaceId] ?? {};
     config[sectionId] = {
       tiles: splitTiles(content.tiles),
+      vizOverrides: parseWorkspaceVisualizations(content.viz_overrides),
       searchbaseAdditions: splitSearchbaseAdditions(
         content.searchbase_additions,
       ),
@@ -570,6 +574,7 @@ const normalizedLayoutSection = (
   section
     ? {
         tiles: [...section.tiles],
+        vizOverrides: parseWorkspaceVisualizations(section.vizOverrides),
         visibleCount: section.visibleCount,
         searchbaseAdditions: splitSearchbaseAdditions(
           section.searchbaseAdditions,
@@ -679,6 +684,7 @@ export const saveWorkspaceLayout = async (
     const sectionConfig = layout[section.id];
     if (!sectionConfig) continue;
     await upsertStanza(layoutStanzaName(workspace.id, section.id), {
+      viz_overrides: JSON.stringify(parseWorkspaceVisualizations(sectionConfig.vizOverrides)),
       tiles: sectionConfig.tiles
         .filter((tileId) => TILE_ID_PATTERN.test(tileId))
         .join(","),

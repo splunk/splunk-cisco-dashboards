@@ -392,6 +392,7 @@ export interface KpiPickerContext {
    * "Default".
    */
   currentVizOverride?: MetricOverride["vizOverride"];
+  currentSharedVizOverride?: string;
   /**
    * Currently-applied display toggles (Build 1202, from Atef's
    * review). Pre-fill the DISPLAY section so re-opening the picker
@@ -497,6 +498,8 @@ export interface KpiPickerPanelProps {
    * app-level layout stanzas.
    */
   onPublishWorkspaceLayout?: () => void | Promise<void>;
+  onSaveSharedVisualization?: (viz: MetricOverride["vizOverride"] | null) => Promise<void>;
+  sharedVisualizationStatus?: "idle" | "saving" | "error";
   workspaceLayoutStatus?: "idle" | "saving" | "saved" | "error";
   /**
    * True when the current Splunk user holds `admin_all_objects`
@@ -746,6 +749,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   onTestInSearch,
   onResetAllCustomizations,
   onPublishWorkspaceLayout,
+  onSaveSharedVisualization,
+  sharedVisualizationStatus = "idle",
   workspaceLayoutStatus = "idle",
   onApplyDisplayToSection,
   canManageFactoryConfig = false,
@@ -2057,7 +2062,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         divider="both"
         material="glass"
         onRequestClose={() => {
-          if (!confirmation) onClose();
+          if (!confirmation && sharedVisualizationStatus !== "saving") onClose();
         }}
         open={open}
         position="page"
@@ -3004,7 +3009,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         summary={
                           vizOverrideInput
                             ? "Custom"
-                            : `Default: ${resolveVizMapping(selectedEntry.defaultViz).label}`
+                            : context.currentSharedVizOverride
+                              ? `Workspace default: ${CHART_STYLE_OPTIONS.find(option => option.v === context.currentSharedVizOverride)?.label ?? context.currentSharedVizOverride}`
+                              : `Default: ${resolveVizMapping(selectedEntry.defaultViz).label}`
                         }
                       >
                         {vizOverrideInput ? (
@@ -3027,8 +3034,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     title="Chart style"
                   >
                     <ControlGroup
-                      help="Default uses the searchbase default_viz setting."
-                      label="Visualization type"
+                      help={`Your preference is saved in this browser. Default uses ${context.currentSharedVizOverride ? 'the shared workspace visualization' : 'the search visualization'}.`}
+                      label="Visualization type — my preference"
                     >
                       <Select
                         onChange={(_event, { value }) =>
@@ -3059,6 +3066,27 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         ))}
                       </Select>
                     </ControlGroup>
+                    {onSaveSharedVisualization && context.sectionId && (
+                      <div>
+                        <Paragraph>Shared default: {CHART_STYLE_OPTIONS.find(option => option.v === context.currentSharedVizOverride)?.label ?? "Search default"}. Publishing affects this tile in this workspace only. Existing personal choices still take precedence.</Paragraph>
+                        <Button
+                          label={sharedVisualizationStatus === "saving" ? "Saving…" : "Save as workspace default for all users"}
+                          aria-disabled={sharedVisualizationStatus === "saving"}
+                          onClick={(event) => {
+                            if (sharedVisualizationStatus === "saving") return;
+                            confirmationReturnFocusRef.current = event.currentTarget;
+                            setConfirmation({
+                            title: "Save shared visualization default?",
+                            body: <Paragraph>{vizOverrideInput ? `Use ${vizOverrideInput}` : "Restore the search visualization"} for this tile in the current workspace. Personal visualization choices are kept. Your own visualization preference will be cleared so you see the shared default.</Paragraph>,
+                            confirmLabel: "Save workspace default",
+                            onConfirm: () => void onSaveSharedVisualization(vizOverrideInput),
+                          });
+                          }}
+                        />
+                        {sharedVisualizationStatus === "saving" && <span role="status">Saving workspace visualization default…</span>}
+                        {sharedVisualizationStatus === "error" && <Message type="error" role="alert">Could not save the shared default. Your preference has not been changed. Reload if someone else updated this workspace, then try again.</Message>}
+                      </div>
+                    )}
                   </CollapsiblePanel>
 
                   {/* DISPLAY form (Build 1202, from Atef's
@@ -3391,6 +3419,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
               appearance="subtle"
               icon={<RotateCcw aria-hidden="true" />}
               label="Reset tile"
+              disabled={sharedVisualizationStatus === "saving"}
               onClick={handleResetThisTile}
             />
             {onResetAllCustomizations && (
@@ -3398,6 +3427,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 appearance="destructiveSecondary"
                 icon={<RotateCcw aria-hidden="true" />}
                 label="Factory reset"
+                disabled={sharedVisualizationStatus === "saving"}
                 onClick={(event) => {
                   confirmationReturnFocusRef.current = event.currentTarget;
                   handleResetAllCustomizations();
@@ -3407,7 +3437,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             {onPublishWorkspaceLayout && (
               <Button
                 appearance="standalone"
-                disabled={workspaceLayoutStatus === "saving"}
+                disabled={workspaceLayoutStatus === "saving" || sharedVisualizationStatus === "saving"}
                 icon={
                   workspaceLayoutStatus === "saving" ? (
                     <WaitSpinner screenReaderText={null} />
@@ -3428,14 +3458,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 }}
               />
             )}
-            <Button appearance="secondary" onClick={onClose} label="Cancel" />
+            <Button appearance="secondary" onClick={onClose} label="Cancel" disabled={sharedVisualizationStatus === "saving"} />
             <Button
               appearance="primary"
               onClick={(event) => {
                 confirmationReturnFocusRef.current = event.currentTarget;
                 handleApply();
               }}
-              disabled={!canApply}
+              disabled={!canApply || sharedVisualizationStatus === "saving"}
               label="Apply"
             />
           </Layout>
