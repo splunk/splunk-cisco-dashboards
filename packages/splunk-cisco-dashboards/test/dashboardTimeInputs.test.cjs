@@ -115,7 +115,15 @@ test('operational canvases retain valid placements and Agentic Ops has no hidden
     for (const name of ['dc_networking_operations', 'sn_network_service_investigations', 'sn_agentic_ops_operational_intelligence']) {
         const definition = JSON.parse(fs.readFileSync(path.join(views, `${name}.xml`), 'utf8').match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);
         if (name === 'sn_agentic_ops_operational_intelligence') {
-            assert.equal(definition.layout.tabs, undefined);
+            const Ajv = require('ajv');
+            const schema = require('@splunk/dashboard-definition/DashboardSchema').default;
+            const validateLayout = new Ajv({ strict: false }).compile(schema.properties.layout);
+            assert.ok(validateLayout(definition.layout), JSON.stringify(validateLayout.errors));
+            const missingTabs = structuredClone(definition.layout);
+            delete missingTabs.tabs;
+            assert.equal(validateLayout(missingTabs), false, 'Splunk requires tab metadata even when the tab bar is hidden');
+            assert.deepEqual(definition.layout.tabs.items, [{ label: 'Overview', layoutId: 'layout_overview' }]);
+            assert.equal(definition.layout.tabs.options.showTabBar, false);
             assert.deepEqual(Object.keys(definition.layout.layoutDefinitions), ['layout_overview']);
             assert.ok(!Object.keys(definition.visualizations).some((key) => key.startsWith('viz_library_')));
         }

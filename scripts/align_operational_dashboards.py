@@ -20,7 +20,9 @@ def align(definition, reference, name, notes=None):
     page['options'].update(width=1920, backgroundColor='#0f1117')
     if name == 'sn_agentic_ops_operational_intelligence':
         definition['layout']['layoutDefinitions'] = {'layout_overview': page}
-        definition['layout'].pop('tabs', None)
+        definition['layout']['tabs'] = {
+            'items': [{'label': 'Overview', 'layoutId': 'layout_overview'}],
+            'options': {'showTabBar': False}}
         for key in list(v):
             if key.startswith('viz_library_'):
                 del v[key]
