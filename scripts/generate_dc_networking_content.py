@@ -300,11 +300,12 @@ def generate():
             viz.update(seriesColors=[record.get('color', '#649ef5'), '#4cbf7f', '#f0c243'], legendDisplay='off', showTotal=False)
         if chart in ('splunk.singlevalueradial', 'splunk.fillergauge'):
             viz.update(valueField='Metric', min=0, max=100, showDelta=False, valueSuffix='%', decimals=2)
+        viz.update(record.get('viz_options', {}))
         if record['section']:
             if key in OVERVIEW_COLUMNS:
                 viz['overviewColumns'] = OVERVIEW_COLUMNS[key]
             viz['overview'] = [dict(workspace='dc_networking', section=record['section'], tileId='dc_workspace_' + key,
-                                    label=record['title'], subLabel=record['question'], valueField=record.get('value_field', 'Observations'), unit=record.get('unit', ''), comparePeriod=False,
+                                    label=record.get('label', record['title']), subLabel=record['question'], valueField=record.get('value_field', 'Observations'), unit=record.get('unit', ''), comparePeriod=False,
                                     color=record.get('color', '#649ef5'), thresholdNote=record.get('note', 'Latest observed evidence in the selected window; missing measurements remain unknown.'))]
         metadata = dict(search_name='DC Networking Workspace - ' + record['title'], search_author='akhamis',
                         updated_author='akhamis', version='1.0.0', date_created='2026-11-07', date_updated='2026-11-07',

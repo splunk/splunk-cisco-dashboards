@@ -1995,7 +1995,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       isCustomized={Boolean(override)}
       vizOverride={sparklineVizOverride}
       hidePeak={override?.hidePeak}
-      hideDelta={override?.hideDelta}
+      hideDelta={override?.hideDelta ?? (sbRecord?.vizOptions?.showDelta === false)}
       hideOverlay={override?.hideOverlay}
       compactDensity={compactDensity}
     />
@@ -2352,6 +2352,8 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
 
   return (
     <BarBreakdownTile
+      unit={effective.unit}
+      maximum={typeof sbRecord?.vizOptions?.max === "number" ? sbRecord.vizOptions.max : undefined}
       showTotal={sbRecord?.vizOptions?.showTotal !== false}
       label={effective.label}
       subLabel={effective.subLabel}

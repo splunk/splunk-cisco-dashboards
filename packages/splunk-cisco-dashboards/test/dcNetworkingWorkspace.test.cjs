@@ -142,7 +142,7 @@ test('overview uses charts, supports nine searches per section, and keeps tables
         charts += 1;
         assert.equal(options.showTotal, false, 'Do not sum percentages or ages into a headline');
         assert.match(spl(id), /where isnotnull\(Metric\)/);
-        assert.match(body, /^default_viz = splunk\.(line|area|column|bar|singlevalueradial|fillergauge)$/m);
+        assert.match(body, /^default_viz = splunk\.(line|area|column|bar|singlevalue|singlevalueradial|fillergauge)$/m);
         const section = options.overview[0].section;
         sections.set(section, (sections.get(section) || 0) + 1);
         for (const target of body.match(/^drilldown_stanza_ids = (.+)$/m)[1].split(',')) {
@@ -164,7 +164,7 @@ test('overview uses charts, supports nine searches per section, and keeps tables
     assert.equal(config.WORKSPACE_SOURCES.dc_networking.fallbackTileCount, 9);
     const layouts = fs.readFileSync(path.join(root, 'src/main/resources/splunk/default/insights_workspaces.conf'), 'utf8');
     assert.equal([...layouts.matchAll(/\[layout.dc_networking.[^\]]+\][^[]*visible_count = 9/g)].length, 6);
-    assert.equal(new Set([...stanzas.values()].filter(b => b.includes('\"overview\"')).map(b => b.match(/^default_viz = (.+)$/m)[1])).size, 6);
+    assert.equal(new Set([...stanzas.values()].filter(b => b.includes('\"overview\"')).map(b => b.match(/^default_viz = (.+)$/m)[1])).size, 7);
     assert.ok([...sections.values()].every((count) => count === 9));
     assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.table').length, 0);
     assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.cisco_drilldown_action').length, 14);
@@ -509,4 +509,45 @@ test('three fabric labels fit clear of separate controls and footer in narrow an
         }
         assert.ok(12*scale >= 12, 'Fabric name text remains readable in the reported panel shapes');
     }
+});
+
+test('SAN health is a snapshot single value, with historical trend retained separately', () => {
+    const snapshot = stanzas.get('dc_workspace_san_health_now');
+    const options = JSON.parse(snapshot.match(/^viz_options = (.*)$/m)[1]);
+    assert.match(snapshot, /^default_viz = splunk.singlevalue$/m);
+    assert.equal(options.showDelta,false);
+    assert.equal(options.overview[0].label,'MDS mean health');
+    assert.match(options.overview[0].subLabel,/snapshot/);
+    assert.match(options.overview[0].thresholdNote,/historical trend/);
+    assert.match(spl('dc_workspace_san_health_history'),/table _time Metric/);
+    const ranking = JSON.parse(stanzas.get('dc_workspace_san_interface_wait').match(/^viz_options = (.*)$/m)[1]);
+    assert.equal(ranking.max,100);
+    assert.match(ranking.overview[0].subLabel,/Top 20/);
+    assert.match(ranking.overview[0].thresholdNote,/not fleet averages/);
+    assert.match(spl('dc_workspace_san_interface_wait'),/TxWaitPct=tonumber\('vendor.pTxWait'\)/);
+});
+
+test('percentage bars show reported units and fixed scale in normal and expanded views without changing values', () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+    const {BarBreakdownTile}=load('src/main/webapp/common/components/workspace/BarBreakdownTile.tsx',{
+        './ChartFocusDialog':{ChartFocusDialog:({children})=>React.createElement('section',null,children)},
+        './InfoTooltip':{InfoTooltip:()=>null},
+        './TileActionMenu':{TileActionMenu:()=>null,TileDrilldownButton:()=>null},
+        '@/common/lib/metricValueFormat':{formatCompactMetricNumber:String},
+        '@/common/lib/utils':{cn:(...values)=>values.filter(Boolean).join(' ')},
+    });
+    const props={label:'Transmit wait',rows:[{Interface:'A',Metric:50},{Interface:'B',Metric:0}],columns:['Interface','Metric'],source:'live',showTotal:false};
+    const html=renderToStaticMarkup(React.createElement(BarBreakdownTile,{...props,unit:'%',maximum:100}));
+    assert.equal((html.match(/style="width:50%;/g)||[]).length,2);
+    assert.equal((html.match(/style="width:0%;/g)||[]).length,2);
+    assert.equal((html.match(/>50%<\/span>/g)||[]).length,2);
+    assert.match(html,/A: 50%/);
+    assert.doesNotMatch(html,/Total 50|>100%<\/span>/);
+    const automatic=renderToStaticMarkup(React.createElement(BarBreakdownTile,{...props,maximum:NaN}));
+    assert.match(automatic,/style="width:100%;/);
+    assert.match(automatic,/>50<\/span>/);
+    const nearLimit=renderToStaticMarkup(React.createElement(BarBreakdownTile,{...props,rows:[{Interface:'A',Metric:99.99},{Interface:'B',Metric:100}],unit:'%',maximum:100}));
+    assert.equal((nearLimit.match(/style="width:8ch"/g)||[]).length,4,'Normal and expanded rows reserve a common numeric column');
+    const tied=renderToStaticMarkup(React.createElement(BarBreakdownTile,{...props,rows:[{Interface:'A',Metric:100},{Interface:'B',Metric:100}],unit:'%',maximum:100}));
+    assert.equal((tied.match(/>100%<\/span>/g)||[]).length,4);
 });

@@ -39,6 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- DC Networking shows MDS mean health as a readable snapshot value, with history in the MDS health trend. SAN transmit-wait rankings show explicit percent units on a fixed 0–100 scale and identify the top reported interfaces.
+
 - Fixed Minimal Enterprise and Prism Pulse movement when all signals fit. A positive Rail speed now enables movement; Static, Pause, and reduced-motion preferences remain supported.
 
 - Minimal Enterprise and Prism Pulse rail controls float over the cards on hover or keyboard focus without reserving an empty column. On touch devices, they remain visible below the cards.

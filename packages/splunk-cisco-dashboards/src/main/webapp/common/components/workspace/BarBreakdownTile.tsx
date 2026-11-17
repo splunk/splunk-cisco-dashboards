@@ -43,6 +43,9 @@ import type { DataSource, NoDataReason } from "@/common/hooks/useMetric";
 
 interface BarBreakdownTileProps {
   label: string;
+  unit?: string;
+  /** Optional fixed positive scale maximum; otherwise fit the reported values. */
+  maximum?: number;
   /** Hide totals for non-additive measurements such as percentages and ages. */
   showTotal?: boolean;
   subLabel?: string;
@@ -174,6 +177,8 @@ const NoDataState: React.FC<{
 
 export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
   label,
+  unit = "",
+  maximum,
   subLabel,
   description,
   infoSections,
@@ -245,6 +250,15 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
   }, [rows, dimensionCol, valueCol]);
 
   const visibleEntries = aggregated.entries.slice(0, visibleRowCap);
+  const fixedScale = typeof maximum === "number" && Number.isFinite(maximum) && maximum > 0;
+  const scaleMaximum = fixedScale ? maximum : aggregated.max;
+  const formatMeasurement = (value: number) => `${formatCount(value)}${unit === "%" ? "%" : unit ? ` ${unit}` : ""}`;
+  const valueColumnCharacters = aggregated.entries.reduce(
+    (longest, entry) => Math.max(longest, formatMeasurement(entry.value).length + 2), 4,
+  );
+  const barWidth = (value: number) => scaleMaximum > 0
+    ? fixedScale ? Math.min(100, Math.max(0, value / scaleMaximum * 100))
+      : Math.max(2, value / scaleMaximum * 100) : 0;
   const overflowCount = Math.max(
     0,
     aggregated.entries.length - visibleEntries.length,
@@ -335,7 +349,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
       {hasData ? (
         <div
           role="img"
-          aria-label={showTotal ? `${label} bar chart. Total ${formatCount(aggregated.total)}.` : `${label} bar chart. Individual category measurements.`}
+          aria-label={showTotal ? `${label} bar chart. Total ${formatCount(aggregated.total)}.` : `${label} bar chart. Individual category measurements. ${visibleEntries.map(entry => `${entry.key}: ${formatMeasurement(entry.value)}`).join(", ")}`}
           title="Category values are shown beside each bar"
           data-tile-control="true"
           className="mt-0.5 flex min-h-[116px] max-h-36 flex-1 flex-col p-1"
@@ -368,15 +382,12 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
             className="flex-1 min-h-[72px] mt-1 pt-0.5 overflow-hidden flex flex-col gap-1"
           >
             {visibleEntries.map((entry) => {
-              const widthPct =
-                aggregated.max > 0
-                  ? Math.max(2, (entry.value / aggregated.max) * 100)
-                  : 0;
+              const widthPct = barWidth(entry.value);
               return (
                 <div
                   key={entry.key}
                   className="flex items-center gap-1.5 text-xs leading-tight"
-                  title={`${entry.key}: ${formatCount(entry.value)}`}
+                  title={`${entry.key}: ${formatMeasurement(entry.value)}`}
                 >
                   <span className="w-14 truncate  sui-color-default font-medium capitalize">
                     {entry.key}
@@ -389,8 +400,8 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                       style={{ width: `${widthPct}%`, backgroundColor: colorForLabel(entry.key) }}
                     />
                   </div>
-                  <span className="w-8 text-right  sui-color-active font-semibold tabular-nums">
-                    {formatCount(entry.value)}
+                  <span className="min-w-[2rem] flex-shrink-0 text-right  sui-color-active font-semibold tabular-nums" style={{ width: `${valueColumnCharacters}ch` }}>
+                    {formatMeasurement(entry.value)}
                   </span>
                 </div>
               );
@@ -421,7 +432,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
       >
         <div
           role="img"
-          aria-label={showTotal ? `Expanded ${label} bar chart. Total ${formatCount(aggregated.total)}.` : `Expanded ${label} bar chart. Individual category measurements.`}
+          aria-label={showTotal ? `Expanded ${label} bar chart. Total ${formatCount(aggregated.total)}.` : `Expanded ${label} bar chart. Individual category measurements. ${focusEntries.map(entry => `${entry.key}: ${formatMeasurement(entry.value)}`).join(", ")}`}
           className="flex h-full min-h-[320px] flex-col rounded-[10px] border sui-border-default sui-bg-section p-5"
         >
           {showTotal && <span className="text-5xl font-black tracking-tighter leading-none sui-color-active">
@@ -429,10 +440,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
           </span>}
           <div className="mt-7 flex flex-1 flex-col gap-4 overflow-y-auto">
             {focusEntries.map((entry) => {
-              const widthPct =
-                aggregated.max > 0
-                  ? Math.max(2, (entry.value / aggregated.max) * 100)
-                  : 0;
+              const widthPct = barWidth(entry.value);
               return (
                 <div
                   key={entry.key}
@@ -447,8 +455,8 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                       style={{ width: `${widthPct}%`, backgroundColor: colorForLabel(entry.key) }}
                     />
                   </div>
-                  <span className="w-20 text-right font-bold tabular-nums sui-color-active">
-                    {formatCount(entry.value)}
+                  <span className="min-w-[2rem] flex-shrink-0 text-right font-bold tabular-nums sui-color-active" style={{ width: `${valueColumnCharacters}ch` }}>
+                    {formatMeasurement(entry.value)}
                   </span>
                 </div>
               );

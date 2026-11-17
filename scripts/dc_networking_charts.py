@@ -195,8 +195,15 @@ def add_charts(searches, base):
     current('san_status', 'MDS switches by reported status', 'dc_san', 'san_health',
             '| stats count as Metric by Status', ['san_health', 'san_analytics'])
     percent('san_health_now', 'Latest observed mean MDS switch health', 'dc_san', 'san_health', 'HealthPct', ['san_health', 'san_analytics'])
+    searches['san_health_now'].update(
+        viz='splunk.singlevalue', label='MDS mean health', question='Latest readings · snapshot', viz_options={'showDelta': False},
+        note='Mean of the latest valid health reading per observed switch in the selected window. This is a snapshot; use MDS observed switch health for the historical trend. Missing readings remain unknown.')
     current('san_interface_wait', 'Which SAN interfaces report the most transmit wait?', 'dc_san', 'san_congestion',
             '| eval Scope=Account." / ".coalesce(Entity,"Unreported")." / ".coalesce(Interface,"Unreported") | stats max(TxWaitPct) as Metric by Scope | sort 20 - Metric', ['san_congestion', 'san_analytics'], unit='%')
+    searches['san_interface_wait'].update(
+        label='Highest reported SAN transmit wait', question='Top 20 latest interface readings · 0–100%',
+        note='Reported vendor.pTxWait for the latest observed interfaces in the selected window, ranked highest first. Tied values can all be 100%; these are not fleet averages or normalized scores. Missing readings remain unknown.',
+        viz_options={'max': 100})
 
     hf_port = base('sourcetype="cisco:dc:hyperfabric:inventory" resource_type=port') + "\n| eventstats max(_time) as LastObserved by Account FabricId node_id vendor.id | where _time=LastObserved | dedup Account FabricId node_id vendor.id"
     hf_node = base('sourcetype="cisco:dc:hyperfabric:inventory" resource_type=node') + "\n| eventstats max(_time) as LastObserved by Account FabricId vendor.nodeId | where _time=LastObserved | dedup Account FabricId vendor.nodeId"
