@@ -37,7 +37,12 @@ test('new dashboard has exactly six catalogue-backed evidence tables and bounded
     const timePosition = layout.structure.find(({ item }) => item === 'input_time_range').position;
     assert.equal(d.inputs.input_time_range.options.showAdvanced, true);
     assert.ok(timePosition.w >= 360, 'All five shortcuts and the custom-range button need to fit');
-    assert.ok(layout.options.width-timePosition.x-timePosition.w >= 100, 'Keep the custom-range button clear of the overlaid Manager toolbar');
+    const referenceHeader = read('sn_zta_posture').layout.layoutDefinitions.layout_overview.structure;
+    for (const id of ['viz_header_bg', 'viz_header_icon', 'viz_header', 'input_time_range']) {
+        assert.deepEqual(layout.structure.find((item) => item.item === id).position,
+            referenceHeader.find((item) => item.item === id).position,
+            `${id} must match Zero Trust Posture exactly`);
+    }
     assert.equal(layout.options.width, 1920, 'Evidence cards follow the shared operational canvas');
     for (let i=1; i<=6; i++) assert.equal(d.visualizations[`viz_evidence_${i}_title`].options.customFontSize, 20, 'Card titles use the shared typography');
     for (const item of layout.structure) {

@@ -77,4 +77,11 @@ def align(definition, reference, name, notes=None):
                           block(prefix+'_info',x+514,y+6,42,42),block(prefix+'_action',x+558,y+6,42,42)]
         structure += [block('viz_interface_text',36,1120,1730,114),block('viz_interface_action',1828,1136,56,56)]
         page['options']['height'] = 1250
+    if name == 'sn_network_service_investigations':
+        reference_page = next(iter(reference['layout']['layoutDefinitions'].values()))
+        header_positions = {item['item']: item['position'] for item in reference_page['structure']
+                            if item['item'] in {'viz_header_bg', 'viz_header_icon', 'viz_header', 'input_time_range'}}
+        for item in structure:
+            if item['item'] in header_positions:
+                item['position'] = deepcopy(header_positions[item['item']])
     page['structure'] = structure
