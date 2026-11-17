@@ -169,7 +169,34 @@ const OptionHelpAction: React.FC<OptionHelpConfig> = ({
 const OptionSummary = styled.span`
   color: ${variables.contentColorMuted};
   font-size: ${variables.fontSizeSmall};
+  max-width: min(22ch, 24vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+const DataMappingFields = styled.div`
+  display: grid;
+  gap: ${variables.spacingMedium};
+  min-width: 0;
+`;
+
+const SuggestedFields = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${variables.spacingXSmall};
+  min-width: 0;
+
+  & > span {
+    color: ${variables.contentColorMuted};
+    font-size: ${variables.fontSizeSmall};
+  }
+`;
+
+const SuggestedFieldActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${variables.spacingXSmall};
 `;
 
 const OptionPanelActions: React.FC<OptionPanelActionsProps> = ({
@@ -178,7 +205,7 @@ const OptionPanelActions: React.FC<OptionPanelActionsProps> = ({
   children,
 }) => (
   <Layout>
-    <OptionSummary>{summary}</OptionSummary>
+    <OptionSummary title={summary}>{summary}</OptionSummary>
     <OptionHelpAction {...help} />
     {children}
   </Layout>
@@ -2552,49 +2579,45 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     open={dataMappingOpen}
                     title="Data mapping"
                   >
-                    <ControlGroup
-                      error={
-                        !fieldNameValid &&
-                        "Letters, digits, underscores, and dots only."
-                      }
-                      help={
-                        !canManageFactoryConfig
-                          ? "Org-wide setting — requires admin"
-                          : "Leave blank to automatically select the first numeric result field."
-                      }
-                      label="Value field"
-                    >
-                      <Text
-                        disabled={!canManageFactoryConfig}
-                        error={!fieldNameValid}
-                        value={valueField}
-                        onChange={(_event, { value }) =>
-                          setValueField(value.slice(0, MAX_FIELD_LENGTH))
+                    <DataMappingFields>
+                      <ControlGroup
+                        error={
+                          !fieldNameValid &&
+                          "Letters, digits, underscores, and dots only."
                         }
-                        placeholder="auto-detect"
-                      />
-                      {/* Clickable chips parsed from the SPL — these
-                                        are the columns the search will emit (`as
-                                        <alias>` and `eval <name>`). Clicking one
-                                        fills the input. Helps users discover
-                                        valid column names without having to read
-                                        the SPL — and makes it obvious that
-                                        typing a non-emitted column won't match.
-                                        Hidden when no aliases parse out. */}
+                        help={
+                          !canManageFactoryConfig
+                            ? "Org-wide setting — requires admin"
+                            : "Leave blank to automatically select the first numeric result field."
+                        }
+                        label="Value field"
+                      >
+                        <Text
+                          disabled={!canManageFactoryConfig}
+                          error={!fieldNameValid}
+                          value={valueField}
+                          onChange={(_event, { value }) =>
+                            setValueField(value.slice(0, MAX_FIELD_LENGTH))
+                          }
+                          placeholder="auto-detect"
+                        />
+                      </ControlGroup>
                       {fieldNameValid && splFieldSuggestions.length > 0 && (
-                        <Layout>
-                          {splFieldSuggestions.map((name) => {
-                            const isPicked = valueField === name;
-                            return (
+                        <SuggestedFields role="group" aria-label="Suggested value fields">
+                          <span>Suggested fields</span>
+                          <SuggestedFieldActions>
+                            {splFieldSuggestions.map((name) => (
                               <Button
-                                appearance={isPicked ? "secondary" : "subtle"}
+                                appearance={valueField === name ? "secondary" : "subtle"}
+                                aria-pressed={valueField === name}
+                                disabled={!canManageFactoryConfig}
                                 key={name}
                                 label={name}
                                 onClick={() => setValueField(name)}
                               />
-                            );
-                          })}
-                        </Layout>
+                            ))}
+                          </SuggestedFieldActions>
+                        </SuggestedFields>
                       )}
                       {fieldNameValid &&
                         valueField &&
@@ -2605,17 +2628,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             this SPL.
                           </Message>
                         )}
-                    </ControlGroup>
-                    <ControlGroup label="Label override">
-                      <Text
-                        disabled={!canManageFactoryConfig}
-                        value={labelOverride}
-                        onChange={(_event, { value }) =>
-                          setLabelOverride(value.slice(0, 80))
-                        }
-                        placeholder={context.defaultLabel}
-                      />
-                    </ControlGroup>
+                      <ControlGroup label="Label override">
+                        <Text
+                          disabled={!canManageFactoryConfig}
+                          value={labelOverride}
+                          onChange={(_event, { value }) =>
+                            setLabelOverride(value.slice(0, 80))
+                          }
+                          placeholder={context.defaultLabel}
+                        />
+                      </ControlGroup>
+                    </DataMappingFields>
                   </CollapsiblePanel>
 
                   <CollapsiblePanel

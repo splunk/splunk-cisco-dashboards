@@ -39,6 +39,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Tile configuration keeps the value field full-width, groups suggested fields underneath, and prevents long option summaries from crowding the section controls.
 - DC Networking shows MDS mean health as a readable snapshot value, with history in the MDS health trend. SAN transmit-wait rankings show explicit percent units on a fixed 0–100 scale and identify the top reported interfaces.
 
 - Fixed Minimal Enterprise and Prism Pulse movement when all signals fit. A positive Rail speed now enables movement; Static, Pause, and reduced-motion preferences remain supported.

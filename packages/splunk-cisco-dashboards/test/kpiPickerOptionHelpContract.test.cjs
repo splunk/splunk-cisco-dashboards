@@ -35,7 +35,7 @@ assert.equal(
 );
 assert.match(
   picker,
-  /<OptionSummary>\{summary\}<\/OptionSummary>/,
+  /<OptionSummary title=\{summary\}>\{summary\}<\/OptionSummary>/,
   "Panel actions must render the existing current-value summary",
 );
 
