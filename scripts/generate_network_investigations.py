@@ -44,10 +44,6 @@ SECTIONS = {
         ('SAN congestion evidence', 'Observed MDS transmit wait and recurring congestion. Missing CPU or memory measurements stay unavailable.', ['network_dc_mds_transmit_wait_trend', 'network_dc_mds_repeated_congestion', 'network_dc_mds_switch_resource_trend']),
         ('Hyperfabric port evidence', 'Observed port rates, directional imbalance and measurement coverage. These are not link-capacity or headroom estimates.', ['network_dc_hyperfabric_port_rate_trend', 'network_dc_hyperfabric_directional_imbalance', 'network_dc_hyperfabric_measurement_coverage']),
     ]),
-    'sn_secure_infrastructure_posture': ('Certificate investigations', [
-        ('Certificate lifecycle', 'Inspect observed Zeek certificate expiry bands and individual validity dates. Observed certificates are not a complete estate inventory.', ['security_zeek_certificate_expiry_summary', 'security_zeek_certificate_expiry_inventory']),
-        ('Certificate rotation candidates', 'Compare fingerprints observed for the same subject. Multiple certificates can be legitimate and do not establish a failed rotation.', ['security_zeek_certificate_rotation_candidates']),
-    ]),
     'sn_agentic_ops_operational_intelligence': ('Telemetry investigations', [
         ('Ingestion delay and feed observations', 'Compare reporting delay and occupied time buckets for observed sources. Missing sources do not prove a collection outage.', ['operations_cisco_ingestion_delay_by_source', 'operations_cisco_feed_bucket_coverage']),
         ('ISE scalar-field quality', 'Inspect repeated and conflicting policy fields before interpreting policy activity. Requires the policy snapshot feeds.', ['operations_ise_multivalue_field_quality']),
@@ -167,7 +163,7 @@ def render(text, match, definition):
 
 def outputs():
     result = {}
-    for view in sorted(CARD_TARGETS.keys() | SECTIONS.keys()):
+    for view in sorted(CARD_TARGETS.keys() | SECTIONS.keys() | {'sn_secure_infrastructure_posture'}):
         text, match, definition = read_view(view)
         for card, additions in CARD_TARGETS.get(view, {}).items():
             trigger = definition['visualizations'][f'viz_card_{card}_drilldown_trigger']
@@ -181,6 +177,12 @@ def outputs():
         if view == 'sn_agentic_ops_operational_intelligence':
             from align_operational_dashboards import align
             align(definition, read_view('sn_data_center_operations')[2], view)
+        elif view == 'sn_secure_infrastructure_posture':
+            definition['layout']['layoutDefinitions'].pop('layout_catalogue_investigations', None)
+            definition['layout']['tabs']['items'] = [tab for tab in definition['layout']['tabs']['items'] if tab['layoutId'] != 'layout_catalogue_investigations']
+            for key in list(definition['visualizations']):
+                if key.startswith('viz_library_'):
+                    del definition['visualizations'][key]
         elif view in SECTIONS:
             add_section(definition, *SECTIONS[view])
         result[VIEWS / f'{view}.xml'] = render(text, match, definition)
