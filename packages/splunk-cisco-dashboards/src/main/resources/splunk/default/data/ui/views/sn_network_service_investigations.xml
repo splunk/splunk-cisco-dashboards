@@ -109,8 +109,8 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 16,
-                "markdown": "### Application transfer observations"
+                "customFontSize": 20,
+                "markdown": "**Application transfer observations**"
             }
         },
         "viz_evidence_1_description": {
@@ -122,7 +122,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 16,
+                "customFontSize": 15,
                 "markdown": "Reported bytes by device and application; overlapping feeds can repeat session totals."
             }
         },
@@ -191,8 +191,8 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 16,
-                "markdown": "### Explicit policy decisions"
+                "customFontSize": 20,
+                "markdown": "**Explicit policy decisions**"
             }
         },
         "viz_evidence_2_description": {
@@ -204,7 +204,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 16,
+                "customFontSize": 15,
                 "markdown": "Allowed, denied and unknown record shares by device; these are not unique session failure rates."
             }
         },
@@ -273,8 +273,8 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 16,
-                "markdown": "### DNS failure observations"
+                "customFontSize": 20,
+                "markdown": "**DNS failure observations**"
             }
         },
         "viz_evidence_3_description": {
@@ -286,7 +286,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 16,
+                "customFontSize": 15,
                 "markdown": "Explicit NXDOMAIN responses by client. Query-only feeds cannot establish response outcomes."
             }
         },
@@ -355,8 +355,8 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 16,
-                "markdown": "### DNS response time"
+                "customFontSize": 20,
+                "markdown": "**DNS response time**"
             }
         },
         "viz_evidence_4_description": {
@@ -368,7 +368,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 16,
+                "customFontSize": 15,
                 "markdown": "Reported CIM response times in seconds by resolver; missing measurements are excluded."
             }
         },
@@ -437,8 +437,8 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 16,
-                "markdown": "### HTTP server-error observations"
+                "customFontSize": 20,
+                "markdown": "**HTTP server-error observations**"
             }
         },
         "viz_evidence_5_description": {
@@ -450,7 +450,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 16,
+                "customFontSize": 15,
                 "markdown": "Reported 5xx responses by destination. Proxy responses can differ from origin application failures."
             }
         },
@@ -519,8 +519,8 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 16,
-                "markdown": "### Remote administration observations"
+                "customFontSize": 20,
+                "markdown": "**Remote administration observations**"
             }
         },
         "viz_evidence_6_description": {
@@ -532,7 +532,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 16,
+                "customFontSize": 15,
                 "markdown": "Allowed records on selected ports; port numbers alone do not establish application identity or unauthorized access."
             }
         },
@@ -698,447 +698,441 @@
                 "type": "absolute",
                 "options": {
                     "backgroundColor": "#0f1117",
-                    "backgroundImage": {
-                        "sizeType": "contain",
-                        "src": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjEyODgiIHZpZXdCb3g9IjAgMCAyMDAwIDEyODgiIHdpZHRoPSIyMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj48ZmlsdGVyIGlkPSJhIiBjb2xvci1pbnRlcnBvbGF0aW9uLWZpbHRlcnM9InNSR0IiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgaGVpZ2h0PSIxNTg0IiB3aWR0aD0iMjAwMCIgeD0iMCIgeT0iLTI4MCI+PGZlRmxvb2QgZmxvb2Qtb3BhY2l0eT0iMCIgcmVzdWx0PSJCYWNrZ3JvdW5kSW1hZ2VGaXgiLz48ZmVCbGVuZCBpbj0iU291cmNlR3JhcGhpYyIgaW4yPSJCYWNrZ3JvdW5kSW1hZ2VGaXgiIG1vZGU9Im5vcm1hbCIgcmVzdWx0PSJzaGFwZSIvPjxmZUdhdXNzaWFuQmx1ciByZXN1bHQ9ImVmZmVjdDFfZm9yZWdyb3VuZEJsdXJfNjU1MTZfNjgiIHN0ZERldmlhdGlvbj0iMTQwIi8+PC9maWx0ZXI+PGNsaXBQYXRoIGlkPSJiIj48cGF0aCBkPSJtMjgwIDBoMTQ0MHYxMDI0aC0xNDQweiIvPjwvY2xpcFBhdGg+PGcgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuNSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2IpIiBmaWxsLW9wYWNpdHk9Ii41Ij48ZWxsaXBzZSBjeD0iNTY2LjAwMSIgY3k9IjEwNDguMTYiIGZpbGw9IiNmZjkwMDAiIHJ4PSI0MjIiIHJ5PSIxNTQiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTEzMi4wMDIgMjA5Ni4zMikiLz48ZWxsaXBzZSBjeD0iMTE4MSIgY3k9IjEwNzAuMTYiIGZpbGw9IiNmZjAwN2YiIHJ4PSI1OTIiIHJ5PSIyMjMiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMjM2MiAyMTQwLjMyKSIvPjxnIGZpbGw9IiNmZjkwMDAiPjxlbGxpcHNlIGN4PSIyNDIuMDEyIiBjeT0iMTU1LjYyMiIgcng9IjI0Mi4wMTIiIHJ5PSIxNTUuNjIyIiB0cmFuc2Zvcm09Im1hdHJpeCgtLjg2MTk2NyAtLjUwNjk2NCAuODIzNDEgLS41Njc0NDcgMTY2OC44NiAxMTgyKSIvPjxlbGxpcHNlIGN4PSI2NzcuMDAxIiBjeT0iMTA0Ny42NiIgcng9IjIyNyIgcnk9Ijk2LjUiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTM1NC4wMDIgMjA5NS4zMikiLz48L2c+PC9nPjwvZz48L3N2Zz4=",
-                        "x": 0,
-                        "y": 0
-                    },
                     "display": "auto-scale",
-                    "height": 1550,
-                    "width": 1120,
+                    "height": 1250,
+                    "width": 1920,
                     "showTitleAndDescription": false
                 },
                 "structure": [
                     {
                         "item": "viz_header_bg",
+                        "type": "block",
                         "position": {
-                            "x": 16,
+                            "x": 20,
                             "y": 0,
-                            "w": 1088,
-                            "h": 102
-                        },
-                        "type": "block"
+                            "w": 1880,
+                            "h": 96
+                        }
                     },
                     {
                         "item": "viz_header_icon",
+                        "type": "block",
                         "position": {
-                            "x": 28,
-                            "y": 20,
-                            "w": 56,
-                            "h": 56
-                        },
-                        "type": "block"
+                            "x": 38,
+                            "y": 16,
+                            "w": 64,
+                            "h": 64
+                        }
                     },
                     {
                         "item": "viz_header",
+                        "type": "block",
                         "position": {
-                            "x": 96,
+                            "x": 118,
                             "y": 8,
-                            "w": 460,
-                            "h": 86
-                        },
-                        "type": "block"
+                            "w": 1290,
+                            "h": 80
+                        }
                     },
                     {
                         "item": "input_time_range",
+                        "type": "input",
                         "position": {
-                            "x": 600,
+                            "x": 1440,
                             "y": 8,
                             "w": 370,
                             "h": 80
-                        },
-                        "type": "input"
+                        }
                     },
                     {
                         "item": "viz_scope",
+                        "type": "block",
                         "position": {
-                            "x": 24,
-                            "y": 112,
-                            "w": 1072,
+                            "x": 36,
+                            "y": 108,
+                            "w": 1848,
                             "h": 64
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_1_background",
+                        "type": "block",
                         "position": {
-                            "x": 16,
+                            "x": 20,
                             "y": 188,
-                            "w": 536,
-                            "h": 388
-                        },
-                        "type": "block"
+                            "w": 613,
+                            "h": 440
+                        }
                     },
                     {
                         "item": "viz_evidence_1_title",
+                        "type": "block",
                         "position": {
-                            "x": 32,
+                            "x": 36,
                             "y": 200,
-                            "w": 388,
-                            "h": 36
-                        },
-                        "type": "block"
+                            "w": 482,
+                            "h": 64
+                        }
                     },
                     {
                         "item": "viz_evidence_1_description",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 240,
-                            "w": 504,
+                            "x": 36,
+                            "y": 268,
+                            "w": 581,
                             "h": 64
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_1_table",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 312,
-                            "w": 504,
-                            "h": 248
-                        },
-                        "type": "block"
+                            "x": 36,
+                            "y": 340,
+                            "w": 581,
+                            "h": 272
+                        }
                     },
                     {
                         "item": "viz_evidence_1_info",
+                        "type": "block",
                         "position": {
-                            "x": 448,
-                            "y": 196,
+                            "x": 534,
+                            "y": 194,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_1_action",
+                        "type": "block",
                         "position": {
-                            "x": 492,
-                            "y": 196,
+                            "x": 578,
+                            "y": 194,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_2_background",
+                        "type": "block",
                         "position": {
-                            "x": 568,
+                            "x": 653,
                             "y": 188,
-                            "w": 536,
-                            "h": 388
-                        },
-                        "type": "block"
+                            "w": 613,
+                            "h": 440
+                        }
                     },
                     {
                         "item": "viz_evidence_2_title",
+                        "type": "block",
                         "position": {
-                            "x": 584,
+                            "x": 669,
                             "y": 200,
-                            "w": 388,
-                            "h": 36
-                        },
-                        "type": "block"
+                            "w": 482,
+                            "h": 64
+                        }
                     },
                     {
                         "item": "viz_evidence_2_description",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 240,
-                            "w": 504,
+                            "x": 669,
+                            "y": 268,
+                            "w": 581,
                             "h": 64
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_2_table",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 312,
-                            "w": 504,
-                            "h": 248
-                        },
-                        "type": "block"
+                            "x": 669,
+                            "y": 340,
+                            "w": 581,
+                            "h": 272
+                        }
                     },
                     {
                         "item": "viz_evidence_2_info",
+                        "type": "block",
                         "position": {
-                            "x": 1000,
-                            "y": 196,
+                            "x": 1167,
+                            "y": 194,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_2_action",
+                        "type": "block",
                         "position": {
-                            "x": 1044,
-                            "y": 196,
+                            "x": 1211,
+                            "y": 194,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_3_background",
+                        "type": "block",
                         "position": {
-                            "x": 16,
-                            "y": 592,
-                            "w": 536,
-                            "h": 388
-                        },
-                        "type": "block"
+                            "x": 1286,
+                            "y": 188,
+                            "w": 613,
+                            "h": 440
+                        }
                     },
                     {
                         "item": "viz_evidence_3_title",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 604,
-                            "w": 388,
-                            "h": 36
-                        },
-                        "type": "block"
+                            "x": 1302,
+                            "y": 200,
+                            "w": 482,
+                            "h": 64
+                        }
                     },
                     {
                         "item": "viz_evidence_3_description",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 644,
-                            "w": 504,
+                            "x": 1302,
+                            "y": 268,
+                            "w": 581,
                             "h": 64
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_3_table",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 716,
-                            "w": 504,
-                            "h": 248
-                        },
-                        "type": "block"
+                            "x": 1302,
+                            "y": 340,
+                            "w": 581,
+                            "h": 272
+                        }
                     },
                     {
                         "item": "viz_evidence_3_info",
+                        "type": "block",
                         "position": {
-                            "x": 448,
-                            "y": 600,
+                            "x": 1800,
+                            "y": 194,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_3_action",
+                        "type": "block",
                         "position": {
-                            "x": 492,
-                            "y": 600,
+                            "x": 1844,
+                            "y": 194,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_4_background",
+                        "type": "block",
                         "position": {
-                            "x": 568,
-                            "y": 592,
-                            "w": 536,
-                            "h": 388
-                        },
-                        "type": "block"
+                            "x": 20,
+                            "y": 644,
+                            "w": 613,
+                            "h": 440
+                        }
                     },
                     {
                         "item": "viz_evidence_4_title",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 604,
-                            "w": 388,
-                            "h": 36
-                        },
-                        "type": "block"
+                            "x": 36,
+                            "y": 656,
+                            "w": 482,
+                            "h": 64
+                        }
                     },
                     {
                         "item": "viz_evidence_4_description",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 644,
-                            "w": 504,
+                            "x": 36,
+                            "y": 724,
+                            "w": 581,
                             "h": 64
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_4_table",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 716,
-                            "w": 504,
-                            "h": 248
-                        },
-                        "type": "block"
+                            "x": 36,
+                            "y": 796,
+                            "w": 581,
+                            "h": 272
+                        }
                     },
                     {
                         "item": "viz_evidence_4_info",
+                        "type": "block",
                         "position": {
-                            "x": 1000,
-                            "y": 600,
+                            "x": 534,
+                            "y": 650,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_4_action",
+                        "type": "block",
                         "position": {
-                            "x": 1044,
-                            "y": 600,
+                            "x": 578,
+                            "y": 650,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_5_background",
+                        "type": "block",
                         "position": {
-                            "x": 16,
-                            "y": 996,
-                            "w": 536,
-                            "h": 388
-                        },
-                        "type": "block"
+                            "x": 653,
+                            "y": 644,
+                            "w": 613,
+                            "h": 440
+                        }
                     },
                     {
                         "item": "viz_evidence_5_title",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 1008,
-                            "w": 388,
-                            "h": 36
-                        },
-                        "type": "block"
+                            "x": 669,
+                            "y": 656,
+                            "w": 482,
+                            "h": 64
+                        }
                     },
                     {
                         "item": "viz_evidence_5_description",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 1048,
-                            "w": 504,
+                            "x": 669,
+                            "y": 724,
+                            "w": 581,
                             "h": 64
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_5_table",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 1120,
-                            "w": 504,
-                            "h": 248
-                        },
-                        "type": "block"
+                            "x": 669,
+                            "y": 796,
+                            "w": 581,
+                            "h": 272
+                        }
                     },
                     {
                         "item": "viz_evidence_5_info",
+                        "type": "block",
                         "position": {
-                            "x": 448,
-                            "y": 1004,
+                            "x": 1167,
+                            "y": 650,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_5_action",
+                        "type": "block",
                         "position": {
-                            "x": 492,
-                            "y": 1004,
+                            "x": 1211,
+                            "y": 650,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_6_background",
+                        "type": "block",
                         "position": {
-                            "x": 568,
-                            "y": 996,
-                            "w": 536,
-                            "h": 388
-                        },
-                        "type": "block"
+                            "x": 1286,
+                            "y": 644,
+                            "w": 613,
+                            "h": 440
+                        }
                     },
                     {
                         "item": "viz_evidence_6_title",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 1008,
-                            "w": 388,
-                            "h": 36
-                        },
-                        "type": "block"
+                            "x": 1302,
+                            "y": 656,
+                            "w": 482,
+                            "h": 64
+                        }
                     },
                     {
                         "item": "viz_evidence_6_description",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 1048,
-                            "w": 504,
+                            "x": 1302,
+                            "y": 724,
+                            "w": 581,
                             "h": 64
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_6_table",
+                        "type": "block",
                         "position": {
-                            "x": 584,
-                            "y": 1120,
-                            "w": 504,
-                            "h": 248
-                        },
-                        "type": "block"
+                            "x": 1302,
+                            "y": 796,
+                            "w": 581,
+                            "h": 272
+                        }
                     },
                     {
                         "item": "viz_evidence_6_info",
+                        "type": "block",
                         "position": {
-                            "x": 1000,
-                            "y": 1004,
+                            "x": 1800,
+                            "y": 650,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_evidence_6_action",
+                        "type": "block",
                         "position": {
-                            "x": 1044,
-                            "y": 1004,
+                            "x": 1844,
+                            "y": 650,
                             "w": 42,
                             "h": 42
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_interface_text",
+                        "type": "block",
                         "position": {
-                            "x": 32,
-                            "y": 1420,
-                            "w": 930,
+                            "x": 36,
+                            "y": 1120,
+                            "w": 1730,
                             "h": 114
-                        },
-                        "type": "block"
+                        }
                     },
                     {
                         "item": "viz_interface_action",
+                        "type": "block",
                         "position": {
-                            "x": 1020,
-                            "y": 1440,
+                            "x": 1828,
+                            "y": 1136,
                             "w": 56,
                             "h": 56
-                        },
-                        "type": "block"
+                        }
                     }
                 ]
             }

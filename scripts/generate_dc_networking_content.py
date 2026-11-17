@@ -396,6 +396,12 @@ regional_view = map
     canvas = definition['layout']
     canvas.pop('globalInputs', None)
     definition['layout'] = {'options': {'showTitleAndDescription': False, 'submitButton': False, 'submitOnDashboardLoad': True}, 'globalInputs': [], 'layoutDefinitions': {'layout_1': canvas}, 'tabs': {'items': [{'label': 'Overview', 'layoutId': 'layout_1'}]}}
+    from align_operational_dashboards import align
+    reference_path = DEFAULT / 'data/ui/views/sn_data_center_operations.xml'
+    import xml.etree.ElementTree as ET
+    reference = json.loads(ET.parse(reference_path).findtext('definition'))
+    align(definition, reference, 'dc_networking_operations',
+          {'viz_'+key: value['note'] for key, value in SEARCHES.items() if value.get('note')})
     xml = '<dashboard version="2" theme="dark" isVisible="false">\n<label>DC Networking Operations</label>\n<description>Five-product lab investigation built from the SSNE search library.</description>\n<definition><![CDATA[\n' + json.dumps(definition, indent=2) + '\n]]></definition>\n</dashboard>\n'
     outputs.append((DEFAULT / 'data/ui/views/dc_networking_operations.xml', xml))
     return outputs

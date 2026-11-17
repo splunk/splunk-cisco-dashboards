@@ -30,7 +30,7 @@ test('DC uses all standard presets and header placement without changing search 
     assert.equal(standard.options.showAdvanced, true);
     assert.deepEqual(dc.layout.globalInputs, []);
     const picker = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'input_time_range').position;
-    const header = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'header').position;
+    const header = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'viz_header').position;
     assert.ok(header.x + header.w <= picker.x, 'Header text must not overlap the picker');
     assert.ok(dc.layout.layoutDefinitions.layout_1.options.width - picker.x - picker.w >= 100, 'Keep clear of the Manager toolbar');
     for (const source of Object.values(dc.dataSources)) assert.deepEqual(source.options.queryParameters, {
@@ -109,4 +109,24 @@ test('all shared presets submit their event and token value synchronously', () =
         });
     }
     assert.equal(calls.length, 5);
+});
+
+test('operational canvases retain valid placements and Agentic Ops has no hidden investigation tab', () => {
+    for (const name of ['dc_networking_operations', 'sn_network_service_investigations', 'sn_agentic_ops_operational_intelligence']) {
+        const definition = JSON.parse(fs.readFileSync(path.join(views, `${name}.xml`), 'utf8').match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);
+        if (name === 'sn_agentic_ops_operational_intelligence') {
+            assert.equal(definition.layout.tabs, undefined);
+            assert.deepEqual(Object.keys(definition.layout.layoutDefinitions), ['layout_overview']);
+            assert.ok(!Object.keys(definition.visualizations).some((key) => key.startsWith('viz_library_')));
+        }
+        for (const page of Object.values(definition.layout.layoutDefinitions)) {
+            assert.equal(page.options.width, 1920);
+            assert.equal(page.options.backgroundImage, undefined);
+            for (const item of page.structure) {
+                assert.ok(definition.visualizations[item.item] || definition.inputs[item.item], item.item);
+                const { x, y, w, h } = item.position;
+                assert.ok(x >= 0 && y >= 0 && x + w <= page.options.width && y + h <= page.options.height, `${name}: ${item.item} exceeds canvas`);
+            }
+        }
+    }
 });

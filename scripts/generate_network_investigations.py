@@ -151,6 +151,8 @@ def new_dashboard(template):
     v['viz_interface_action'] = action('IPv6 and interface evidence', ['network_cross_vendor_ip_family_mix', 'mv_ipv6_decision_visibility', 'network_cross_vendor_ipv6_denied_destinations', 'network_cross_vendor_decision_field_coverage', 'mv_interface_error_counter_rates', 'mv_arista_latest_interface_state', 'mv_arista_interface_error_rates', 'mv_arista_interface_discard_rates', 'mv_arista_interface_transfer_rates', 'mv_arista_bgp_adjacency_messages', 'mv_arista_lanz_queue_observations'])
     layout['structure'] += [block('viz_interface_text', 32, 1420, canvas_width-190, 114), block('viz_interface_action', canvas_width-100, 1440, 56, 56)]
     d['layout'] = {'options':{'showTitleAndDescription':False, 'submitButton':False, 'submitOnDashboardLoad':True}, 'globalInputs':[], 'layoutDefinitions':{'layout_overview':layout}, 'tabs':{'items':[{'label':'Service investigations','layoutId':'layout_overview'}]}}
+    from align_operational_dashboards import align
+    align(d, read_view('sn_data_center_operations')[2], VIEW)
     return d
 
 
@@ -176,7 +178,10 @@ def outputs():
             if len(targets)>24:
                 raise ValueError(f'{view}:{card}: target limit exceeded')
             options['url'] = url(parsed.get('origin',['Investigate drivers'])[0], targets)
-        if view in SECTIONS:
+        if view == 'sn_agentic_ops_operational_intelligence':
+            from align_operational_dashboards import align
+            align(definition, read_view('sn_data_center_operations')[2], view)
+        elif view in SECTIONS:
             add_section(definition, *SECTIONS[view])
         result[VIEWS / f'{view}.xml'] = render(text, match, definition)
     # The React preview shares the Zero Trust story and must offer the same

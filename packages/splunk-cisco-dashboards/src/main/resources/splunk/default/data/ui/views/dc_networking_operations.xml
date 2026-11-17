@@ -223,30 +223,24 @@
     }
   },
   "visualizations": {
-    "header": {
-      "type": "splunk.markdown",
-      "options": {
-        "markdown": "# DC Networking Operations\nLab observations \u00b7 Start with attention, confirm coverage, then follow product evidence.\n\nThe configured DC index macro and selected time window define this overview. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.",
-        "backgroundColor": "#1c2738",
-        "fontColor": "#ecf0f5"
-      }
-    },
     "viz_attention_history": {
       "type": "splunk.area",
-      "title": "Observed active faults and anomalies",
-      "description": "Observed active faults and anomalies",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_attention_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "Observed entities"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_attention_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -264,20 +258,22 @@
     },
     "viz_attention_products": {
       "type": "splunk.bar",
-      "title": "Reported items to review by product",
-      "description": "Reported items to review by product",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_attention_products"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "Observed entities"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_attention_products": {
       "type": "splunk.cisco_drilldown_action",
@@ -295,20 +291,22 @@
     },
     "viz_coverage_age": {
       "type": "splunk.bar",
-      "title": "How old is each product\u2019s latest observation?",
-      "description": "How old is each product\u2019s latest observation?",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_coverage_age"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "min"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_coverage_age": {
       "type": "splunk.cisco_drilldown_action",
@@ -326,20 +324,22 @@
     },
     "viz_inventory_products": {
       "type": "splunk.bar",
-      "title": "Shared inventory: products reporting each switch",
-      "description": "Shared inventory: products reporting each switch",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_inventory_products"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "Observed entities"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_inventory_products": {
       "type": "splunk.cisco_drilldown_action",
@@ -357,20 +357,22 @@
     },
     "viz_nd_active_history": {
       "type": "splunk.area",
-      "title": "Nexus Dashboard active-anomaly history",
-      "description": "Nexus Dashboard active-anomaly history",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_nd_active_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "Observed entities"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_nd_active_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -388,20 +390,22 @@
     },
     "viz_nd_reachability_history": {
       "type": "splunk.line",
-      "title": "Reported fabric reachability",
-      "description": "Reported fabric reachability",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_nd_reachability_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "%"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_nd_reachability_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -419,20 +423,22 @@
     },
     "viz_aci_tenant_health_history": {
       "type": "splunk.line",
-      "title": "ACI observed tenant health",
-      "description": "ACI observed tenant health",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_aci_tenant_health_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "%"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_aci_tenant_health_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -450,20 +456,22 @@
     },
     "viz_aci_fault_history": {
       "type": "splunk.column",
-      "title": "ACI active-fault history",
-      "description": "ACI active-fault history",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_aci_fault_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "Observed entities"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_aci_fault_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -481,20 +489,22 @@
     },
     "viz_nexus_cpu_history": {
       "type": "splunk.area",
-      "title": "Nexus 9000 mean CPU busy",
-      "description": "Nexus 9000 mean CPU busy",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_nexus_cpu_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "%"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_nexus_cpu_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -512,20 +522,22 @@
     },
     "viz_nexus_temperature_history": {
       "type": "splunk.line",
-      "title": "Nexus 9000 peak reported temperature (Celsius)",
-      "description": "Nexus 9000 peak reported temperature (Celsius)",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_nexus_temperature_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "\u00b0C"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_nexus_temperature_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -543,20 +555,22 @@
     },
     "viz_san_health_history": {
       "type": "splunk.area",
-      "title": "MDS observed switch health",
-      "description": "MDS observed switch health",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_san_health_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "%"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_san_health_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -574,20 +588,22 @@
     },
     "viz_san_wait_history": {
       "type": "splunk.column",
-      "title": "SAN highest reported transmit wait",
-      "description": "SAN highest reported transmit wait",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_san_wait_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "%"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_san_wait_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -605,20 +621,22 @@
     },
     "viz_hf_nodes_history": {
       "type": "splunk.line",
-      "title": "Hyperfabric observed nodes",
-      "description": "Hyperfabric observed nodes",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_hf_nodes_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "Observed entities"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_hf_nodes_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -636,20 +654,22 @@
     },
     "viz_hf_ports_history": {
       "type": "splunk.area",
-      "title": "Hyperfabric observed ports",
-      "description": "Hyperfabric observed ports",
+      "title": "",
+      "description": "",
       "dataSources": {
         "primary": "ds_hf_ports_history"
       },
       "options": {
-        "backgroundColor": "#131a23",
+        "backgroundColor": "transparent",
         "seriesColors": [
           "#649ef5",
           "#4cbf7f"
         ],
         "legendDisplay": "off",
         "yAxisTitleText": "Observed entities"
-      }
+      },
+      "showLastUpdated": false,
+      "showProgressBar": false
     },
     "detail_hf_ports_history": {
       "type": "splunk.cisco_drilldown_action",
@@ -669,8 +689,521 @@
       "type": "splunk.markdown",
       "options": {
         "markdown": "### Continue the investigation\nUse the panel menu to open its resolved query in Search. Review **Shared switch inventory** for exact serial matches and **Reported topology** for endpoint/port evidence. Neither establishes a traffic path.\n\n**Optional expansion:** Search the library for ISE, Secure Firewall, SD-WAN, Meraki or ThousandEyes. Only link records when exact device, IP, session or test identities agree; review address reuse and scope first.",
-        "backgroundColor": "#1c2738",
+        "backgroundColor": "transparent",
         "fontColor": "#ecf0f5"
+      }
+    },
+    "viz_header_bg": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#1c2738",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 10
+      }
+    },
+    "viz_header_icon": {
+      "type": "splunk.image",
+      "title": "DC Networking Operations",
+      "options": {
+        "preserveAspectRatio": true,
+        "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ServersWrench.svg"
+      }
+    },
+    "viz_header": {
+      "type": "splunk.markdown",
+      "options": {
+        "markdown": "# DC Networking Operations\nLab observations \u00b7 Start with attention, confirm coverage, then follow product evidence.",
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5"
+      }
+    },
+    "viz_scope": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "The configured DC index macro and selected time window define this overview. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause."
+      }
+    },
+    "card_viz_attention_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_attention_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Observed active faults and anomalies**"
+      }
+    },
+    "card_viz_attention_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_attention_products_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_attention_products_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Reported items to review by product**"
+      }
+    },
+    "card_viz_attention_products_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observed entities in the selected scope/time, not a historical series. Missing values are not zero."
+      }
+    },
+    "card_viz_coverage_age_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_coverage_age_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**How old is each product\u2019s latest observation?**"
+      }
+    },
+    "card_viz_coverage_age_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observed entities in the selected scope/time, not a historical series. Missing values are not zero."
+      }
+    },
+    "card_viz_inventory_products_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_inventory_products_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Shared inventory: products reporting each switch**"
+      }
+    },
+    "card_viz_inventory_products_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observed entities in the selected scope/time, not a historical series. Missing values are not zero."
+      }
+    },
+    "card_viz_nd_active_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_nd_active_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Nexus Dashboard active-anomaly history**"
+      }
+    },
+    "card_viz_nd_active_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_nd_reachability_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_nd_reachability_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Reported fabric reachability**"
+      }
+    },
+    "card_viz_nd_reachability_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_aci_tenant_health_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_aci_tenant_health_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**ACI observed tenant health**"
+      }
+    },
+    "card_viz_aci_tenant_health_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_aci_fault_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_aci_fault_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**ACI active-fault history**"
+      }
+    },
+    "card_viz_aci_fault_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_nexus_cpu_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_nexus_cpu_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Nexus 9000 mean CPU busy**"
+      }
+    },
+    "card_viz_nexus_cpu_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_nexus_temperature_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_nexus_temperature_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Nexus 9000 peak reported temperature (Celsius)**"
+      }
+    },
+    "card_viz_nexus_temperature_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_san_health_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_san_health_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**MDS observed switch health**"
+      }
+    },
+    "card_viz_san_health_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_san_wait_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_san_wait_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**SAN highest reported transmit wait**"
+      }
+    },
+    "card_viz_san_wait_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_hf_nodes_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_hf_nodes_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Hyperfabric observed nodes**"
+      }
+    },
+    "card_viz_hf_nodes_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "card_viz_hf_ports_history_background": {
+      "type": "splunk.rectangle",
+      "options": {
+        "fillColor": "#131a23",
+        "strokeColor": "rgba(100,158,245,0.28)",
+        "rx": 12
+      }
+    },
+    "card_viz_hf_ports_history_title": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#ecf0f5",
+        "fontSize": "custom",
+        "customFontSize": 20,
+        "markdown": "**Hyperfabric observed ports**"
+      }
+    },
+    "card_viz_hf_ports_history_description": {
+      "type": "splunk.markdown",
+      "title": "",
+      "showLastUpdated": false,
+      "showProgressBar": false,
+      "options": {
+        "backgroundColor": "transparent",
+        "fontColor": "#a6adb6",
+        "fontSize": "custom",
+        "customFontSize": 15,
+        "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
       }
     }
   },
@@ -693,308 +1226,758 @@
       "layout_1": {
         "type": "absolute",
         "options": {
-          "width": 1440,
-          "height": 2720,
+          "width": 1920,
+          "height": 2668,
           "display": "auto-scale",
-          "backgroundColor": "#0b1018"
+          "backgroundColor": "#0f1117"
         },
         "structure": [
           {
-            "item": "input_time_range",
-            "type": "input",
+            "item": "viz_header_bg",
+            "type": "block",
             "position": {
-              "x": 940,
-              "y": 20,
-              "w": 400,
+              "x": 20,
+              "y": 0,
+              "w": 1880,
+              "h": 96
+            }
+          },
+          {
+            "item": "viz_header_icon",
+            "type": "block",
+            "position": {
+              "x": 38,
+              "y": 16,
+              "w": 64,
+              "h": 64
+            }
+          },
+          {
+            "item": "viz_header",
+            "type": "block",
+            "position": {
+              "x": 118,
+              "y": 8,
+              "w": 1290,
               "h": 80
             }
           },
           {
-            "item": "header",
+            "item": "input_time_range",
+            "type": "input",
+            "position": {
+              "x": 1440,
+              "y": 8,
+              "w": 370,
+              "h": 80
+            }
+          },
+          {
+            "item": "viz_scope",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 108,
+              "w": 1848,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_attention_history_background",
             "type": "block",
             "position": {
               "x": 20,
-              "y": 20,
-              "w": 900,
-              "h": 150
+              "y": 188,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_attention_history_title",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 200,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_attention_history_description",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 268,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_attention_history",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 190,
-              "w": 690,
-              "h": 310
+              "x": 36,
+              "y": 360,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_attention_history",
             "type": "block",
             "position": {
-              "x": 658,
-              "y": 200,
+              "x": 578,
+              "y": 194,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_attention_products_background",
+            "type": "block",
+            "position": {
+              "x": 653,
+              "y": 188,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_attention_products_title",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 200,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_attention_products_description",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 268,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_attention_products",
             "type": "block",
             "position": {
-              "x": 730,
-              "y": 190,
-              "w": 690,
-              "h": 310
+              "x": 669,
+              "y": 360,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_attention_products",
             "type": "block",
             "position": {
-              "x": 1368,
-              "y": 200,
+              "x": 1211,
+              "y": 194,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_coverage_age_background",
+            "type": "block",
+            "position": {
+              "x": 1286,
+              "y": 188,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_coverage_age_title",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 200,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_coverage_age_description",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 268,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_coverage_age",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 520,
-              "w": 690,
-              "h": 310
+              "x": 1302,
+              "y": 360,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_coverage_age",
             "type": "block",
             "position": {
-              "x": 658,
-              "y": 530,
+              "x": 1844,
+              "y": 194,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_inventory_products_background",
+            "type": "block",
+            "position": {
+              "x": 20,
+              "y": 644,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_inventory_products_title",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 656,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_inventory_products_description",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 724,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_inventory_products",
             "type": "block",
             "position": {
-              "x": 730,
-              "y": 520,
-              "w": 690,
-              "h": 310
+              "x": 36,
+              "y": 816,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_inventory_products",
             "type": "block",
             "position": {
-              "x": 1368,
-              "y": 530,
+              "x": 578,
+              "y": 650,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_nd_active_history_background",
+            "type": "block",
+            "position": {
+              "x": 653,
+              "y": 644,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_nd_active_history_title",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 656,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_nd_active_history_description",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 724,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_nd_active_history",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 850,
-              "w": 690,
-              "h": 310
+              "x": 669,
+              "y": 816,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_nd_active_history",
             "type": "block",
             "position": {
-              "x": 658,
-              "y": 860,
+              "x": 1211,
+              "y": 650,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_nd_reachability_history_background",
+            "type": "block",
+            "position": {
+              "x": 1286,
+              "y": 644,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_nd_reachability_history_title",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 656,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_nd_reachability_history_description",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 724,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_nd_reachability_history",
             "type": "block",
             "position": {
-              "x": 730,
-              "y": 850,
-              "w": 690,
-              "h": 310
+              "x": 1302,
+              "y": 816,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_nd_reachability_history",
             "type": "block",
             "position": {
-              "x": 1368,
-              "y": 860,
+              "x": 1844,
+              "y": 650,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_aci_tenant_health_history_background",
+            "type": "block",
+            "position": {
+              "x": 20,
+              "y": 1100,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_aci_tenant_health_history_title",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 1112,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_aci_tenant_health_history_description",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 1180,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_aci_tenant_health_history",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 1180,
-              "w": 690,
-              "h": 310
+              "x": 36,
+              "y": 1272,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_aci_tenant_health_history",
             "type": "block",
             "position": {
-              "x": 658,
-              "y": 1190,
+              "x": 578,
+              "y": 1106,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_aci_fault_history_background",
+            "type": "block",
+            "position": {
+              "x": 653,
+              "y": 1100,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_aci_fault_history_title",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 1112,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_aci_fault_history_description",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 1180,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_aci_fault_history",
             "type": "block",
             "position": {
-              "x": 730,
-              "y": 1180,
-              "w": 690,
-              "h": 310
+              "x": 669,
+              "y": 1272,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_aci_fault_history",
             "type": "block",
             "position": {
-              "x": 1368,
-              "y": 1190,
+              "x": 1211,
+              "y": 1106,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_nexus_cpu_history_background",
+            "type": "block",
+            "position": {
+              "x": 1286,
+              "y": 1100,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_nexus_cpu_history_title",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 1112,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_nexus_cpu_history_description",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 1180,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_nexus_cpu_history",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 1510,
-              "w": 690,
-              "h": 310
+              "x": 1302,
+              "y": 1272,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_nexus_cpu_history",
             "type": "block",
             "position": {
-              "x": 658,
-              "y": 1520,
+              "x": 1844,
+              "y": 1106,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_nexus_temperature_history_background",
+            "type": "block",
+            "position": {
+              "x": 20,
+              "y": 1556,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_nexus_temperature_history_title",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 1568,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_nexus_temperature_history_description",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 1636,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_nexus_temperature_history",
             "type": "block",
             "position": {
-              "x": 730,
-              "y": 1510,
-              "w": 690,
-              "h": 310
+              "x": 36,
+              "y": 1728,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_nexus_temperature_history",
             "type": "block",
             "position": {
-              "x": 1368,
-              "y": 1520,
+              "x": 578,
+              "y": 1562,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_san_health_history_background",
+            "type": "block",
+            "position": {
+              "x": 653,
+              "y": 1556,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_san_health_history_title",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 1568,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_san_health_history_description",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 1636,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_san_health_history",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 1840,
-              "w": 690,
-              "h": 310
+              "x": 669,
+              "y": 1728,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_san_health_history",
             "type": "block",
             "position": {
-              "x": 658,
-              "y": 1850,
+              "x": 1211,
+              "y": 1562,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_san_wait_history_background",
+            "type": "block",
+            "position": {
+              "x": 1286,
+              "y": 1556,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_san_wait_history_title",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 1568,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_san_wait_history_description",
+            "type": "block",
+            "position": {
+              "x": 1302,
+              "y": 1636,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_san_wait_history",
             "type": "block",
             "position": {
-              "x": 730,
-              "y": 1840,
-              "w": 690,
-              "h": 310
+              "x": 1302,
+              "y": 1728,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_san_wait_history",
             "type": "block",
             "position": {
-              "x": 1368,
-              "y": 1850,
+              "x": 1844,
+              "y": 1562,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_hf_nodes_history_background",
+            "type": "block",
+            "position": {
+              "x": 20,
+              "y": 2012,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_hf_nodes_history_title",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 2024,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_hf_nodes_history_description",
+            "type": "block",
+            "position": {
+              "x": 36,
+              "y": 2092,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_hf_nodes_history",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 2170,
-              "w": 690,
-              "h": 310
+              "x": 36,
+              "y": 2184,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_hf_nodes_history",
             "type": "block",
             "position": {
-              "x": 658,
-              "y": 2180,
+              "x": 578,
+              "y": 2018,
               "w": 42,
               "h": 42
+            }
+          },
+          {
+            "item": "card_viz_hf_ports_history_background",
+            "type": "block",
+            "position": {
+              "x": 653,
+              "y": 2012,
+              "w": 613,
+              "h": 440
+            }
+          },
+          {
+            "item": "card_viz_hf_ports_history_title",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 2024,
+              "w": 482,
+              "h": 64
+            }
+          },
+          {
+            "item": "card_viz_hf_ports_history_description",
+            "type": "block",
+            "position": {
+              "x": 669,
+              "y": 2092,
+              "w": 581,
+              "h": 84
             }
           },
           {
             "item": "viz_hf_ports_history",
             "type": "block",
             "position": {
-              "x": 730,
-              "y": 2170,
-              "w": 690,
-              "h": 310
+              "x": 669,
+              "y": 2184,
+              "w": 581,
+              "h": 252
             }
           },
           {
             "item": "detail_hf_ports_history",
             "type": "block",
             "position": {
-              "x": 1368,
-              "y": 2180,
+              "x": 1211,
+              "y": 2018,
               "w": 42,
               "h": 42
             }
@@ -1003,9 +1986,9 @@
             "item": "notes",
             "type": "block",
             "position": {
-              "x": 20,
-              "y": 2520,
-              "w": 1400,
+              "x": 36,
+              "y": 2468,
+              "w": 1848,
               "h": 180
             }
           }
