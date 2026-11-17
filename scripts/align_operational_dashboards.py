@@ -53,7 +53,7 @@ def align(definition, reference, name, notes=None):
             v[key].update(title='', description='', showLastUpdated=False, showProgressBar=False)
             v[key]['options']['backgroundColor'] = 'transparent'
             detail = 'detail_'+key[4:]
-            v[detail]['options']['iconStyle'] = 'panel'
+            v[detail]['options'].pop('iconStyle', None)
             search = 'search_'+key[4:]
             v[search] = {'type': 'splunk.cisco_drilldown_action', 'options': {
                 'action': 'open-search', 'targetVisualization': key, 'label': 'Open '+title+' in Search'}}

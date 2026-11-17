@@ -245,8 +245,7 @@
     "detail_attention_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Observed active faults and anomalies",
-        "iconStyle": "panel"
+        "label": "Investigate Observed active faults and anomalies"
       },
       "eventHandlers": [
         {
@@ -279,8 +278,7 @@
     "detail_attention_products": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Reported items to review by product",
-        "iconStyle": "panel"
+        "label": "Investigate Reported items to review by product"
       },
       "eventHandlers": [
         {
@@ -313,8 +311,7 @@
     "detail_coverage_age": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate How old is each product\u2019s latest observation?",
-        "iconStyle": "panel"
+        "label": "Investigate How old is each product\u2019s latest observation?"
       },
       "eventHandlers": [
         {
@@ -347,8 +344,7 @@
     "detail_inventory_products": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Shared inventory: products reporting each switch",
-        "iconStyle": "panel"
+        "label": "Investigate Shared inventory: products reporting each switch"
       },
       "eventHandlers": [
         {
@@ -381,8 +377,7 @@
     "detail_nd_active_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Nexus Dashboard active-anomaly history",
-        "iconStyle": "panel"
+        "label": "Investigate Nexus Dashboard active-anomaly history"
       },
       "eventHandlers": [
         {
@@ -415,8 +410,7 @@
     "detail_nd_reachability_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Reported fabric reachability",
-        "iconStyle": "panel"
+        "label": "Investigate Reported fabric reachability"
       },
       "eventHandlers": [
         {
@@ -449,8 +443,7 @@
     "detail_aci_tenant_health_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate ACI observed tenant health",
-        "iconStyle": "panel"
+        "label": "Investigate ACI observed tenant health"
       },
       "eventHandlers": [
         {
@@ -483,8 +476,7 @@
     "detail_aci_fault_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate ACI active-fault history",
-        "iconStyle": "panel"
+        "label": "Investigate ACI active-fault history"
       },
       "eventHandlers": [
         {
@@ -517,8 +509,7 @@
     "detail_nexus_cpu_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Nexus 9000 mean CPU busy",
-        "iconStyle": "panel"
+        "label": "Investigate Nexus 9000 mean CPU busy"
       },
       "eventHandlers": [
         {
@@ -551,8 +542,7 @@
     "detail_nexus_temperature_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Nexus 9000 peak reported temperature (Celsius)",
-        "iconStyle": "panel"
+        "label": "Investigate Nexus 9000 peak reported temperature (Celsius)"
       },
       "eventHandlers": [
         {
@@ -585,8 +575,7 @@
     "detail_san_health_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate MDS observed switch health",
-        "iconStyle": "panel"
+        "label": "Investigate MDS observed switch health"
       },
       "eventHandlers": [
         {
@@ -619,8 +608,7 @@
     "detail_san_wait_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate SAN highest reported transmit wait",
-        "iconStyle": "panel"
+        "label": "Investigate SAN highest reported transmit wait"
       },
       "eventHandlers": [
         {
@@ -653,8 +641,7 @@
     "detail_hf_nodes_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Hyperfabric observed nodes",
-        "iconStyle": "panel"
+        "label": "Investigate Hyperfabric observed nodes"
       },
       "eventHandlers": [
         {
@@ -687,8 +674,7 @@
     "detail_hf_ports_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Hyperfabric observed ports",
-        "iconStyle": "panel"
+        "label": "Investigate Hyperfabric observed ports"
       },
       "eventHandlers": [
         {

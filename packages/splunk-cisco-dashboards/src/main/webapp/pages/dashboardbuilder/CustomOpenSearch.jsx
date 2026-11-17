@@ -10,7 +10,6 @@ import {
     resolveOpenSearchToken,
 } from '../../common/lib/openSearchTokenResolution';
 
-import { ExternalLink } from '../../common/icons/SuiIcon';
 
 const ActionButtonIcon = <Magnifier />;
 const DEFAULT_EARLIEST = '-24h@h';
@@ -180,7 +179,7 @@ const CustomOpenSearch = ({ dashboardApi, itemDefinition, dataSources, standalon
                     '_blank',
                 );
             }}
-            icon={standalone ? <ExternalLink aria-hidden="true" /> : ActionButtonIcon} // icon for this button
+            icon={ActionButtonIcon} // icon for this button
             disabled={disabled}
         />
     );
