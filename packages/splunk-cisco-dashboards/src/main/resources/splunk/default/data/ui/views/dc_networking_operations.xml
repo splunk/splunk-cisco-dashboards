@@ -245,7 +245,8 @@
     "detail_attention_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Observed active faults and anomalies"
+        "label": "Investigate Observed active faults and anomalies",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -278,7 +279,8 @@
     "detail_attention_products": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Reported items to review by product"
+        "label": "Investigate Reported items to review by product",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -311,7 +313,8 @@
     "detail_coverage_age": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate How old is each product\u2019s latest observation?"
+        "label": "Investigate How old is each product\u2019s latest observation?",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -344,7 +347,8 @@
     "detail_inventory_products": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Shared inventory: products reporting each switch"
+        "label": "Investigate Shared inventory: products reporting each switch",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -377,7 +381,8 @@
     "detail_nd_active_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Nexus Dashboard active-anomaly history"
+        "label": "Investigate Nexus Dashboard active-anomaly history",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -410,7 +415,8 @@
     "detail_nd_reachability_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Reported fabric reachability"
+        "label": "Investigate Reported fabric reachability",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -443,7 +449,8 @@
     "detail_aci_tenant_health_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate ACI observed tenant health"
+        "label": "Investigate ACI observed tenant health",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -476,7 +483,8 @@
     "detail_aci_fault_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate ACI active-fault history"
+        "label": "Investigate ACI active-fault history",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -509,7 +517,8 @@
     "detail_nexus_cpu_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Nexus 9000 mean CPU busy"
+        "label": "Investigate Nexus 9000 mean CPU busy",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -542,7 +551,8 @@
     "detail_nexus_temperature_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Nexus 9000 peak reported temperature (Celsius)"
+        "label": "Investigate Nexus 9000 peak reported temperature (Celsius)",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -575,7 +585,8 @@
     "detail_san_health_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate MDS observed switch health"
+        "label": "Investigate MDS observed switch health",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -608,7 +619,8 @@
     "detail_san_wait_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate SAN highest reported transmit wait"
+        "label": "Investigate SAN highest reported transmit wait",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -641,7 +653,8 @@
     "detail_hf_nodes_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Hyperfabric observed nodes"
+        "label": "Investigate Hyperfabric observed nodes",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -674,7 +687,8 @@
     "detail_hf_ports_history": {
       "type": "splunk.cisco_drilldown_action",
       "options": {
-        "label": "Investigate Hyperfabric observed ports"
+        "label": "Investigate Hyperfabric observed ports",
+        "iconStyle": "panel"
       },
       "eventHandlers": [
         {
@@ -764,6 +778,14 @@
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
       }
     },
+    "search_attention_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_attention_history",
+        "label": "Open Observed active faults and anomalies in Search"
+      }
+    },
     "card_viz_attention_products_background": {
       "type": "splunk.rectangle",
       "options": {
@@ -796,6 +818,14 @@
         "fontSize": "custom",
         "customFontSize": 15,
         "markdown": "Latest observed entities in the selected scope/time, not a historical series. Missing values are not zero."
+      }
+    },
+    "search_attention_products": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_attention_products",
+        "label": "Open Reported items to review by product in Search"
       }
     },
     "card_viz_coverage_age_background": {
@@ -832,6 +862,14 @@
         "markdown": "Latest observed entities in the selected scope/time, not a historical series. Missing values are not zero."
       }
     },
+    "search_coverage_age": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_coverage_age",
+        "label": "Open How old is each product\u2019s latest observation? in Search"
+      }
+    },
     "card_viz_inventory_products_background": {
       "type": "splunk.rectangle",
       "options": {
@@ -864,6 +902,14 @@
         "fontSize": "custom",
         "customFontSize": 15,
         "markdown": "Latest observed entities in the selected scope/time, not a historical series. Missing values are not zero."
+      }
+    },
+    "search_inventory_products": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_inventory_products",
+        "label": "Open Shared inventory: products reporting each switch in Search"
       }
     },
     "card_viz_nd_active_history_background": {
@@ -900,6 +946,14 @@
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
       }
     },
+    "search_nd_active_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_nd_active_history",
+        "label": "Open Nexus Dashboard active-anomaly history in Search"
+      }
+    },
     "card_viz_nd_reachability_history_background": {
       "type": "splunk.rectangle",
       "options": {
@@ -932,6 +986,14 @@
         "fontSize": "custom",
         "customFontSize": 15,
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "search_nd_reachability_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_nd_reachability_history",
+        "label": "Open Reported fabric reachability in Search"
       }
     },
     "card_viz_aci_tenant_health_history_background": {
@@ -968,6 +1030,14 @@
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
       }
     },
+    "search_aci_tenant_health_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_aci_tenant_health_history",
+        "label": "Open ACI observed tenant health in Search"
+      }
+    },
     "card_viz_aci_fault_history_background": {
       "type": "splunk.rectangle",
       "options": {
@@ -1000,6 +1070,14 @@
         "fontSize": "custom",
         "customFontSize": 15,
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "search_aci_fault_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_aci_fault_history",
+        "label": "Open ACI active-fault history in Search"
       }
     },
     "card_viz_nexus_cpu_history_background": {
@@ -1036,6 +1114,14 @@
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
       }
     },
+    "search_nexus_cpu_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_nexus_cpu_history",
+        "label": "Open Nexus 9000 mean CPU busy in Search"
+      }
+    },
     "card_viz_nexus_temperature_history_background": {
       "type": "splunk.rectangle",
       "options": {
@@ -1068,6 +1154,14 @@
         "fontSize": "custom",
         "customFontSize": 15,
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "search_nexus_temperature_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_nexus_temperature_history",
+        "label": "Open Nexus 9000 peak reported temperature (Celsius) in Search"
       }
     },
     "card_viz_san_health_history_background": {
@@ -1104,6 +1198,14 @@
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
       }
     },
+    "search_san_health_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_san_health_history",
+        "label": "Open MDS observed switch health in Search"
+      }
+    },
     "card_viz_san_wait_history_background": {
       "type": "splunk.rectangle",
       "options": {
@@ -1136,6 +1238,14 @@
         "fontSize": "custom",
         "customFontSize": 15,
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "search_san_wait_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_san_wait_history",
+        "label": "Open SAN highest reported transmit wait in Search"
       }
     },
     "card_viz_hf_nodes_history_background": {
@@ -1172,6 +1282,14 @@
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
       }
     },
+    "search_hf_nodes_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_hf_nodes_history",
+        "label": "Open Hyperfabric observed nodes in Search"
+      }
+    },
     "card_viz_hf_ports_history_background": {
       "type": "splunk.rectangle",
       "options": {
@@ -1204,6 +1322,14 @@
         "fontSize": "custom",
         "customFontSize": 15,
         "markdown": "Latest observation per entity in each 15-minute bucket. Missing measurements stay unknown; this is observed history, not a complete snapshot."
+      }
+    },
+    "search_hf_ports_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "action": "open-search",
+        "targetVisualization": "viz_hf_ports_history",
+        "label": "Open Hyperfabric observed ports in Search"
       }
     }
   },
@@ -1333,6 +1459,16 @@
             }
           },
           {
+            "item": "search_attention_history",
+            "type": "block",
+            "position": {
+              "x": 534,
+              "y": 194,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
             "item": "card_viz_attention_products_background",
             "type": "block",
             "position": {
@@ -1377,6 +1513,16 @@
             "type": "block",
             "position": {
               "x": 1211,
+              "y": 194,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
+            "item": "search_attention_products",
+            "type": "block",
+            "position": {
+              "x": 1167,
               "y": 194,
               "w": 42,
               "h": 42
@@ -1433,6 +1579,16 @@
             }
           },
           {
+            "item": "search_coverage_age",
+            "type": "block",
+            "position": {
+              "x": 1800,
+              "y": 194,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
             "item": "card_viz_inventory_products_background",
             "type": "block",
             "position": {
@@ -1477,6 +1633,16 @@
             "type": "block",
             "position": {
               "x": 578,
+              "y": 650,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
+            "item": "search_inventory_products",
+            "type": "block",
+            "position": {
+              "x": 534,
               "y": 650,
               "w": 42,
               "h": 42
@@ -1533,6 +1699,16 @@
             }
           },
           {
+            "item": "search_nd_active_history",
+            "type": "block",
+            "position": {
+              "x": 1167,
+              "y": 650,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
             "item": "card_viz_nd_reachability_history_background",
             "type": "block",
             "position": {
@@ -1577,6 +1753,16 @@
             "type": "block",
             "position": {
               "x": 1844,
+              "y": 650,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
+            "item": "search_nd_reachability_history",
+            "type": "block",
+            "position": {
+              "x": 1800,
               "y": 650,
               "w": 42,
               "h": 42
@@ -1633,6 +1819,16 @@
             }
           },
           {
+            "item": "search_aci_tenant_health_history",
+            "type": "block",
+            "position": {
+              "x": 534,
+              "y": 1106,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
             "item": "card_viz_aci_fault_history_background",
             "type": "block",
             "position": {
@@ -1677,6 +1873,16 @@
             "type": "block",
             "position": {
               "x": 1211,
+              "y": 1106,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
+            "item": "search_aci_fault_history",
+            "type": "block",
+            "position": {
+              "x": 1167,
               "y": 1106,
               "w": 42,
               "h": 42
@@ -1733,6 +1939,16 @@
             }
           },
           {
+            "item": "search_nexus_cpu_history",
+            "type": "block",
+            "position": {
+              "x": 1800,
+              "y": 1106,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
             "item": "card_viz_nexus_temperature_history_background",
             "type": "block",
             "position": {
@@ -1777,6 +1993,16 @@
             "type": "block",
             "position": {
               "x": 578,
+              "y": 1562,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
+            "item": "search_nexus_temperature_history",
+            "type": "block",
+            "position": {
+              "x": 534,
               "y": 1562,
               "w": 42,
               "h": 42
@@ -1833,6 +2059,16 @@
             }
           },
           {
+            "item": "search_san_health_history",
+            "type": "block",
+            "position": {
+              "x": 1167,
+              "y": 1562,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
             "item": "card_viz_san_wait_history_background",
             "type": "block",
             "position": {
@@ -1877,6 +2113,16 @@
             "type": "block",
             "position": {
               "x": 1844,
+              "y": 1562,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
+            "item": "search_san_wait_history",
+            "type": "block",
+            "position": {
+              "x": 1800,
               "y": 1562,
               "w": 42,
               "h": 42
@@ -1933,6 +2179,16 @@
             }
           },
           {
+            "item": "search_hf_nodes_history",
+            "type": "block",
+            "position": {
+              "x": 534,
+              "y": 2018,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
             "item": "card_viz_hf_ports_history_background",
             "type": "block",
             "position": {
@@ -1977,6 +2233,16 @@
             "type": "block",
             "position": {
               "x": 1211,
+              "y": 2018,
+              "w": 42,
+              "h": 42
+            }
+          },
+          {
+            "item": "search_hf_ports_history",
+            "type": "block",
+            "position": {
+              "x": 1167,
               "y": 2018,
               "w": 42,
               "h": 42

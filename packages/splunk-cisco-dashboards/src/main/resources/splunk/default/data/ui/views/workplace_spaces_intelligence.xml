@@ -1987,7 +1987,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 2600,
+					"height": 2550,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -2328,7 +2328,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1100,
+					"height": 1015,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -2465,7 +2465,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1100,
+					"height": 1065,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -2602,7 +2602,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 2200,
+					"height": 2195,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -2869,7 +2869,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1015,
+					"height": 825,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",

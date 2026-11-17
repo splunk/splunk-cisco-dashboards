@@ -95,7 +95,7 @@ test('Manager dashboard uses visible library sources, global time/scope and dark
         assert.ok(block.position.x + block.position.w <= definition.layout.layoutDefinitions.layout_1.options.width);
         assert.ok(block.position.y + block.position.h <= definition.layout.layoutDefinitions.layout_1.options.height);
     }
-    assert.equal(definition.layout.layoutDefinitions.layout_1.options.backgroundColor, '#0b1018');
+    assert.equal(definition.layout.layoutDefinitions.layout_1.options.backgroundColor, '#0f1117');
 });
 
 test('Searchbase runtime scopes actual SPL and fails before dispatch on invalid scope', async () => {
@@ -167,7 +167,10 @@ test('overview uses charts, supports nine searches per section, and keeps tables
     assert.equal(new Set([...stanzas.values()].filter(b => b.includes('\"overview\"')).map(b => b.match(/^default_viz = (.+)$/m)[1])).size, 7);
     assert.ok([...sections.values()].every((count) => count === 9));
     assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.table').length, 0);
-    assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.cisco_drilldown_action').length, 14);
+    const searchActions = Object.values(definition.visualizations).filter((v) => v.options?.action === 'open-search');
+    assert.equal(searchActions.length, 14);
+    for (const action of searchActions) assert.ok(definition.visualizations[action.options.targetVisualization]?.dataSources?.primary);
+    assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.cisco_drilldown_action' && v.options.action !== 'open-search').length, 14);
 });
 
 test('SUI defaults distinguish workspaces and uploaded branding remains replaceable', () => {

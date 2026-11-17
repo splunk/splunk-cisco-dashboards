@@ -52,9 +52,14 @@ def align(definition, reference, name, notes=None):
             v[prefix+'_description'] = text(note)
             v[key].update(title='', description='', showLastUpdated=False, showProgressBar=False)
             v[key]['options']['backgroundColor'] = 'transparent'
+            detail = 'detail_'+key[4:]
+            v[detail]['options']['iconStyle'] = 'panel'
+            search = 'search_'+key[4:]
+            v[search] = {'type': 'splunk.cisco_drilldown_action', 'options': {
+                'action': 'open-search', 'targetVisualization': key, 'label': 'Open '+title+' in Search'}}
             structure += [block(prefix+'_background',x,y,613,440),block(prefix+'_title',x+16,y+12,482,64),
                           block(prefix+'_description',x+16,y+80,581,84),block(key,x+16,y+172,581,252),
-                          block('detail_'+key[4:],x+558,y+6,42,42)]
+                          block('detail_'+key[4:],x+558,y+6,42,42),block(search,x+514,y+6,42,42)]
         bottom = 188+((len(keys)+2)//3)*456
         structure.append(block('notes',36,bottom,1848,180))
         v['notes']['options']['backgroundColor'] = 'transparent'
