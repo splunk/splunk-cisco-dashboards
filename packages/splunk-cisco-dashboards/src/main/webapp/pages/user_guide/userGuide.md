@@ -652,7 +652,7 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 
 ### Dashboard actions
 
-- **About this metric** explains the card's calculation, expected fields, interpretation, and related information.
+- **About this metric** shows the primary chart or table for the selected time range, together with the card's calculation, expected fields, interpretation, and related information. Results load when you open the dialog.
 - **Investigate drivers** opens supporting searches without loading every detail search on the first canvas.
 - **Open in Search** opens the exact SPL with the active dashboard time range and allowed dashboard-defined filters.
 - Dashboard Manager view controls support display options, zoom, export, and cloning for supported dashboards.
