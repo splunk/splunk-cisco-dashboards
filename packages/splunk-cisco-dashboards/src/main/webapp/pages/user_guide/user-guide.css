@@ -1051,3 +1051,26 @@
         box-shadow: none !important;
     }
 }
+
+@media print {
+    body.scd-guide-printing #scan-root .scd-guide-layout {
+        --scd-guide-page-bg: #fff;
+        --scd-guide-panel-bg: #fff;
+        --scd-guide-control-bg: #fff;
+        --scd-guide-fg: #17212b;
+        --scd-guide-fg-default: #253443;
+        --scd-guide-fg-muted: #465564;
+        --scd-guide-accent: #075aab;
+        --scd-guide-accent-soft: #eef3f7;
+        --scd-guide-border: #687786;
+        --scd-guide-border-weak: #cad2db;
+        --scd-guide-border-strong: #465564;
+    }
+    body.scd-guide-printing #scan-root .scd-guide-layout pre,
+    body.scd-guide-printing #scan-root .scd-guide-layout code,
+    body.scd-guide-printing #scan-root .scd-guide-layout th,
+    body.scd-guide-printing #scan-root .scd-guide-layout td {
+        color: #17212b !important;
+        background: #fff !important;
+    }
+}

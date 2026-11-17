@@ -10,6 +10,7 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Workspace radial gauges keep values clear of the arc, including narrow tiles and long values. Chart descriptions include their reported observations. Security Operations improves keyboard tab navigation, dialog focus return and reduced-motion behavior. Unknown states remain neutral, investigation dialogs use solid theme surfaces, and User Guide printing uses a readable paper palette.
 - Tile configuration keeps the value field full-width, groups suggested fields underneath, and prevents long option summaries from crowding the section controls.
 - DC Networking shows MDS mean health as a readable snapshot value, with history in the MDS health trend. SAN transmit-wait rankings show explicit percent units on a fixed 0–100 scale and identify the top reported interfaces.
 

@@ -122,6 +122,7 @@ const FALLBACK_COLOR = "var(--sui-content-info, #649ef5)";
 
 const colorForLabel = (label: string): string => {
   if (typeof label !== "string" || label.length === 0) return FALLBACK_COLOR;
+  if (/^(unknown|unavailable|unreported|not reported|n\/a)$/i.test(label.trim())) return "var(--sui-content-muted)";
   for (const entry of SEVERITY_COLOR_MAP) {
     if (entry.match.test(label)) return entry.color;
   }

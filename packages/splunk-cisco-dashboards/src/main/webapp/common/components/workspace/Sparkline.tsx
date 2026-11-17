@@ -958,7 +958,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
         <div
             ref={hostRef}
             data-sparkline-density={compact ? 'compact' : 'detailed'}
-            aria-label={title ?? 'Trend over the selected time range'}
+            aria-label={`${title ?? 'Trend over the selected time range'}. ${data.map((value, index) => `${Number.isFinite(resolvedTimestamps[index]) ? new Date(resolvedTimestamps[index]).toISOString() : `Observation ${index + 1}`}: ${value == null || !Number.isFinite(value) ? 'unavailable' : value}`).join('; ')}`}
             role={onClick ? undefined : 'img'}
             {...interactiveProps}
         >

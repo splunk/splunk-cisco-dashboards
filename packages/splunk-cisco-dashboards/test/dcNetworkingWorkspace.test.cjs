@@ -300,11 +300,27 @@ for (const mode of ['dark', 'light']) {
             assert.match(html, /stroke="#649ef5"/);
             assert.match(html, /stroke="var\(--sui-content-disabled, #89919c\)"/);
             assert.doesNotMatch(html, /stroke="#131a23"/);
-            assert.match(html, /sui-fill-active/);
+            assert.match(html, /sui-color-active/);
+            assert.doesNotMatch(html.match(/<svg[\s\S]*?<\/svg>/)?.[0] || '', /<text|<tspan/);
+            assert.match(html, /aria-label="Measured percentage:/);
         }
         const { html } = render(Gauge, { label:'Unknown', value:NaN, noDataReason:'empty_rows' }, mode);
         assert.doesNotMatch(html, /<svg/);
         assert.match(html, /—/);
+    });
+    test(`radial values never occupy the arc in ${mode} mode, including long labels and deltas`, () => {
+        const { SingleValueRadialTile: Gauge } = loadChart(dir + 'SingleValueRadialTile.tsx');
+        for (const arcDegrees of [90, 180, 270, 360]) {
+            for (const value of [0, 92.12345, 100, 123456789, '12 of 18 available']) {
+                const { html } = render(Gauge, {label:'Reachability', value, change:-12.5, unit:'%', vizOptions:{arcDegrees, showDelta:true, decimals:2}}, mode);
+                const svg = html.match(/<svg[\s\S]*?<\/svg>/)?.[0] || '';
+                assert.match(svg, /<path/);
+                assert.doesNotMatch(svg, /<text|<tspan/);
+                assert.match(html, /aria-label="Reachability:/);
+                assert.match(html, /overflow-wrap:anywhere/);
+                assert.ok(html.indexOf('</svg>') < html.indexOf('overflow-wrap:anywhere'));
+            }
+        }
     });
     test(`radial explicit colors and threshold bands retain precedence in ${mode} mode`, () => {
         const { SingleValueRadialTile: Gauge } = loadChart(dir + 'SingleValueRadialTile.tsx');

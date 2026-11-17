@@ -3,7 +3,7 @@
  *
  * Canvas analogue of Splunk Dashboard Studio's `splunk.singlevalueradial`
  * "scoreboard" gauge. Defaults to a 180-degree half-arc with the headline
- * value (and optional inline delta) centred inside the arc as SVG text.
+ * value and optional delta in a separate row below the arc to avoid overlap.
  *
  * Configurable via `viz_options` keys (see `canvasVizOptions.ts` for the
  * full schema): `arcDegrees`, `min` / `max`, `showDelta`, `deltaFormat`,
@@ -202,19 +202,13 @@ const RadialArc: React.FC<RadialArcProps> = ({
     const clampedPct = Math.max(0, Math.min(100, percent));
     const offset = length * (1 - clampedPct / 100);
 
-    // For a 180-degree arc the value sits visually *inside* the arc;
-    // nudge the text up a touch so it isn't clipped by the open end.
-    const textY =
-        arcDegrees <= 180
-            ? cy - ARC_RADIUS * 0.18
-            : cy;
-
     return (
+        <div className="flex w-full min-w-0 flex-col items-center gap-1">
         <svg
             width="100%"
             viewBox={`0 0 ${width} ${height}`}
             preserveAspectRatio="xMidYMid meet"
-            className="block max-h-[112px]"
+            className="scd-radial-arc block max-h-[72px]"
             aria-hidden="true"
         >
             <path
@@ -237,38 +231,12 @@ const RadialArc: React.FC<RadialArcProps> = ({
                     opacity: isMockOrLoading ? 0.55 : 1,
                 }}
             />
-            {/*
-              Single text element with two tspans keeps the value and
-              delta on the same baseline (tspan default alphabetic
-              alignment) while letting `textAnchor="middle"` centre the
-              combined run inside the arc. This satisfies the "centered
-              inside the arc as SVG text" requirement and produces the
-              DS look ("85   ↑4") without needing JS bbox measurement.
-            */}
-            <text
-                x={cx}
-                y={textY}
-                textAnchor="middle"
-                dominantBaseline="central"
-                className="sui-fill-active tabular-nums"
-                style={{
-                    fontFamily: 'inherit',
-                    fontWeight: 800,
-                    letterSpacing: '-0.02em',
-                }}
-            >
-                <tspan style={{ fontSize: '28px' }}>{valueText}</tspan>
-                {deltaText !== null && (
-                    <tspan
-                        dx="6"
-                        className="sui-fill-muted sui-fill-default"
-                        style={{ fontSize: '13px', fontWeight: 700 }}
-                    >
-                        {deltaText}
-                    </tspan>
-                )}
-            </text>
         </svg>
+        <div className="flex max-w-full flex-wrap items-baseline justify-center gap-x-2 text-center">
+            <span className="break-words text-2xl font-bold leading-tight tabular-nums sui-color-active" style={{ overflowWrap: 'anywhere' }}>{valueText}</span>
+            {deltaText !== null && <span className="text-xs tabular-nums sui-color-muted">{deltaText}</span>}
+        </div>
+        </div>
     );
 };
 
@@ -423,6 +391,8 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
             ) : (
                 <div
                     data-tile-control="true"
+                    role="img"
+                    aria-label={`${label}: ${valueText}${deltaText !== null ? `; change ${deltaText}` : ''}${rangeLabel ? `; ${rangeLabel}` : ''}`}
                     className="flex flex-1 items-center justify-center min-h-[88px]"
                 >
                     <RadialArc

@@ -311,7 +311,8 @@ const statusToneForValue = (value: unknown): StatusTone => {
     ) {
         return 'good';
     }
-    if (/info|informational|unknown|notable/.test(normalized)) return 'info';
+    if (/unknown|unavailable|unreported/.test(normalized)) return 'neutral';
+    if (/info|informational|notable/.test(normalized)) return 'info';
     return 'neutral';
 };
 
@@ -460,10 +461,19 @@ const SearchActions = ({
     );
 };
 
+// These dialogs unmount on close; restore focus explicitly rather than relying
+// on a Modal open=false transition that does not occur on this path.
+const useDialogFocusReturn = (target: React.MutableRefObject<HTMLElement | null>): void => {
+    useEffect(() => () => {
+        if (target.current?.isConnected) target.current.focus({preventScroll: true});
+    }, [target]);
+};
+
 const MetricInvestigationDialog = ({context, request, onClose, returnFocus}: {
     context: PageContext; request: MetricInvestigation; onClose: () => void;
     returnFocus: React.MutableRefObject<HTMLElement | null>;
 }): JSX.Element => {
+    useDialogFocusReturn(returnFocus);
     const source = context.catalogue!.get(request.searchId)!;
     const targets = useMemo(() => metricInvestigationTargets(source, context.catalogue!), [source, context.catalogue]);
     const [selected, setSelected] = useState(targets[1]?.id ?? source.id);
@@ -511,6 +521,7 @@ const SearchInfoDialog = ({
     onClose: () => void;
     returnFocus: React.MutableRefObject<HTMLElement | null>;
 }): JSX.Element => {
+    useDialogFocusReturn(returnFocus);
     const description = plainTextFromHtml(
         record.explanation || record.description || record.solution
     );
@@ -2380,6 +2391,7 @@ const FilterSidebar = ({
 
 const SecureOperationsGlassPage = (): JSX.Element => {
     const [activeTab, setActiveTab] = useState<TabId>('overview');
+    const [focusedTab, setFocusedTab] = useState<TabId>('overview');
     const [earliest, setEarliest] = useState('-7d@d');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
@@ -2515,6 +2527,9 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             <div
                 className="scd-glass-tabs"
                 aria-label="Dashboard sections"
+                onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedTab(activeTab);
+                }}
                 role="tablist"
             >
                 {TABS.map((tab) => {
@@ -2526,6 +2541,18 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                             className={activeTab === tab.id ? 'is-active' : ''}
                             onClick={() => setActiveTab(tab.id)}
                             role="tab"
+                            tabIndex={focusedTab === tab.id ? 0 : -1}
+                            onFocus={() => setFocusedTab(tab.id)}
+                            onKeyDown={(event) => {
+                                const index = TABS.findIndex(item => item.id === tab.id);
+                                const next = event.key === 'ArrowRight' ? (index + 1) % TABS.length
+                                    : event.key === 'ArrowLeft' ? (index + TABS.length - 1) % TABS.length
+                                    : event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : -1;
+                                if (next < 0) return;
+                                event.preventDefault();
+                                setFocusedTab(TABS[next].id);
+                                document.getElementById(`scd-glass-tab-${TABS[next].id}`)?.focus();
+                            }}
                             id={`scd-glass-tab-${tab.id}`}
                             aria-selected={activeTab === tab.id}
                             aria-controls={`scd-glass-panel-${tab.id}`}

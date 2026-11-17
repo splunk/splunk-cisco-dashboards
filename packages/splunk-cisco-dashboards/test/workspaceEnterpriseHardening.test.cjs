@@ -1283,8 +1283,8 @@ assert.match(
 );
 assert.match(
   globalStyles,
-  /\[data-app-color-scheme='dark'\] \.scd-workspace-modal-surface[\s\S]*?linear-gradient\(155deg, #17263a[\s\S]*?\.scd-workspace-modal-guidance-card/,
-  "Dark drill-down surfaces must retain the navy workspace atmosphere across the shell and guidance cards",
+  /\.scd-workspace-modal-surface[\s\S]*?background-color: var\(--sui-background-popup\);[\s\S]*?background-image: none;[\s\S]*?\.scd-workspace-modal-guidance-card/,
+  "Drill-down surfaces must use solid theme tokens across the shell and guidance cards",
 );
 assert.match(
   appThemeProvider,

@@ -161,6 +161,7 @@ export const PieTile: React.FC<PieTileProps> = ({
     const overflowCount = Math.max(0, chartData.length - visibleSlices.length);
     const hasData = visibleSlices.length > 0;
     const total = chartData.reduce((acc, e) => acc + e.value, 0);
+    const accessibleSummary = `${label} ranked horizontal bar chart. Total ${formatCount(total)}. ${chartData.map(item => `${item.name}: ${formatCount(item.value)}`).join('; ')}`;
 
     const colors = useMemo(() => {
         const fromOptions = (seriesColors ?? []).filter(
@@ -288,7 +289,7 @@ export const PieTile: React.FC<PieTileProps> = ({
             {hasData ? (
                 <div
                     role="img"
-                    aria-label={`${label} ranked horizontal bar chart. Total ${formatCount(total)}.`}
+                    aria-label={accessibleSummary}
                     title="Ranked category values are shown on the chart"
                     data-tile-control="true"
                     className="relative mt-0.5 flex min-h-[118px] flex-1"
@@ -330,7 +331,7 @@ export const PieTile: React.FC<PieTileProps> = ({
             >
                 <div
                     role="img"
-                    aria-label={`Expanded ${label} ranked horizontal bar chart. Total ${formatCount(total)}.`}
+                    aria-label={`Expanded ${accessibleSummary}`}
                     className="relative h-full min-h-[320px] rounded-[10px] border sui-border-default sui-bg-section p-3"
                 >
                     <React.Suspense fallback={<ChartLoadingState />}>

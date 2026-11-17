@@ -1929,7 +1929,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    #scan-root .scd-glass-spin {
+    #scan-root .scd-glass-spin,
+    #scan-root .scd-glass-map-marker-wave {
         animation: none;
     }
 }

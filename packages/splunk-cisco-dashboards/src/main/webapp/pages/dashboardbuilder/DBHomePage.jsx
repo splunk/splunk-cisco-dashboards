@@ -965,6 +965,12 @@ export default function DBHomePage() {
           </div>
         </Modal.Body>
         <Modal.Footer>
+          <Button
+            appearance="secondary"
+            label="Cancel"
+            disabled={isCreatingDashboard}
+            onClick={handleCloseCreateDashboard}
+          />
           {createdDashboardId ? (
             <Button
               appearance="primary"
@@ -980,12 +986,6 @@ export default function DBHomePage() {
             />
           )}
 
-          <Button
-            appearance="secondary"
-            label="Cancel"
-            disabled={isCreatingDashboard}
-            onClick={handleCloseCreateDashboard}
-          />
         </Modal.Footer>
       </Modal>
       <Modal
@@ -1116,17 +1116,17 @@ export default function DBHomePage() {
         </Modal.Body>
         <Modal.Footer>
           <Button
+            appearance="secondary"
+            label="Cancel"
+            onClick={handleCloseDashboardMetadataEditor}
+          />
+          <Button
             appearance="primary"
             label={isSavingDashboardMetadata ? "Saving..." : "Save Metadata"}
             onClick={handleSaveDashboardMetadata}
             disabled={
               isSavingDashboardMetadata || !dashboardMetadataTitle.trim()
             }
-          />
-          <Button
-            appearance="secondary"
-            label="Cancel"
-            onClick={handleCloseDashboardMetadataEditor}
           />
         </Modal.Footer>
       </Modal>
@@ -1642,9 +1642,9 @@ export default function DBHomePage() {
                                 />
                                 <Button
                                   appearance="primary"
-                                  icon={<ArrowSquareTopRight />}
                                   label="Open"
-                                  onClick={() => handleOpenDashboard(dash)}
+                                  to={buildDashboardStudioUrl(dash.title)}
+                                  openInNewContext
                                 />
                                 <Button
                                   appearance="subtle"
@@ -1664,7 +1664,7 @@ export default function DBHomePage() {
                                   appearance="secondary"
                                   icon={<Pencil />}
                                   label="Edit"
-                                  onClick={() => handleEditDashboard(dash)}
+                                  to={buildDashboardStudioUrl(dash.title, "edit")}
                                 />
                                 <Button
                                   appearance="subtle"

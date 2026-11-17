@@ -2230,14 +2230,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
       isCustomized={isCustomized}
-      sparkTitle={
-        // The chart itself is no longer a click target — the
-        // ExternalLink icon next to the tile label is the
-        // explicit drilldown affordance. We keep `sparkTitle`
-        // around as a hover hint so users still discover the
-        // per-bucket Recharts tooltip.
-        drilldownSpl ? "Hover for date and value" : undefined
-      }
+      sparkTitle={effective.label}
       noDataReason={result.noDataReason}
       rangeLabel={result.rangeLabel}
     />

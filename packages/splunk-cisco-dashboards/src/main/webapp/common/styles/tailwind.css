@@ -175,59 +175,25 @@ body.scd-overview-active .panel-body,
   background-image: none !important;
 }
 
-/* Workspace drill-downs are task-focused layers of the dashboard, not black
- * utility dialogs. Keep the surface opaque enough for dense tables while
- * carrying the same Cisco atmosphere as the workspace behind it. */
-.scd-workspace-modal-surface {
-  background-color: var(--sui-background-page, #f8fafc);
-  background-image:
-    radial-gradient(circle at 14% -8%, rgb(0 188 235 / 12%), transparent 36%),
-    radial-gradient(circle at 76% -14%, rgb(155 95 245 / 10%), transparent 42%),
-    linear-gradient(155deg, #f8fafc 0%, #eef4f9 54%, #f3f0fb 100%);
-}
-
-.scd-workspace-modal-header {
-  background: rgb(248 250 252 / 88%);
-}
-
-.scd-workspace-modal-content {
-  background: rgb(241 245 249 / 78%);
-}
-
-.scd-workspace-modal-subheader,
-.scd-workspace-modal-guidance {
-  background: rgb(248 250 252 / 74%);
-}
-
-.scd-workspace-modal-guidance-card {
-  background: rgb(255 255 255 / 68%);
-}
-
+/* Dense investigation content uses solid theme surfaces. */
+.scd-workspace-modal-surface,
 [data-app-color-scheme='dark'] .scd-workspace-modal-surface {
-  background-color: #142033;
-  background-image:
-    radial-gradient(circle at 14% -8%, rgb(0 188 235 / 18%), transparent 36%),
-    radial-gradient(circle at 76% -14%, rgb(155 95 245 / 20%), transparent 42%),
-    radial-gradient(circle at 42% 112%, rgb(247 120 47 / 10%), transparent 44%),
-    linear-gradient(155deg, #17263a 0%, #111d2c 54%, #19283a 100%);
+  background-color: var(--sui-background-popup);
+  background-image: none;
 }
-
-[data-app-color-scheme='dark'] .scd-workspace-modal-header {
-  background: rgb(18 30 45 / 88%);
-}
-
-[data-app-color-scheme='dark'] .scd-workspace-modal-content {
-  background: rgb(14 24 36 / 72%);
-}
-
+.scd-workspace-modal-header,
+.scd-workspace-modal-content,
+.scd-workspace-modal-subheader,
+.scd-workspace-modal-guidance,
+.scd-workspace-modal-guidance-card,
+[data-app-color-scheme='dark'] .scd-workspace-modal-header,
+[data-app-color-scheme='dark'] .scd-workspace-modal-content,
 [data-app-color-scheme='dark'] .scd-workspace-modal-subheader,
-[data-app-color-scheme='dark'] .scd-workspace-modal-guidance {
-  background: rgb(15 27 42 / 76%);
+[data-app-color-scheme='dark'] .scd-workspace-modal-guidance,
+[data-app-color-scheme='dark'] .scd-workspace-modal-guidance-card {
+  background: var(--sui-background-section);
 }
 
-[data-app-color-scheme='dark'] .scd-workspace-modal-guidance-card {
-  background: rgb(25 42 61 / 68%);
-}
 
 /* Preserve the page title and primary time/refresh actions before secondary
  * layout controls at narrower desktop widths. Every hidden option remains
@@ -419,4 +385,22 @@ html[data-exporting="true"] *::before,
 html[data-exporting="true"] *::after {
   animation-play-state: paused !important;
   transition: none !important;
+}
+
+/* Reduced effects keep operational dialogs opaque and their content legible. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+    [data-workspace-modal-backdrop='true'],
+    .scd-workspace-modal-surface,
+    .scd-workspace-modal-header {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background-image: none !important;
+    }
+    .scd-workspace-modal-surface,
+    .scd-workspace-modal-header {
+        background-color: var(--sui-background-popup) !important;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .scd-radial-arc path { transition: none !important; }
 }
