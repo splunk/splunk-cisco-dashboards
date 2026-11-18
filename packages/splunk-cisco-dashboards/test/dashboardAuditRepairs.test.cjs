@@ -48,7 +48,10 @@ test('syslog investigation retains the overview source and preserves unknown sev
     assert.equal(target, 'it_critical_systems_syslog_event_detail');
     const detail = stanzas[target].split('search = ')[1];
     assert.match(detail, /`index_network` sourcetype="cisco:ios"/);
-    assert.match(detail, /table _time host severity facility mnemonic _raw TotalEvents RowsTruncated/);
+    // The modal intentionally hides internal fields other than _time. Expose the
+    // original event as a display field so investigations retain their evidence.
+    assert.match(detail, /rename _raw as Message/);
+    assert.match(detail, /table _time host severity facility mnemonic Message TotalEvents RowsTruncated/);
     assert.match(detail, /sort 1000 - _time/);
     assert.equal(detail.match(/\| eval severity=(.+)/)[1], overview.match(/\| eval severity=(.+)/)[1]);
     assert.match(detail, /1==1,"Unknown"/);
