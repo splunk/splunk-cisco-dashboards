@@ -10,6 +10,7 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restored readable User Guide formatting, including list bullets, numbered steps, paragraph spacing, and themed code examples.
 - Zscaler transfer investigations recognize reported `requestsize` and `responsesize` fields alongside the existing byte aliases.
 - Palo Alto SGT charts and investigations correlate repeated identical source-address and ISE assignment fields. Conflicting values remain unknown.
 - FMC policy investigations and blocked-connection details recognize policy and rule names from FTD syslog as well as canonical connection fields.
