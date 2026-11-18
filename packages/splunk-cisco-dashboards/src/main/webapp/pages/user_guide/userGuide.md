@@ -39,6 +39,9 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- DNS category investigations show blocked DNS events without mixing in cloud firewall or proxy traffic.
+- Data configuration discovers Infoblox DNS indexes and retains them in network routing. Rerun the routing scan if an earlier configuration omitted these indexes.
+- GlobalProtect failure investigations include explicitly reported legacy portal/gateway authentication failures, including records delivered through PAN system logs.
 - Catalyst client location charts and site filters handle repeated identical location fields. Conflicting locations remain unknown.
 
 - Syslog severity investigations now open the underlying IOS events. Unrecognized severity stays Unknown.
@@ -605,7 +608,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | Catalyst Center | `cisco:dnac:*`, `cisco:catalyst:center:*` | `index_catalyst` |
 | Firewall | `cisco:asa`, `cisco:ftd*`, `cisco:sfw:*`, `cisco:sourcefire:*`, `cisco:estreamer:*` | `index_firewall` |
 | Identity | `cisco:ise:*`, Windows, and Active Directory | `index_identity`, `index_windows` |
-| Network infrastructure | `cisco:ios*`, `cisco:telemetry`, and network syslog | `index_network` |
+| Network infrastructure | `cisco:ios*`, `cisco:telemetry`, network syslog, `infoblox:dns`, and `ib:dns` | `index_network` |
 | Network detection | Zeek connection, DNS, TLS, HTTP, and notice logs | `index_zeek` |
 | Meraki | `meraki:*` | `index_meraki` |
 | Cisco Spaces | `cisco:spaces:*` | `index_spaces` |

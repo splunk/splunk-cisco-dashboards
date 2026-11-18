@@ -57,6 +57,28 @@ test('syslog investigation retains the overview source and preserves unknown sev
     assert.match(detail, /1==1,"Unknown"/);
     assert.match(stanzas.it_critical_systems_inventory_unreachable_detail, /drilldown_stanza_id = it_critical_systems_ds_base_devicehealth/);
 });
+test('DNS category investigations retain blocked DNS scope before the result cap', () => {
+    const target = stanzas.secure_networking_sse_dns_blocked_categories.match(/^drilldown_stanza_id = (.+)$/m)[1];
+    const detail = stanzas[target].split('search = ')[1];
+    const headline = stanzas.secure_networking_sse_dns_blocked_categories.split('search = ')[1];
+    assert.equal(detail.split('\\\n')[0], headline.split('\\\n')[0]);
+    assert.match(detail, /^`index_security` sourcetype="cisco:cloud_security:dns" action="Blocked"/);
+    assert.ok(detail.indexOf('action="Blocked"') < detail.indexOf('sort 500'));
+    assert.match(detail, /table "Last Seen", Layer, Identity, Action, Destination, Category/);
+    // Other callers still need the broader companion; narrow only the DNS binding.
+    assert.match(stanzas.secure_networking_sse_security_event_detail, /sourcetype="cisco:cloud_security:firewall" OR/);
+});
+test('routing discovery finds both Infoblox DNS names outside the configured index scope', () => {
+    const query = stanzas.admin_macro_index_tuning.split('search = ')[1];
+    const metadataClause = query.split('\\\n')[0];
+    assert.match(metadataClause, /OR sourcetype IN \("infoblox:dns","ib:dns"\) by index, sourcetype$/);
+    assert.match(query, /match\(sourcetype,"\^\(infoblox\|ib\):dns\$"\), "index_network"/);
+    const routing = query.split('\\\n').find(line => line.startsWith('| eval scd_macro='));
+    const rules = [...routing.matchAll(/match\(sourcetype,"([^"]+)"\), "([^"]+)"/g)];
+    const classify = type => rules.find(([, pattern]) => new RegExp(pattern.replace(/^\(\?i\)/, ''), pattern.startsWith('(?i)') ? 'i' : '').test(type))?.[2];
+    for (const type of ['infoblox:dns', 'ib:dns']) assert.equal(classify(type), 'index_network');
+    for (const type of ['infoblox:dhcp', 'infoblox:threatprotect', 'unrelated:infoblox:dns']) assert.notEqual(classify(type), 'index_network');
+});
 test('remote-access health requires observed attempts and never fabricates a healthy denominator', () => {
     const query = stanzas.secure_networking_zta_ravpn_connection_attempts_trend.split('search = ')[1];
     assert.ok(query.indexOf('where outcome IN ("Connected","Failed")') < query.indexOf('| timechart'));

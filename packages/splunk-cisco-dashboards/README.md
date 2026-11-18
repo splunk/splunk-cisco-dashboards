@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- DNS category investigations show blocked DNS events without mixing in cloud firewall or proxy traffic.
+- Data configuration discovers Infoblox DNS indexes and retains them in network routing. Rerun the routing scan if an earlier configuration omitted these indexes.
+- GlobalProtect failure investigations include explicitly reported legacy portal/gateway authentication failures, including records delivered through PAN system logs.
 - Catalyst client location charts and site filters handle repeated identical location fields. Conflicting locations remain unknown.
 
 - Syslog severity investigations now open the underlying IOS events. Unrecognized severity stays Unknown.

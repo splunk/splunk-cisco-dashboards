@@ -50,6 +50,7 @@ REVISIONS.update(crowdstrike_network_listeners='1.0.2',aruba_authentication_fail
 REVISIONS['dns_unusual_query_types']='1.0.1'
 REVISIONS['infoblox_txt_null_queries']='1.0.1'
 REVISIONS['intrusion_alert_actions']='1.0.1'
+REVISIONS['pan_globalprotect_failures']='1.0.1'
 def event(**kw): return {'host':'device-a','_time':{'expr':'now()-60'},**kw}
 def norm(mapping, defaults=(), ip_targets=(), family_field=None, integers=None):
     raw=list(dict.fromkeys(a for aliases in mapping.values() for a in aliases.split()))
@@ -247,12 +248,15 @@ add('Palo Alto','pan_denied_zone_boundaries','Palo Alto - Denied Zone and Rule B
  'Device SourceZone DestinationZone Rule Records Sources','Finds reported denied traffic at zone/rule boundaries.',
  'Unknown zone/rule context remains visible. Counts are records, not denied sessions or a rule-effectiveness score.',
  [event(action='deny',src_zone='trust',dest_zone='untrust',rule='rule-1'),event(action='allow',src_zone='trust',dest_zone='untrust',rule='rule-1')],1,defaults=('Device','SourceZone','DestinationZone','Rule'))
-add('Palo Alto','pan_globalprotect_failures','Palo Alto - GlobalProtect Failure Reasons',src('pan:globalprotect','pan:globalprotect:cloud'),
- {**DEVICE,'User':'user src_user','Outcome':'status action','Reason':'error reason description','Gateway':'gateway dest'},
- '| where lower(Outcome) IN ("failure","failed","fail","error")\n| stats count as Records dc(User) as Users by Device Gateway Reason',
+add('Palo Alto','pan_globalprotect_failures','Palo Alto - GlobalProtect Failure Reasons',src('pan:globalprotect','pan:globalprotect:cloud','pan:system'),
+ {**DEVICE,'User':'user src_user','Status':'status','Action':'action','EventId':'event_id eventid signature','LogSubtype':'log_subtype subtype','Reason':'error reason description','Gateway':'gateway'},
+ '''| where sourcetype!="pan:system" OR lower(LogSubtype)="globalprotect" OR match(lower(EventId),"^globalprotect(portal|gateway)-auth-(fail|succ)$")
+| where lower(Status) IN ("failure","failed","fail","error") OR lower(Action) IN ("failure","failed","fail","error") OR lower(EventId) IN ("globalprotectportal-auth-fail","globalprotectgateway-auth-fail")
+| eval Reason=if(Reason="Not reported",coalesce(EventId,"Not reported"),Reason)
+| stats count as Records dc(User) as Users by Device Gateway Reason''',
  'Device Gateway Reason Records Users','Ranks explicitly failed GlobalProtect records by gateway and reason.',
- 'Requires parsed status/action and error context. Status values vary by PAN version; unrecognized outcomes are excluded, not treated as success.',
- [event(user='alice',status='failure',error='certificate rejected',gateway='gw-1'),event(status='success')],1,defaults=('Device','Gateway','Reason'))
+ 'Uses explicit failed status/action values or the legacy portal/gateway authentication-failure event IDs. Also accepts pan:system records identified as GlobalProtect. Unrecognized values, successful authentication and unrelated system events are excluded. Missing reason falls back to the reported event ID, not an invented cause.',
+ [event(sourcetype='pan:globalprotect',user='alice',status='failure',error='certificate rejected',gateway='gw-1'),event(sourcetype='pan:globalprotect',status='success'),event(sourcetype='pan:globalprotect',status='0x0',event_id='globalprotectportal-auth-fail'),event(sourcetype='pan:system',signature='globalprotectgateway-auth-fail'),event(sourcetype='pan:globalprotect',status='0x64',action='failure'),event(sourcetype='pan:system',status='failure',log_subtype='routing'),event(sourcetype='pan:globalprotect',event_id='globalprotectportal-auth-succ')],4,groups=4,defaults=('Device','Gateway','Reason'))
 add('Palo Alto','pan_threat_enforcement','Palo Alto - Threat Action and Severity Evidence',src('pan:threat'),IDS,
  '| where isnotnull(Signature)\n| stats count as Records dc(Destination) as Destinations by Device Signature Severity Action',
  'Device Signature Severity Action Records Destinations','Summarizes PAN threat signatures with their reported action and severity.',
@@ -656,6 +660,7 @@ def render():
         category='Network' if e['group']=='Vendor neutral' else 'Security'
         if e['group'] in ('Arista','Juniper / Aruba','F5','Infoblox'):category='Network'
         updated='2026-10-28' if e['id'] in ('mv_dns_unusual_query_types','mv_infoblox_txt_null_queries','mv_intrusion_alert_actions') else '2026-10-27'
+        if e['id']=='mv_pan_globalprotect_failures':updated='2026-11-18'
         metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version',e['version']),('date_created','2026-10-27'),('date_updated',updated),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
         metadata.extend((k,'<p>'+html.escape(v,quote=False)+'</p>') for k,v in [
             ('description',e['description']),('explanation',COMMON+e['limits']),
