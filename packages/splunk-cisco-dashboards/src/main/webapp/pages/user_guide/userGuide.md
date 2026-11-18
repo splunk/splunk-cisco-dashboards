@@ -39,6 +39,9 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Zscaler transfer investigations recognize reported `requestsize` and `responsesize` fields alongside the existing byte aliases.
+- Palo Alto SGT charts and investigations correlate repeated identical source-address and ISE assignment fields. Conflicting values remain unknown.
+- FMC policy investigations and blocked-connection details recognize policy and rule names from FTD syslog as well as canonical connection fields.
 - DNS category investigations show blocked DNS events without mixing in cloud firewall or proxy traffic.
 - Data configuration discovers Infoblox DNS indexes and retains them in network routing. Rerun the routing scan if an earlier configuration omitted these indexes.
 - GlobalProtect failure investigations include explicitly reported legacy portal/gateway authentication failures, including records delivered through PAN system logs.

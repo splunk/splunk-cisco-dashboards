@@ -51,6 +51,7 @@ REVISIONS['dns_unusual_query_types']='1.0.1'
 REVISIONS['infoblox_txt_null_queries']='1.0.1'
 REVISIONS['intrusion_alert_actions']='1.0.1'
 REVISIONS['pan_globalprotect_failures']='1.0.1'
+REVISIONS['zscaler_zia_transfer_sizes']='1.0.2'
 def event(**kw): return {'host':'device-a','_time':{'expr':'now()-60'},**kw}
 def norm(mapping, defaults=(), ip_targets=(), family_field=None, integers=None):
     raw=list(dict.fromkeys(a for aliases in mapping.values() for a in aliases.split()))
@@ -500,7 +501,7 @@ add('Zscaler','zscaler_zia_http_errors','Zscaler - ZIA HTTP Response Error Evide
  'Requires response-code fields in the NSS feed. These may be proxy-generated responses; no origin-outage or policy-effectiveness conclusion is inferred.',
  [event(respcode=503,dest_host='app.example.test',cip='192.0.2.1'),event(respcode=200,dest_host='app.example.test')],1,defaults=('Device','Destination'))
 add('Zscaler','zscaler_zia_transfer_sizes','Zscaler - ZIA Reported Request and Response Sizes',ZWEB,
- {**DEVICE,'User':'user login','Application':'app appname','RequestBytes':'reqsize bytes_out','ResponseBytes':'respsize bytes_in'},
+ {**DEVICE,'User':'user login','Application':'app appname','RequestBytes':'reqsize requestsize bytes_out','ResponseBytes':'respsize responsesize bytes_in'},
  '''| eval RequestBytes=tonumber(RequestBytes), ResponseBytes=tonumber(ResponseBytes)
 | eval RequestBytes=if(RequestBytes>=0,RequestBytes,null()), ResponseBytes=if(ResponseBytes>=0,ResponseBytes,null())
 | where isnotnull(RequestBytes) OR isnotnull(ResponseBytes)
@@ -508,7 +509,7 @@ add('Zscaler','zscaler_zia_transfer_sizes','Zscaler - ZIA Reported Request and R
 | eval RequestBytes=if(RequestMeasurements>0,RequestBytes,null()), ResponseBytes=if(ResponseMeasurements>0,ResponseBytes,null())''',
  'Device User Application Records RequestMeasurements ResponseMeasurements RequestBytes ResponseBytes','Aggregates valid reported HTTP request/response byte measurements.',
  'Requires request/response sizes from the chosen NSS format. Missing directions remain unknown, not zero. Proxy record volumes are not unique sessions or endpoint exfiltration proof.',
- [event(login='alice',appname='app-a',reqsize=0,respsize=500),event(login='alice',appname='app-a',reqsize=-1,respsize=-1)],1,extra='sum(ResponseBytes) as Bytes',assertion='Bytes=500',defaults=('Device','User','Application'))
+ [event(login='alice',appname='app-a',reqsize=0,respsize=500),event(login='alice',appname='app-a',reqsize=-1,respsize=-1),event(login='alice',appname='app-a',requestsize=1436,responsesize=403)],2,extra='sum(ResponseBytes) as Bytes sum(RequestBytes) as ReqBytes',assertion='Bytes=903 AND ReqBytes=1436',defaults=('Device','User','Application'))
 add('Zscaler','zscaler_zpa_server_setup','Zscaler - ZPA Server Setup Measurement Summary',ZPA,
  {**DEVICE,'Application':'Application application','Connector':'Connector connector','Setup':'ServerSetupTime'},
  '| eval Setup=tonumber(Setup)\n| where Setup>=0 AND isnotnull(Application)\n| stats count as Records median(Setup) as MedianSetupReported perc95(Setup) as P95SetupReported max(Setup) as MaxSetupReported by Device Application Connector',
@@ -660,7 +661,7 @@ def render():
         category='Network' if e['group']=='Vendor neutral' else 'Security'
         if e['group'] in ('Arista','Juniper / Aruba','F5','Infoblox'):category='Network'
         updated='2026-10-28' if e['id'] in ('mv_dns_unusual_query_types','mv_infoblox_txt_null_queries','mv_intrusion_alert_actions') else '2026-10-27'
-        if e['id']=='mv_pan_globalprotect_failures':updated='2026-11-18'
+        if e['id'] in ('mv_pan_globalprotect_failures','mv_zscaler_zia_transfer_sizes'):updated='2026-11-18'
         metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version',e['version']),('date_created','2026-10-27'),('date_updated',updated),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
         metadata.extend((k,'<p>'+html.escape(v,quote=False)+'</p>') for k,v in [
             ('description',e['description']),('explanation',COMMON+e['limits']),

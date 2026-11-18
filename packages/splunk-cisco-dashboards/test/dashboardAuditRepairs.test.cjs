@@ -79,6 +79,27 @@ test('routing discovery finds both Infoblox DNS names outside the configured ind
     for (const type of ['infoblox:dns', 'ib:dns']) assert.equal(classify(type), 'index_network');
     for (const type of ['infoblox:dhcp', 'infoblox:threatprotect', 'unrelated:infoblox:dns']) assert.notEqual(classify(type), 'index_network');
 });
+test('FMC policy investigations accept syslog policy names before excluding unavailable policies', () => {
+    const query = stanzas.secure_networking_fmc_top_policies_by_action.split('search = ')[1];
+    assert.doesNotMatch(query.split('\\\n')[0], /FirewallPolicy/);
+    assert.match(query, /FirewallPolicy=coalesce\(FirewallPolicy,ACPolicy,fw_policy\)/);
+    assert.ok(query.indexOf('FirewallPolicy=coalesce') < query.indexOf('where isnotnull(FirewallPolicy)'));
+    assert.match(query, /coalesce\(AC_RuleAction,AccessControlRuleAction,"Unknown"\)/);
+    const detail = stanzas.secure_networking_fmc_blocked_connection_detail.split('search = ')[1];
+    assert.match(detail, /Policy=coalesce\(FirewallPolicy,ACPolicy,fw_policy,"Unknown"\)/);
+    assert.match(detail, /Rule=coalesce\(FirewallRule,AccessControlRuleName,"Unknown"\)/);
+    assert.ok(detail.indexOf('sort 500') < detail.indexOf('foreach FirewallPolicy'));
+});
+test('all Palo Alto SGT consumers normalize identical addresses and reject ambiguous assignment values before correlation', () => {
+    const queries = Object.entries(stanzas).filter(([, block]) => block.includes('source_ip=coalesce(src,src_ip)') && block.includes('ise_sgt_candidate'));
+    assert.equal(queries.length, 4);
+    for (const [id, block] of queries) {
+        const query = block.split('search = ')[1];
+        assert.match(query, /foreach source_ip ise_sgt_candidate ise_sgt_name_candidate/, id);
+        assert.match(query, /if\(mvcount\(mvdedup\('<<FIELD>>'\)\)=1,mvindex\(mvdedup\('<<FIELD>>'\),0\),null\(\)\)/, id);
+        assert.ok(query.indexOf('foreach source_ip') < query.indexOf('| where is_pan=1'), id);
+    }
+});
 test('remote-access health requires observed attempts and never fabricates a healthy denominator', () => {
     const query = stanzas.secure_networking_zta_ravpn_connection_attempts_trend.split('search = ')[1];
     assert.ok(query.indexOf('where outcome IN ("Connected","Failed")') < query.indexOf('| timechart'));
