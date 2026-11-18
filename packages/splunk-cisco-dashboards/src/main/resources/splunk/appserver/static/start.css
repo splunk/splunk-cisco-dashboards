@@ -765,8 +765,9 @@ body {
     line-height: 1.45;
 }
 
-.scd-setup__empty p {
+#scd-setup-root .scd-setup__empty p {
     margin: 4px 0 0;
+    color: inherit;
 }
 
 .scd-setup__actions {
