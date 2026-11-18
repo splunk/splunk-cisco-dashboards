@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="network_diagram_bootstrap.js">
-    <label>Network Diagram</label>
+    <label>Network Diagram (Under Dev)</label>
     <row>
         <panel>
             <html>

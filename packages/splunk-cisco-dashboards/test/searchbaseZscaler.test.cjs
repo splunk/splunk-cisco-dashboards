@@ -14,7 +14,7 @@ test('Setup discovers Zscaler outside existing scopes and routes it to security'
   const setup = blocks.get('admin_macro_index_tuning');
   const query = setup.split(/^search = /m)[1].replace(/\\\n/g, '\n');
   const preamble = query.split('\n')[0];
-  assert.match(preamble, /\)\) OR sourcetype="pan:\*" OR sourcetype="zscaler\*" by index, sourcetype$/);
+  assert.match(preamble, /\)\) OR sourcetype="pan:\*" OR sourcetype="zscaler\*" OR sourcetype IN \("infoblox:dns","ib:dns"\) by index, sourcetype$/);
   assert.doesNotMatch(query, /zscaler_demo/, 'Discovery must work with customer index names');
   const routing = query.split('\n').find(line => line.startsWith('| eval scd_macro=case('));
   const rules = [...routing.matchAll(/match\(sourcetype,"([^"]+)"\), "([^"]+)"/g)];

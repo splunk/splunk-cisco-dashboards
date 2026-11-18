@@ -70,6 +70,24 @@ class WorkspaceRestValidationTest(unittest.TestCase):
         fake_rest.response_content = b'{"entry": []}'
         fake_rest.raise_non_raw_http_errors = False
 
+    def test_workspace_spec_documents_every_writable_key(self):
+        import re
+        spec_text = (handler_path.parents[1] / "README" / "insights_workspaces.conf.spec").read_text()
+        keys = set(re.findall(r"^([a-z_]+) =", spec_text, re.MULTILINE))
+        for fields in (handler._WORKSPACE_FIELDS, handler._LAYOUT_FIELDS, handler._SIGNAL_ITEM_FIELDS, handler._SIGNAL_RAIL_FIELDS):
+            self.assertTrue(fields <= keys, fields - keys)
+
+    def test_workspace_visualization_defaults_are_bounded_and_allowlisted(self):
+        stanza = "layout.delegated_ops.security"
+        values = {"one": "column", "two": "singlevalueradial"}
+        result = handler.validate_settings(handler.WORKSPACE_CONF, stanza, {"viz_overrides": json.dumps(values)})
+        self.assertEqual(json.loads(result["viz_overrides"]), values)
+        for value in (["column"], {"one": "script"}, {"__proto__": "line"}, {"bad/key": "line"}, {"one": {}}, {str(i): "bar" for i in range(257)}):
+            with self.subTest(value=str(value)[:60]), self.assertRaises(ValueError):
+                handler.validate_settings(handler.WORKSPACE_CONF, stanza, {"viz_overrides": json.dumps(value)})
+        with self.assertRaises(ValueError):
+            handler.validate_settings(handler.WORKSPACE_CONF, "workspace.delegated_ops", {"viz_overrides": "{}"})
+
     def test_accepts_every_supported_stanza_family(self):
         scenarios = (
             (handler.WORKSPACE_CONF, "workspace.delegated_ops", {"label": ["Ops"]}),

@@ -262,13 +262,7 @@
     top: 1px;
     left: -1px;
 }
-body {
-    background: #eeeeee;
-    /* background: #fcfcfc; */
-}
-p {
-    color: #3c444d !important;
-}
+/* Page surfaces and paragraph colors belong to the active SUI theme. */
 
 section[data-test='markdown'] p {
     color: inherit !important; /* or any other color */
@@ -5994,6 +5988,25 @@ body.dashboard-builder-modal-portal-dark
 }
 .dashboard-builder-description-group {
     width: 100%;
+}
+.dashboard-builder-id-group {
+    width: 100%;
+    margin-bottom: 12px;
+}
+.dashboard-builder-id-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+}
+.dashboard-builder-id-row .dashboard-builder-id-input {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+.dashboard-builder-id-row .dashboard-builder-id-action {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 .dashboard-builder-description-group textarea,
 .dashboard-builder-description-group [data-test='textarea'] {

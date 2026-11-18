@@ -43,6 +43,11 @@ import type { DataSource, NoDataReason } from "@/common/hooks/useMetric";
 
 interface BarBreakdownTileProps {
   label: string;
+  unit?: string;
+  /** Optional fixed positive scale maximum; otherwise fit the reported values. */
+  maximum?: number;
+  /** Hide totals for non-additive measurements such as percentages and ages. */
+  showTotal?: boolean;
   subLabel?: string;
   description?: string;
   infoSections?: readonly InfoTooltipDetailSection[];
@@ -105,22 +110,23 @@ const SEVERITY_PRIORITY: Record<string, number> = {
  * Order matters: more specific terms win over generic ones. MAJOR/MINOR
  * are the Cisco_ThousandEyes enum equivalents of high/medium.
  */
-const SEVERITY_COLOR_MAP: Array<{ match: RegExp; tw: string }> = [
-  { match: /critical|fatal|p1\b/i, tw: "bg-rose-500" },
-  { match: /error|high|major|p2\b/i, tw: "bg-orange-500" },
-  { match: /warn|medium|moderate|minor|p3\b/i, tw: "bg-amber-500" },
-  { match: /low|p4\b/i, tw: "bg-yellow-500" },
-  { match: /notice|info|p5\b/i, tw: "bg-emerald-500" },
+const SEVERITY_COLOR_MAP: Array<{ match: RegExp; color: string }> = [
+  { match: /critical|fatal|p1\b/i, color: "var(--sui-content-negative, #fa5762)" },
+  { match: /error|high|major|p2\b/i, color: "var(--sui-content-negative, #f7782f)" },
+  { match: /warn|medium|moderate|minor|p3\b/i, color: "var(--sui-content-warning, #f0c243)" },
+  { match: /low|p4\b/i, color: "var(--sui-content-warning, #f0c243)" },
+  { match: /notice|info|p5\b/i, color: "var(--sui-content-info, #649ef5)" },
 ];
 
-const FALLBACK_COLOR_TW = "bg-sky-500";
+const FALLBACK_COLOR = "var(--sui-content-info, #649ef5)";
 
 const colorForLabel = (label: string): string => {
-  if (typeof label !== "string" || label.length === 0) return FALLBACK_COLOR_TW;
+  if (typeof label !== "string" || label.length === 0) return FALLBACK_COLOR;
+  if (/^(unknown|unavailable|unreported|not reported|n\/a)$/i.test(label.trim())) return "var(--sui-content-muted)";
   for (const entry of SEVERITY_COLOR_MAP) {
-    if (entry.match.test(label)) return entry.tw;
+    if (entry.match.test(label)) return entry.color;
   }
-  return FALLBACK_COLOR_TW;
+  return FALLBACK_COLOR;
 };
 
 const dimensionPriority = (label: string): number => {
@@ -172,6 +178,8 @@ const NoDataState: React.FC<{
 
 export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
   label,
+  unit = "",
+  maximum,
   subLabel,
   description,
   infoSections,
@@ -191,6 +199,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
   noDataReason,
   rangeLabel,
   visibleRowCap = DEFAULT_VISIBLE_ROW_CAP,
+  showTotal = true,
   className,
 }) => {
   const [isFocusOpen, setIsFocusOpen] = useState(false);
@@ -242,6 +251,15 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
   }, [rows, dimensionCol, valueCol]);
 
   const visibleEntries = aggregated.entries.slice(0, visibleRowCap);
+  const fixedScale = typeof maximum === "number" && Number.isFinite(maximum) && maximum > 0;
+  const scaleMaximum = fixedScale ? maximum : aggregated.max;
+  const formatMeasurement = (value: number) => `${formatCount(value)}${unit === "%" ? "%" : unit ? ` ${unit}` : ""}`;
+  const valueColumnCharacters = aggregated.entries.reduce(
+    (longest, entry) => Math.max(longest, formatMeasurement(entry.value).length + 2), 4,
+  );
+  const barWidth = (value: number) => scaleMaximum > 0
+    ? fixedScale ? Math.min(100, Math.max(0, value / scaleMaximum * 100))
+      : Math.max(2, value / scaleMaximum * 100) : 0;
   const overflowCount = Math.max(
     0,
     aggregated.entries.length - visibleEntries.length,
@@ -332,9 +350,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
       {hasData ? (
         <div
           role="img"
-          aria-label={`${label} bar chart. Total ${formatCount(
-            aggregated.total,
-          )}.`}
+          aria-label={showTotal ? `${label} bar chart. Total ${formatCount(aggregated.total)}.` : `${label} bar chart. Individual category measurements. ${visibleEntries.map(entry => `${entry.key}: ${formatMeasurement(entry.value)}`).join(", ")}`}
           title="Category values are shown beside each bar"
           data-tile-control="true"
           className="mt-0.5 flex min-h-[116px] max-h-36 flex-1 flex-col p-1"
@@ -345,11 +361,11 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                         sum-to-headline mapping deliberately ignores
                         the visibleRowCap, so when the cap kicks in the
                         headline still reflects the full result set. */}
-          <div className="flex items-baseline gap-2 mb-1">
+          {showTotal && <div className="flex items-baseline gap-2 mb-1">
             <span className="text-4xl font-black tracking-tighter leading-none  sui-color-active">
               {formatCount(aggregated.total)}
             </span>
-          </div>
+          </div>}
 
           {/* Bar list. flex-1 + min-h-[72px] + max-h-28 so
                         the row of bars consumes the same slot as the
@@ -367,15 +383,12 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
             className="flex-1 min-h-[72px] mt-1 pt-0.5 overflow-hidden flex flex-col gap-1"
           >
             {visibleEntries.map((entry) => {
-              const widthPct =
-                aggregated.max > 0
-                  ? Math.max(2, (entry.value / aggregated.max) * 100)
-                  : 0;
+              const widthPct = barWidth(entry.value);
               return (
                 <div
                   key={entry.key}
                   className="flex items-center gap-1.5 text-xs leading-tight"
-                  title={`${entry.key}: ${formatCount(entry.value)}`}
+                  title={`${entry.key}: ${formatMeasurement(entry.value)}`}
                 >
                   <span className="w-14 truncate  sui-color-default font-medium capitalize">
                     {entry.key}
@@ -384,13 +397,12 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                     <div
                       className={cn(
                         "h-full rounded-sm",
-                        colorForLabel(entry.key),
                       )}
-                      style={{ width: `${widthPct}%` }}
+                      style={{ width: `${widthPct}%`, backgroundColor: colorForLabel(entry.key) }}
                     />
                   </div>
-                  <span className="w-8 text-right  sui-color-active font-semibold tabular-nums">
-                    {formatCount(entry.value)}
+                  <span className="min-w-[2rem] flex-shrink-0 text-right  sui-color-active font-semibold tabular-nums" style={{ width: `${valueColumnCharacters}ch` }}>
+                    {formatMeasurement(entry.value)}
                   </span>
                 </div>
               );
@@ -421,20 +433,15 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
       >
         <div
           role="img"
-          aria-label={`Expanded ${label} bar chart. Total ${formatCount(
-            aggregated.total,
-          )}.`}
+          aria-label={showTotal ? `Expanded ${label} bar chart. Total ${formatCount(aggregated.total)}.` : `Expanded ${label} bar chart. Individual category measurements. ${focusEntries.map(entry => `${entry.key}: ${formatMeasurement(entry.value)}`).join(", ")}`}
           className="flex h-full min-h-[320px] flex-col rounded-[10px] border sui-border-default sui-bg-section p-5"
         >
-          <span className="text-5xl font-black tracking-tighter leading-none sui-color-active">
+          {showTotal && <span className="text-5xl font-black tracking-tighter leading-none sui-color-active">
             {formatCount(aggregated.total)}
-          </span>
+          </span>}
           <div className="mt-7 flex flex-1 flex-col gap-4 overflow-y-auto">
             {focusEntries.map((entry) => {
-              const widthPct =
-                aggregated.max > 0
-                  ? Math.max(2, (entry.value / aggregated.max) * 100)
-                  : 0;
+              const widthPct = barWidth(entry.value);
               return (
                 <div
                   key={entry.key}
@@ -445,12 +452,12 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                   </span>
                   <div className="h-5 min-w-0 flex-1 overflow-hidden rounded sui-bg-popup">
                     <div
-                      className={cn("h-full rounded", colorForLabel(entry.key))}
-                      style={{ width: `${widthPct}%` }}
+                      className="h-full rounded"
+                      style={{ width: `${widthPct}%`, backgroundColor: colorForLabel(entry.key) }}
                     />
                   </div>
-                  <span className="w-20 text-right font-bold tabular-nums sui-color-active">
-                    {formatCount(entry.value)}
+                  <span className="min-w-[2rem] flex-shrink-0 text-right font-bold tabular-nums sui-color-active" style={{ width: `${valueColumnCharacters}ch` }}>
+                    {formatMeasurement(entry.value)}
                   </span>
                 </div>
               );

@@ -1,0 +1,5 @@
+<dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true" script="expandable_search_example_bootstrap.js">
+    <label>Expandable Search Example (Under Dev)</label>
+    <description>Try expandable sections that request live searches only when opened.</description>
+    <row><panel><html><div id="scan-root"></div></html></panel></row>
+</dashboard>

@@ -5017,6 +5017,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 <header className="border-b   shadow-sm sui-border-weak sui-bg-page">
                     <div className="flex min-w-0 flex-wrap items-center gap-3 px-4 py-3">
                         <div className="min-w-[240px] flex-1">
+                            <span className="text-xs font-semibold">Searchbase Canvas (Under Dev)</span>
                             {editingCanvasName ? (
                                 <input
                                     ref={canvasNameInputRef}

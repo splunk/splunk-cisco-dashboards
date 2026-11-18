@@ -590,8 +590,8 @@ const pillarViewNames = Array.from(
 );
 assert.equal(
   pillarViewNames.length,
-  19,
-  "The Secure Networking collections must include the 19 Studio dashboards",
+  20,
+  "The Secure Networking collections must include the 20 Studio dashboards",
 );
 let pillarVisibleTrendCount = 0;
 for (const viewName of pillarViewNames) {
@@ -625,7 +625,7 @@ for (const viewName of pillarViewNames) {
       sparklineValues: options.sparklineValues,
     }));
   }
-  const expectedKpiCount = viewName === "sn_network_service_investigations" ? 0 : viewName === "sn_data_center_operations" ? 15 : 6;
+  const expectedKpiCount = ["sn_network_service_investigations", "dc_networking_operations"].includes(viewName) ? 0 : viewName === "sn_data_center_operations" ? 15 : 6;
   assert.equal(
     bindingSignatures.length,
     expectedKpiCount,
@@ -656,7 +656,6 @@ assert.deepEqual(
     "Data Center Security",
     "Runtime Security",
     "Runtime Investigation",
-    "SAN and fabric investigations",
   ],
   "Secure Data Center Operations must use the standard story-card dashboard journey",
 );
@@ -871,7 +870,7 @@ for (const fileName of studioViewFiles) {
 }
 assert.equal(
   studioViewFiles.length,
-  28,
+  30,
   "the color audit must cover every shipped Studio dashboard",
 );
 assert.equal(

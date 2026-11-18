@@ -3,7 +3,7 @@
  *
  * Canvas analogue of Splunk Dashboard Studio's `splunk.singlevalueradial`
  * "scoreboard" gauge. Defaults to a 180-degree half-arc with the headline
- * value (and optional inline delta) centred inside the arc as SVG text.
+ * value and optional delta in a separate row below the arc to avoid overlap.
  *
  * Configurable via `viz_options` keys (see `canvasVizOptions.ts` for the
  * full schema): `arcDegrees`, `min` / `max`, `showDelta`, `deltaFormat`,
@@ -130,16 +130,10 @@ const arcPathLength = (r: number, arcDegrees: number): number => {
 const formatNumber = (n: number, decimals: number): string =>
     Number.isFinite(n) ? n.toFixed(decimals) : '0';
 
-// Match the chrome's universal accent fallback so the radial knows when
-// the caller's `accentColor` is the default sky-blue (i.e. the stanza
-// did not override `seriesColors`) and we should drop to a DS-style
-// near-black fill instead.
+// Keep the arc visible in both SUI modes. The old near-black fallback
+// replaced the standard blue accent and disappeared against dark panels.
 const DEFAULT_ACCENT_FALLBACK = C3_VISUALIZATION_COLORS.info;
-// DS scoreboard fill: dark slate, near-black, theme primary.
-const RADIAL_DEFAULT_FILL = '#131a23';
-// DS-style neutral track. Hex-equivalent of Tailwind slate-200 so the
-// custom override and the default render at the same lightness.
-const RADIAL_DEFAULT_TRACK = '#e2e8f0';
+const RADIAL_DEFAULT_TRACK = 'var(--sui-content-disabled, #89919c)';
 
 const resolveRadialColors = (
     vizOptions: Record<string, unknown> | undefined,
@@ -147,33 +141,11 @@ const resolveRadialColors = (
     bands: ReturnType<typeof resolveColorBands>,
     numeric: number | null
 ): { fillColor: string; trackColor: string } => {
-    const trackOverride = resolveTrackColor(vizOptions);
-    const fillOverride = resolveFillColorOverride(vizOptions);
-
-    let fillColor: string;
-    if (fillOverride) {
-        fillColor = fillOverride;
-    } else if (numeric !== null && bands.length > 0) {
-        // colorForValueInBands returns the fallback when no band
-        // matches; pass an empty sentinel so we can detect "no match"
-        // and fall through to the accent / radial default chain.
-        const banded = colorForValueInBands(numeric, bands, '');
-        if (banded.length > 0) {
-            fillColor = banded;
-        } else if (accentColor && accentColor !== DEFAULT_ACCENT_FALLBACK) {
-            fillColor = accentColor;
-        } else {
-            fillColor = RADIAL_DEFAULT_FILL;
-        }
-    } else if (accentColor && accentColor !== DEFAULT_ACCENT_FALLBACK) {
-        fillColor = accentColor;
-    } else {
-        fillColor = RADIAL_DEFAULT_FILL;
-    }
-
+    const fallback = accentColor || DEFAULT_ACCENT_FALLBACK;
     return {
-        fillColor,
-        trackColor: trackOverride ?? RADIAL_DEFAULT_TRACK,
+        fillColor: resolveFillColorOverride(vizOptions) ??
+            (numeric !== null ? colorForValueInBands(numeric, bands, fallback) : fallback),
+        trackColor: resolveTrackColor(vizOptions) ?? RADIAL_DEFAULT_TRACK,
     };
 };
 
@@ -230,19 +202,13 @@ const RadialArc: React.FC<RadialArcProps> = ({
     const clampedPct = Math.max(0, Math.min(100, percent));
     const offset = length * (1 - clampedPct / 100);
 
-    // For a 180-degree arc the value sits visually *inside* the arc;
-    // nudge the text up a touch so it isn't clipped by the open end.
-    const textY =
-        arcDegrees <= 180
-            ? cy - ARC_RADIUS * 0.18
-            : cy;
-
     return (
+        <div className="flex w-full min-w-0 flex-col items-center gap-1">
         <svg
             width="100%"
             viewBox={`0 0 ${width} ${height}`}
             preserveAspectRatio="xMidYMid meet"
-            className="block max-h-[112px]"
+            className="scd-radial-arc block max-h-[72px]"
             aria-hidden="true"
         >
             <path
@@ -265,38 +231,12 @@ const RadialArc: React.FC<RadialArcProps> = ({
                     opacity: isMockOrLoading ? 0.55 : 1,
                 }}
             />
-            {/*
-              Single text element with two tspans keeps the value and
-              delta on the same baseline (tspan default alphabetic
-              alignment) while letting `textAnchor="middle"` centre the
-              combined run inside the arc. This satisfies the "centered
-              inside the arc as SVG text" requirement and produces the
-              DS look ("85   ↑4") without needing JS bbox measurement.
-            */}
-            <text
-                x={cx}
-                y={textY}
-                textAnchor="middle"
-                dominantBaseline="central"
-                className="sui-fill-active tabular-nums"
-                style={{
-                    fontFamily: 'inherit',
-                    fontWeight: 800,
-                    letterSpacing: '-0.02em',
-                }}
-            >
-                <tspan style={{ fontSize: '28px' }}>{valueText}</tspan>
-                {deltaText !== null && (
-                    <tspan
-                        dx="6"
-                        className="sui-fill-muted sui-fill-default"
-                        style={{ fontSize: '13px', fontWeight: 700 }}
-                    >
-                        {deltaText}
-                    </tspan>
-                )}
-            </text>
         </svg>
+        <div className="flex max-w-full flex-wrap items-baseline justify-center gap-x-2 text-center">
+            <span className="break-words text-2xl font-bold leading-tight tabular-nums sui-color-active" style={{ overflowWrap: 'anywhere' }}>{valueText}</span>
+            {deltaText !== null && <span className="text-xs tabular-nums sui-color-muted">{deltaText}</span>}
+        </div>
+        </div>
     );
 };
 
@@ -407,10 +347,10 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
     // that need a unit append it via `unit` (legacy) or via
     // `valueSuffix` (new viz_option, more obvious).
     let valueText: string;
-    if (typeof value === 'string') {
-        valueText = value;
-    } else if (numeric !== null) {
+    if (numeric !== null) {
         valueText = formatNumber(numeric, decimals);
+    } else if (typeof value === 'string') {
+        valueText = value;
     } else {
         valueText = '0';
     }
@@ -451,6 +391,8 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
             ) : (
                 <div
                     data-tile-control="true"
+                    role="img"
+                    aria-label={`${label}: ${valueText}${deltaText !== null ? `; change ${deltaText}` : ''}${rangeLabel ? `; ${rangeLabel}` : ''}`}
                     className="flex flex-1 items-center justify-center min-h-[88px]"
                 >
                     <RadialArc

@@ -11,6 +11,31 @@ import {
 
 export type SearchRow = Record<string, unknown>;
 
+const chartDate = (value: unknown): Date | null => {
+    if (value === null || value === undefined || value === '') return null;
+    const text = String(value);
+    const numeric = typeof value === 'number' || /^\d+(?:\.\d+)?$/.test(text);
+    if (!numeric && !/^\d{4}-\d{2}-\d{2}[T ]/.test(text)) return null;
+    const amount = Number(value);
+    const date = new Date(numeric ? amount * (Math.abs(amount) < 1e12 ? 1000 : 1) : text);
+    return Number.isFinite(date.getTime()) ? date : null;
+};
+
+export const chartTimeLabels = (values: unknown[], locale?: string, timeZone?: string) => {
+    const dates = values.map(chartDate).filter((date): date is Date => date !== null);
+    const span = dates.length ? Math.max(...dates.map(Number)) - Math.min(...dates.map(Number)) : 0;
+    const common = { timeZone, hourCycle: 'h23' as const };
+    const ticks = new Intl.DateTimeFormat(locale, span <= 86400000
+        ? { ...common, hour: '2-digit', minute: '2-digit' }
+        : { ...common, month: 'short', day: 'numeric' });
+    const detail = new Intl.DateTimeFormat(locale, { ...common, year: 'numeric', month: 'short',
+        day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' });
+    return {
+        tick: (value: unknown): string => { const date = chartDate(value); return date ? ticks.format(date) : String(value ?? 'Unknown'); },
+        tooltip: (value: unknown): string => { const date = chartDate(value); return date ? detail.format(date) : String(value ?? 'Unknown'); },
+    };
+};
+
 export interface SearchState {
     rows: SearchRow[];
     loading: boolean;
@@ -98,9 +123,13 @@ export const useSearchbaseRows = ({
         }
 
         const controller = new AbortController();
-        const spl = transformSearch
-            ? transformSearch(record.search)
-            : record.search;
+        let spl: string;
+        try {
+            spl = transformSearch ? transformSearch(record.search) : record.search;
+        } catch {
+            setState({rows: [], loading: false, error: 'The selected filter cannot be applied safely to this search.'});
+            return undefined;
+        }
 
         setState((current) => ({
             ...current,
@@ -205,12 +234,14 @@ export const getScalarValue = (
     rows: SearchRow[],
     preferredFields: string[] = []
 ): number | null => {
+    if (getTelemetryMessage(rows)) return null;
     const first = rows[0];
     if (!first) return null;
     for (const field of preferredFields) {
         const value = asNumber(first[field]);
         if (value !== null) return value;
     }
+    if (preferredFields.length) return null;
     for (const [key, rawValue] of Object.entries(first)) {
         if (key === '_time') continue;
         const value = asNumber(rawValue);
@@ -251,3 +282,95 @@ export const sanitizeSearchValue = (value: string): string =>
 
 export const sanitizeWildcardSearchValue = (value: string): string =>
     value.replace(/[^A-Za-z0-9@._:\-\s*]/g, '').trim().slice(0, 128);
+
+
+// Fallback rows carry source-coverage guidance, not measured zeroes.
+export const getTelemetryMessage = (rows: SearchRow[]): string | null => {
+    for (const row of rows) {
+        for (const key of ['data_status', 'Data Status', 'message']) {
+            if (typeof row[key] === 'string' && String(row[key]).trim()) return String(row[key]);
+        }
+        for (const value of Object.values(row)) {
+            if (typeof value === 'string' && /^No matching (telemetry|data)/i.test(value)) return value;
+        }
+    }
+    return null;
+};
+
+export const dnsCategoryMetricSearch = (spl: string): string => `${spl}
+| where isnotnull(Category) AND isnotnull('Block Count')
+| stats dc(Category) as category_count, count as classified_rows
+| where classified_rows>0`;
+
+export const dlpFindingMetricSearch = (spl: string): string => `${spl}
+| where isnotnull(Events)
+| stats sum(Events) as finding_count, count as classified_rows
+| where classified_rows>0`;
+
+export const identityActivitySearch = (spl: string, identity: string): string => {
+    const safe = sanitizeWildcardSearchValue(identity).replace(/\s+/g, ' ');
+    if (!safe) throw new Error('An identity is required.');
+    const marker = '\n| stats count as event_count';
+    if (!spl.includes(marker) || !spl.includes('identity_context=')) {
+        throw new Error('Identity activity search shape is unsupported.');
+    }
+    return spl.replace(marker, `\n| search identity_context="${safe}"${marker}`);
+};
+
+export const summarizeIdentityActivity = (rows: SearchRow[]) => {
+    const valid = rows.filter((row) => asNumber(row['Total Events']) !== null);
+    const sources = new Set(valid.map((r) => String(r['Source Layer'] ?? '')).filter(Boolean));
+    const identities = new Set(valid.map((r) => String(r['Identity / Security Context'] ?? '')).filter(Boolean));
+    const blocked = new Set(valid.filter((r) => (asNumber(r['Failures / Blocks']) ?? 0)>0)
+        .map((r) => String(r['Identity / Security Context'] ?? '')).filter(Boolean));
+    return { totalEvents: valid.length ? valid.reduce((sum, r) => sum + (asNumber(r['Total Events']) ?? 0), 0) : null,
+        secondLabel: 'Matching identities / contexts', secondValue: valid.length ? identities.size : null,
+        thirdLabel: 'Identities / contexts with blocks', thirdValue: valid.length ? blocked.size : null,
+        sources: [...sources].join(', '),
+        lastSeen: valid.map((r) => String(r['Last Seen'] ?? '')).sort().slice(-1)[0] ?? '' };
+};
+
+
+export type CloudVerdict = {action: string; name: string; value: number; percent: number};
+export function cloudFirewallVerdicts(rows: SearchRow[]): CloudVerdict[] {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+        const value = asNumber(row.count);
+        if (value === null || !Number.isSafeInteger(value) || value <= 0) continue;
+        const action = String(row.action ?? 'Unknown');
+        counts.set(action, (counts.get(action) ?? 0) + value);
+    }
+    const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
+    return [...counts].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0])).map(([action,value]) =>
+        ({action, name: action || '(empty action)', value, percent: value / total * 100}));
+}
+export function toggleCloudVerdict(selected: string | null, action: string): string | null {
+    return selected === action ? null : action;
+}
+export function cloudFirewallDetailSearch(spl: string, selected: string | null): string {
+    const marker = /\|\s*eval\s+Action=coalesce\(action,\s*verdict,\s*amp_disposition,\s*"Unknown"\)/;
+    if (!marker.test(spl) || !/\|\s*sort\s+500\s+priority\s+-\s*_time/.test(spl)) {
+        throw new Error('Unsupported cloud firewall detail search');
+    }
+    if (selected !== null && (selected.length > 256 || /[\x00-\x1f\x7f`$]/.test(selected))) {
+        throw new Error('Unsupported verdict');
+    }
+    const literal = selected === null ? '' : selected.replace(/[\\"]/g, '\\$&');
+    const predicate = selected === null ? '' : '\n| where Action="' + literal + '"';
+    // Restrict the source and exact normalized verdict before priority sorting and the row cap.
+    return spl.replace(marker, '| search sourcetype="cisco:cloud_security:firewall"\n| eval Action=coalesce(action,verdict,"Unknown")' + predicate);
+}
+
+
+export function chartPieValues(rows: SearchRow[], labelKey: string, valueKey: string): Array<{name: string; value: number; percent: number}> {
+    const totals = new Map<string, number>();
+    for (const row of rows) {
+        const value = asNumber(row[valueKey]);
+        if (value === null || value <= 0) continue;
+        const name = String(row[labelKey] ?? 'Unknown');
+        totals.set(name, (totals.get(name) ?? 0) + value);
+    }
+    const total = [...totals.values()].reduce((sum, value) => sum + value, 0);
+    if (!Number.isFinite(total) || total <= 0) return [];
+    return [...totals].map(([name,value]) => ({name,value,percent:value / total * 100}));
+}

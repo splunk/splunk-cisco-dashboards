@@ -51,6 +51,9 @@ const getSearchbaseSearch = async (ref, ownerApp) => {
 };
 
 export const resolveSearchbaseDefinitionForNativeStudio = async (definition = {}) => {
+    if (Object.values(definition.dataSources || {}).some((source) => source.options?.dcScope)) {
+        throw new Error('DC Networking scope filters require Dashboard Manager. Keep this dashboard in Dashboard Manager so investigation scope is preserved.');
+    }
     const resolvedDefinition = cloneDeep(definition || {});
     const dataSources = resolvedDefinition.dataSources || {};
 

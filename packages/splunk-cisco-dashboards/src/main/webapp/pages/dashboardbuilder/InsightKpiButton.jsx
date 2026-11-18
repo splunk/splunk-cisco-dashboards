@@ -9,6 +9,7 @@ import {
 } from '../../common/services/searchbaseCatalogue';
 import DropdownWithSearch from './DropdownWithSearch';
 import { getDashboardTimeQueryParameters } from './dashboardTimeUtils';
+import { DC_SCOPE_MARKER } from '../../common/lib/dcNetworkingScope';
 
 const LAYOUT_MARGIN = 24;
 const LAYOUT_GAP = 24;
@@ -211,12 +212,19 @@ const InsightKpiButton = (props) => {
                     searchName,
                 );
                 if (!searchKey) {
+                    const definition = dashboardApi.coreApi.getDefinition();
+                    const tokens = new Set(Object.values(definition.inputs || {}).map((input) => input.options?.token));
+                    const dcScope = selectedKpi.search?.includes(DC_SCOPE_MARKER) &&
+                        ['dc_account', 'dc_fabric', 'dc_device'].every((token) => tokens.has(token))
+                        ? { account: '$dc_account$', fabric: '$dc_fabric$', device: '$dc_device$' }
+                        : undefined;
                     dashboardApi.createDataSource({
                         type: 'ds.searchbase',
                         options: {
                             ref: selectedKpi.id,
                             ownerApp: selectedKpi.ownerApp,
                             queryParameters,
+                            ...(dcScope ? { dcScope } : {}),
                         },
                         name: searchName,
                     });

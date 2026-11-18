@@ -115,6 +115,7 @@ import {
 } from "./searchbaseDefinitionUtils";
 import { repairSearchbaseTimeQueryParameters } from "./dashboardTimeUtils";
 import DashboardStudioDrilldownModal from "./DashboardStudioDrilldownModal";
+import { applyDcDashboardHandoff, dcScopeFromDrilldownUrl } from "../../common/lib/dcNetworkingScope";
 import {
   DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
   getDashboardDrilldownInitialTimeRange,
@@ -130,6 +131,7 @@ const DASHBOARD_STUDIO_HEIGHT = 1200;
 // Investigation tables retain readable rows and scroll vertically rather than
 // shrinking the entire multi-row dashboard into the available viewport height.
 const WIDTH_FIT_DASHBOARD_IDS = new Set([
+  "dc_networking_operations",
   ...MANAGER_ROUTED_STUDIO_VIEW_NAMES,
   "sn_network_service_investigations",
 ]);
@@ -1041,7 +1043,10 @@ const DashboardStudioEditor = ({
       return undefined;
     }
 
-    return normalizeDashboardDrilldownIcons(JSON.parse(currentDashboard.data));
+    return applyDcDashboardHandoff(
+      normalizeDashboardDrilldownIcons(JSON.parse(currentDashboard.data)),
+      new URLSearchParams(window.location.search),
+    );
   }, [currentDashboard?.data]);
 
   useEffect(() => {
@@ -1971,7 +1976,10 @@ const DashboardStudioEditor = ({
       }
 
       event.preventDefault?.();
+      let dcScope;
+      try { dcScope = dcScopeFromDrilldownUrl(event.url); } catch { return; }
       setDashboardDrilldown({
+        dcScope,
         ...parsedAction,
         mode: parsedMetricInfo ? "metric-info" : "drilldown",
         timeRange: dashboardDrilldownTimeRange,
@@ -2742,6 +2750,7 @@ const DashboardStudioEditor = ({
         open={Boolean(dashboardDrilldown)}
         origin={dashboardDrilldown?.origin || ""}
         targetIds={dashboardDrilldown?.targetIds || []}
+        dcScope={dashboardDrilldown?.dcScope}
         ownerApp={currentDashboard?.app}
         timeRange={
           dashboardDrilldown?.timeRange ||

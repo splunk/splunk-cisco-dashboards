@@ -28,6 +28,12 @@
 /icons/
 /packages/splunk-cisco-dashboards/docs/
 /packages/splunk-cisco-dashboards/test/*
+!/packages/splunk-cisco-dashboards/test/sharedVisualizationDefaults.test.cjs
+!/packages/splunk-cisco-dashboards/test/dashboardAuditRepairs.test.cjs
+!/packages/splunk-cisco-dashboards/test/dashboardTimeInputs.test.cjs
+!/packages/splunk-cisco-dashboards/test/operationsQualification.test.cjs
+!/packages/splunk-cisco-dashboards/test/expandableSearchExample.test.cjs
+!/packages/splunk-cisco-dashboards/test/refinedSignalRail.test.cjs
 /tests/
 
 # Operating-system, editor, and document artifacts.
@@ -89,3 +95,5 @@ pip-delete-this-directory.txt
 /tmp/
 /site/
 /splunk-user-guide-builder
+
+!packages/splunk-cisco-dashboards/test/studioExpandableSearchExample.test.cjs

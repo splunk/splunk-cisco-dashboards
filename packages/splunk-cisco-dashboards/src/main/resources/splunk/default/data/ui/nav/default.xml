@@ -26,6 +26,7 @@
         <divider />
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
         <a href="dashboard_manager#/sn_data_center_operations">Secure Data Center Operations</a>
+        <a href="dashboard_manager#/dc_networking_operations">DC Networking Operations</a>
         <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
         <a href="dashboard_manager#/sn_network_service_investigations">Network Service Investigations</a>
     </collection>
@@ -63,30 +64,33 @@
         <collection label="Network &amp; IT Operations">
             <a href="dashboard_manager#/netops_critical_systems_health">IT Health</a>
             <a href="dashboard_manager#/netops_readiness">NetOps Readiness</a>
-            <a href="netops_health_monitoring">Health Monitoring</a>
+            <a href="netops_health_monitoring">Health Monitoring (Under Dev)</a>
         </collection>
 
         <collection label="Security Operations">
             <a href="dashboard_manager#/secops_resilience">Security Resilience</a>
-            <a href="secops_overview">Security Operations Overview</a>
+            <a href="secops_overview">Security Operations Overview (Preview)</a>
         </collection>
 
         <collection label="Workplace Intelligence">
+            <a href="workplace_m365_activity_monitoring">M365 Activity Monitoring (Under Dev)</a>
             <a href="dashboard_manager#/workplace_building_intelligence">Building Intelligence</a>
             <a href="dashboard_manager#/workplace_spaces_intelligence">Cisco Spaces - Intelligence</a>
             <a href="dashboard_manager#/workplace_operations_overview">Workplace - Single Pane of Glass</a>
         </collection>
 
         <collection label="Catalyst Operations">
-            <a href="dashboard_manager#/netops_catalyst_health">Catalyst Health</a>
-            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations</a>
+            <a href="dashboard_manager#/netops_catalyst_health">Catalyst Health (Under Dev)</a>
+            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations (Preview)</a>
         </collection>
 
         <collection label="Visual Labs">
-            <a href="secure_networking_pillars">Secure Networking Pillars (React Preview)</a>
-            <a href="searchbase_canvas">Searchbase Canvas</a>
-            <a href="network_diagram">Network Diagram</a>
-            <a href="sn_topology_canvas">Topology Canvas</a>
+            <a href="studio_expandable_search_example">Studio Expand/Collapse Example (Under Dev)</a>
+            <a href="expandable_search_example">Expandable Search Example (Under Dev)</a>
+            <a href="secure_networking_pillars">Secure Networking Pillars (Under Dev)</a>
+            <a href="searchbase_canvas">Searchbase Canvas (Under Dev)</a>
+            <a href="network_diagram">Network Diagram (Under Dev)</a>
+            <a href="sn_topology_canvas">Topology Canvas (Under Dev)</a>
         </collection>
 
         <!-- <collection label="Help &amp; Resources">

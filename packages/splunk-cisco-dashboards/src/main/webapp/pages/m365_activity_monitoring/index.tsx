@@ -290,7 +290,7 @@ const AppHeader: React.FC = () => (
             </div>
             <div>
                 <h1 className="text-xl font-black tracking-tight sui-color-active">
-                    M365 Activity Monitoring
+                    M365 Activity Monitoring (Under Dev)
                 </h1>
                 <p className="text-xs font-medium sui-color-muted">
                     Splunk Add-on for Microsoft Office 365
@@ -637,7 +637,7 @@ const About: React.FC = () => (
                     </div>
                     <div>
                         <h2 className="text-2xl font-black tracking-tight sui-color-active">
-                            M365 Activity Monitoring
+                            M365 Activity Monitoring (Under Dev)
                         </h2>
                         <p className="text-base font-medium sui-color-default">
                             Splunk Add-on for Microsoft Office 365

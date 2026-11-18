@@ -314,7 +314,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <h1 className="flex-shrink-0 whitespace-nowrap text-xl leading-7 font-semibold tracking-tight">
-                            Network Diagram
+                            Network Diagram (Under Dev)
                         </h1>
                     </div>
                     <div className="flex items-center gap-2.5 mt-0.5">

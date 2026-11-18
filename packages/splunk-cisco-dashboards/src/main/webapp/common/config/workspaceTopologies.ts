@@ -163,6 +163,13 @@ const EXECUTIVE_GLOBAL_TOPOLOGY: CustomerTopology = {
 };
 
 const WORKSPACE_TOPOLOGIES: Record<string, CustomerTopology> = {
+    dc_networking: {
+        id: 'workspace-dc-fabrics', name: 'Fabrics needing attention',
+        subtitle: 'Top 3 by active anomalies · Nexus Dashboard lab data · inter-fabric links unreported',
+        telemetrySearchName: 'DC Networking Workspace - DC fabrics for the standard map',
+        map: { center: [0, 0], zoom: 1, minZoom: 1, maxZoom: 1, bounds: [[0, 0], [0, 0]] },
+        sites: [], links: [],
+    },
     secure_networking: CUSTOMER_TOPOLOGY,
     zero_trust_access_demo: ZERO_TRUST_EUROPE_TOPOLOGY,
     network_resilience_demo: NETWORK_RESILIENCE_APAC_TOPOLOGY,

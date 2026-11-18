@@ -1,50 +1,151 @@
-# insights_workspaces.conf - shared workspace schema and delegated writes
+# insights_workspaces.conf — shared Insights configuration
+# Shared workspace definitions and tile defaults are stored in this app's
+# local overlay. Writes require ssne_manage_insights_workspaces; personal
+# visualization choices remain browser-local and take precedence.
+# No restart is required when saving workspace configuration.
 
-Purpose:
-  Stores app-wide Insights workspace definitions, layouts, Signal Rail items,
-  and Signal Rail defaults. Personal speed, density, and type-size overlays
-  live in insights_workspace_preferences.conf.
+[workspace.<workspace_id>]
 
-Layering:
-  - default/insights_workspaces.conf ships the factory definitions.
-  - local/insights_workspaces.conf stores shared operator changes.
-  - Search Head Cluster replication is enabled in default/server.conf.
+label = <string>
+* Shared label.
 
-Stanza families:
-  [workspace.<workspace_id>]
-    Workspace identity, source, sections, tile-count boundaries, header,
-    built-in/enabled state, sort order, and map presentation.
+source_workspace = <string>
+* Shared source workspace.
 
-  [layout.<workspace_id>.<section_id>]
-    Ordered tiles, Searchbase additions, and the shared visible tile count.
+sections = <string>
+* Shared sections.
 
-  [signal_item.<item_id>]
-    Search, label, value field, warning/critical thresholds, direction, and unit.
+default_visible_sections = <string>
+* Shared default visible sections.
 
-  [signal_rail.<workspace_id>]
-    Shared enablement, drilldown, rows, speed, density, font size, and item list.
+max_visible_sections = <string>
+* Shared max visible sections.
 
-Runtime:
-  Reads use Splunk's merged generic endpoint:
-    GET /servicesNS/-/splunk-cisco-dashboards/configs/conf-insights_workspaces
+min_tile_count = <string>
+* Shared min tile count.
 
-  Mutations use the capability-protected custom REST endpoint:
-    POST   /servicesNS/nobody/splunk-cisco-dashboards/scd_insights_workspaces
-    POST   /servicesNS/nobody/splunk-cisco-dashboards/scd_insights_workspaces/<stanza>
-    DELETE /servicesNS/nobody/splunk-cisco-dashboards/scd_insights_workspaces/<stanza>
+max_tile_count = <string>
+* Shared max tile count.
 
-Authorization:
-  ssne_manage_insights_workspaces is required by the mutation endpoint. The app
-  grants it to admin and sc_admin by default. The built-in user and power roles
-  remain read-only for shared workspace configuration. A custom role may
-  receive only this capability to manage shared workspaces and customer
-  topology. It does not grant writes to factory searchbase.conf.
+default_tile_count = <string>
+* Shared default tile count.
 
-Validation:
-  The handler allowlists stanza-name shapes and fields per stanza family,
-  rejects cross-schema or traversal-like names, limits scalar/list sizes, and
-  writes only to this app's local configuration overlay.
+header_title = <string>
+* Shared header title.
 
-Restart boundary:
-  Installing restmap.conf, web.conf, and authorize.conf requires one Splunk
-  restart. Subsequent workspace mutations are live and require no restart.
+header_subtitle = <string>
+* Shared header subtitle.
+
+default_logo_src = <string>
+* Shared default logo src.
+
+hide_default_logo = <string>
+* Shared hide default logo.
+
+legacy_view_names = <string>
+* Shared legacy view names.
+
+is_builtin = <string>
+* Shared is builtin.
+
+enabled = <string>
+* Shared enabled.
+
+sort_order = <string>
+* Shared sort order.
+
+map_visible = <string>
+* Shared map visible.
+
+map_position = <string>
+* Shared map position.
+
+regional_view = <string>
+* Shared regional view.
+
+updated_at = <string>
+* Shared updated at.
+
+updated_by = <string>
+* Shared updated by.
+
+[layout.<workspace_id>.<section_id>]
+
+tiles = <string>
+* Shared tiles.
+
+searchbase_additions = <string>
+* Shared searchbase additions.
+
+visible_count = <string>
+* Shared visible count.
+
+viz_overrides = <string>
+* Single-line JSON tile-ID to visualization-type map for this workspace section.
+* Personal choices take precedence; an empty object inherits search defaults.
+* Types: area, line, column, bar, singlevalue, table, barbreakdown, pie,
+* singlevalueradial, fillergauge, markergauge. Maximum 256 entries.
+
+updated_at = <string>
+* Shared updated at.
+
+updated_by = <string>
+* Shared updated by.
+
+[signal_item.<item_id>]
+
+search_name = <string>
+* Shared search name.
+
+label = <string>
+* Shared label.
+
+value_field = <string>
+* Shared value field.
+
+threshold_warning = <string>
+* Shared threshold warning.
+
+threshold_critical = <string>
+* Shared threshold critical.
+
+threshold_direction = <string>
+* Shared threshold direction.
+
+threshold_unit = <string>
+* Shared threshold unit.
+
+updated_at = <string>
+* Shared updated at.
+
+updated_by = <string>
+* Shared updated by.
+
+[signal_rail.<workspace_id>]
+
+enabled = <string>
+* Shared enabled.
+
+show_priority_drilldown = <string>
+* Shared show priority drilldown.
+
+rows = <string>
+* Shared rows.
+
+speed = <string>
+* Shared speed.
+
+density = <string>
+* Shared density.
+
+font_size = <string>
+* Shared font size.
+
+items = <string>
+* Shared items.
+
+updated_at = <string>
+* Shared updated at.
+
+updated_by = <string>
+* Shared updated by.

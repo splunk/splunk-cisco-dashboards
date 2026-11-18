@@ -7,6 +7,7 @@
  * and telemetry bindings live in one config object.
  */
 
+import { isolatedFabricLayout } from "@/common/lib/topologyCommandLayout";
 import React, {
   useCallback,
   useEffect,
@@ -190,6 +191,42 @@ const MapTopRightActions = styled.div`
   align-items: flex-end;
   gap: ${variables.spacingXSmall};
   pointer-events: auto;
+`;
+
+// Command controls and summary occupy real rows outside the fitted SVG.
+const CommandToolbar = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${variables.spacingSmall};
+  padding: ${variables.spacingSmall};
+  border-bottom: ${variables.inputBorderWidth} solid ${variables.borderColor};
+
+  > ${MapTopRightActions} {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+`;
+
+const CommandCanvas = styled.div`
+  position: relative;
+  flex: 1 1 0;
+  min-height: 160px;
+  overflow: hidden;
+`;
+
+const CommandSummary = styled.div`
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: ${variables.spacingXSmall};
+  padding: ${variables.spacingSmall};
+  border-top: ${variables.inputBorderWidth} solid ${variables.borderColor};
+  overflow-wrap: anywhere;
 `;
 
 const MapBottomRightActions = styled.div`
@@ -3772,6 +3809,7 @@ const buildShortName = (name: string): string => {
  */
 const parseSiteRowAsDiscovered = (
   row: Record<string, unknown>,
+  allowUnlocated = false,
 ): TopologySite | null => {
   const siteId = normalizeId(
     textFromRow(row, ["siteId", "site_id", "site", "id"]),
@@ -3779,8 +3817,8 @@ const parseSiteRowAsDiscovered = (
   );
   const lat = finiteNumberFromRow(row, ["lat", "latitude"]);
   const lng = finiteNumberFromRow(row, ["lng", "lon", "long", "longitude"]);
-  if (!siteId || lat === undefined || lng === undefined) return null;
-  if (lat === 0 && lng === 0) return null;
+  if (!siteId) return null;
+  if (!allowUnlocated && (lat === undefined || lng === undefined || (lat === 0 && lng === 0))) return null;
 
   const name =
     textFromRow(row, ["siteName", "site_name", "name", "displayName"]) ??
@@ -3799,8 +3837,9 @@ const parseSiteRowAsDiscovered = (
     name,
     shortName,
     role,
-    lat,
-    lng,
+    // Command layout does not use geographic coordinates.
+    lat: lat ?? 0,
+    lng: lng ?? 0,
     status: "unknown",
     metrics: {},
     telemetrySource: "Auto-discovered from topology search",
@@ -5009,6 +5048,8 @@ const clampCommandViewport = ({
 };
 
 interface TopologyCommandViewProps {
+  actions: React.ReactNode;
+  notices: React.ReactNode;
   topology: CustomerTopology;
   selected: SelectedTarget | null;
   spotlightSiteId?: string;
@@ -5026,6 +5067,8 @@ interface TopologyCommandViewProps {
  * implying that latitude is the most important relationship.
  */
 const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
+  actions,
+  notices,
   topology,
   selected,
   spotlightSiteId,
@@ -5036,6 +5079,20 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
   onSelectLink,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || typeof ResizeObserver === "undefined") return undefined;
+    const update = () => {
+      const { width, height } = svg.getBoundingClientRect();
+      setWide(width >= height);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+  const fabricLayout = useMemo(() => isolatedFabricLayout(topology.sites, topology.links.length, wide), [topology.sites, topology.links.length, wide]);
   const viewportGroupRef = useRef<SVGGElement | null>(null);
   const viewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
   const pendingViewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
@@ -5272,6 +5329,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
   );
 
   const points = useMemo(() => {
+    if (fabricLayout) return fabricLayout.points;
     const degree = new Map(topology.sites.map((site) => [site.id, 0]));
     for (const link of topology.links) {
       degree.set(link.sourceSiteId, (degree.get(link.sourceSiteId) ?? 0) + 1);
@@ -5298,7 +5356,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
       });
     });
     return next;
-  }, [topology.links, topology.sites]);
+  }, [topology.links, topology.sites, fabricLayout]);
 
   const healthySites = topology.sites.filter(
     (site) => site.status === "stable",
@@ -5313,7 +5371,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
   return (
     <div
       className={cn(
-        "absolute inset-0 overflow-hidden",
+        "absolute inset-0 flex min-h-0 flex-col overflow-y-auto",
         isDark ? "sui-bg-section" : "sui-bg-section",
       )}
       role="region"
@@ -5325,9 +5383,67 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                 .scd-command-flow { animation: scd-command-flow 1.8s linear infinite; }
                 .scd-command-pulse { transform-box: fill-box; transform-origin: center; animation: scd-command-pulse 2.4s ease-in-out infinite; }
             `}</style>
+      {notices}
+      <CommandToolbar>
+        {actions}
+      <div
+        className={cn(
+          "flex-shrink-0 inline-flex items-center rounded-lg border p-1 shadow-xl backdrop-blur-xl",
+          isDark
+            ? "sui-border-default sui-bg-page sui-color-active"
+            : "sui-border-info sui-bg-section sui-color-default",
+        )}
+        role="group"
+        aria-label="Command topology zoom controls"
+      >
+        <button
+          ref={zoomOutButtonRef}
+          type="button"
+          onClick={() => zoomAtCenter(1 / COMMAND_ZOOM_STEP)}
+          title="Zoom out"
+          aria-label="Zoom out command topology"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </button>
+        <span
+          ref={zoomLabelRef}
+          className="min-w-[48px] px-1 text-center sui-color-default font-black tabular-nums tracking-wide"
+          aria-live="polite"
+        >
+          100%
+        </span>
+        <button
+          ref={zoomInButtonRef}
+          type="button"
+          onClick={() => zoomAtCenter(COMMAND_ZOOM_STEP)}
+          title="Zoom in"
+          aria-label="Zoom in command topology"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </button>
+        <span
+          className={cn(
+            "mx-1 h-5 w-px",
+            isDark ? "sui-bg-floating" : "sui-bg-info",
+          )}
+        />
+        <button
+          type="button"
+          onClick={() => scheduleViewport(COMMAND_FIT_VIEWPORT)}
+          title="Fit topology"
+          aria-label="Fit command topology to view"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+      </div>
+      </CommandToolbar>
+      <CommandCanvas>
       <svg
         ref={svgRef}
-        viewBox="0 0 1000 620"
+        viewBox={fabricLayout?.viewBox ?? "0 0 1000 620"}
         preserveAspectRatio="xMidYMid meet"
         className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
         role="group"
@@ -5554,75 +5670,22 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
           })}
         </g>
       </svg>
+      {topology.sites.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center text-sm font-semibold sui-color-muted">
+          No topology sites configured.
+        </div>
+      )}
+      </CommandCanvas>
 
-      <div
-        className={cn(
-          "absolute right-3 top-14 z-[1050] inline-flex items-center rounded-lg border p-1 shadow-xl backdrop-blur-xl",
-          isDark
-            ? "sui-border-default sui-bg-page sui-color-active"
-            : "sui-border-info sui-bg-section sui-color-default",
-        )}
-        role="group"
-        aria-label="Command topology zoom controls"
-      >
-        <button
-          ref={zoomOutButtonRef}
-          type="button"
-          onClick={() => zoomAtCenter(1 / COMMAND_ZOOM_STEP)}
-          title="Zoom out"
-          aria-label="Zoom out command topology"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </button>
-        <span
-          ref={zoomLabelRef}
-          className="min-w-[48px] px-1 text-center sui-color-default font-black tabular-nums tracking-wide"
-          aria-live="polite"
-        >
-          100%
-        </span>
-        <button
-          ref={zoomInButtonRef}
-          type="button"
-          onClick={() => zoomAtCenter(COMMAND_ZOOM_STEP)}
-          title="Zoom in"
-          aria-label="Zoom in command topology"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </button>
-        <span
-          className={cn(
-            "mx-1 h-5 w-px",
-            isDark ? "sui-bg-floating" : "sui-bg-info",
-          )}
-        />
-        <button
-          type="button"
-          onClick={() => scheduleViewport(COMMAND_FIT_VIEWPORT)}
-          title="Fit topology"
-          aria-label="Fit command topology to view"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div
-        className={cn(
-          "pointer-events-none absolute bottom-3 right-3 grid grid-cols-3 gap-1 rounded-lg border p-1.5 shadow-xl backdrop-blur-xl",
-          "sui-border-default sui-bg-section",
-        )}
-      >
+      <CommandSummary role="group" aria-label="Topology summary">
         {[
-          ["Sites", `${healthySites}/${topology.sites.length}`],
-          ["Paths", `${healthyLinks}/${topology.links.length}`],
-          ["Critical", String(criticalCount)],
+          [fabricLayout ? "Fabrics" : "Sites", fabricLayout ? String(topology.sites.length) : topology.sites.some(site => site.status !== "unknown") ? `${healthySites}/${topology.sites.length}` : `${topology.sites.length} observed`],
+          ["Paths", topology.links.length ? `${healthyLinks}/${topology.links.length}` : "Unreported"],
+          ["Critical", topology.sites.some(site => site.status !== "unknown") || topology.links.some(link => link.status !== "unknown") ? String(criticalCount) : "Unknown"],
         ].map(([label, value]) => (
           <div
             key={label}
-            className="min-w-[62px] rounded-md px-2 py-1 text-center"
+            className="min-w-0 rounded-md px-2 py-1 text-center"
           >
             <div
               className={cn(
@@ -5646,18 +5709,14 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
             </div>
           </div>
         ))}
-      </div>
-
-      {topology.sites.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-sm font-semibold sui-color-muted">
-          No topology sites configured.
-        </div>
-      )}
+      </CommandSummary>
     </div>
   );
 };
 
 interface CustomerTopologyMapProps {
+  /** Use the standard Command surface for inventory without geographic coordinates. */
+  commandOnly?: boolean;
   topology?: CustomerTopology;
   canManageTopology?: boolean;
   earliestTime?: string;
@@ -5671,6 +5730,7 @@ interface CustomerTopologyMapProps {
 
 export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   topology = CUSTOMER_TOPOLOGY,
+  commandOnly = false,
   canManageTopology = false,
   earliestTime = "-24h",
   latestTime = "now",
@@ -5683,7 +5743,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const { colorScheme } = useAppThemeControls();
   const isDark = colorScheme === "dark";
   const [selected, setSelected] = useState<SelectedTarget | null>(null);
-  const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>("geo");
+  const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>(commandOnly ? "command" : "geo");
   const [spotlightSite, setSpotlightSite] = useState<TopologySite | null>(null);
   const [paused, setPaused] = useState(false);
   const {
@@ -6036,7 +6096,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             if (site) {
               siteUpdates[site.id] = parseSiteRow(site, row);
             } else if (itemType === "site" && siteId) {
-              const discovered = parseSiteRowAsDiscovered(row);
+              const discovered = parseSiteRowAsDiscovered(row, commandOnly);
               if (discovered) discoveredSites[discovered.id] = discovered;
             }
             continue;
@@ -6182,6 +6242,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     refreshToken,
     storedTopology.links,
     storedTopology.sites,
+    commandOnly,
     telemetrySearchName,
   ]);
 
@@ -6621,7 +6682,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       : resolvedSelected?.kind === "link"
         ? resolvedSelected.link.searchName
         : undefined;
-  const selectedSearchName = selectedItemSearchName?.trim() || undefined;
+  const selectedSearchName = selectedItemSearchName?.trim() || (commandOnly ? telemetrySearchName : undefined);
   const selectedRecord =
     selectedSearchName && catalogueByName
       ? (catalogueByName[selectedSearchName] ?? null)
@@ -6994,22 +7055,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     </MapTopRightActions>
   );
 
-  return (
-    <TopologyMapRoot
-      className={cn(
-        "relative flex w-full h-full flex-col overflow-hidden border rounded-xl shadow-inner group",
-        `customer-topology-anim--${visualAnimationLevel}`,
-        isDark
-          ? "sui-bg-section sui-border-weak"
-          : "sui-bg-section sui-border-weak",
-      )}
-    >
-      <style>{topologyAnimationCss}</style>
-      <MapViewport>
-        {topRightActions}
-
+  const topologyNotices = (
+    <>
       {topologyLoadError && (
-        <div className="absolute left-3 right-14 top-3 z-[1000]">
+        <div className={surfaceMode === "command" ? "flex-shrink-0 p-3" : "absolute left-3 right-14 top-3 z-[1000]"}>
           <Message type="error" appearance="fill">
             <Message.Title>Topology editor unavailable</Message.Title>
             {topologyLoadError}
@@ -7023,7 +7072,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         spotlightSite && (
           <div
             className={cn(
-              "absolute top-3 left-3 z-[999] px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest pointer-events-none",
+              "px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest pointer-events-none",
+              surfaceMode === "command" ? "mx-3 mt-3 self-start flex-shrink-0" : "absolute top-3 left-3 z-[999]",
               isDark
                 ? "sui-bg-section sui-border-default sui-color-default backdrop-blur"
                 : "sui-bg-section sui-border-weak sui-color-muted backdrop-blur",
@@ -7047,8 +7097,29 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
           </div>
         )}
 
+    </>
+  );
+
+  return (
+    <TopologyMapRoot
+      className={cn(
+        "relative flex w-full h-full flex-col overflow-hidden border rounded-xl shadow-inner group",
+        `customer-topology-anim--${visualAnimationLevel}`,
+        isDark
+          ? "sui-bg-section sui-border-weak"
+          : "sui-bg-section sui-border-weak",
+      )}
+    >
+      <style>{topologyAnimationCss}</style>
+      <MapViewport>
+        {surfaceMode === "geo" && topRightActions}
+
+        {surfaceMode === "geo" && topologyNotices}
+
       {surfaceMode === "command" ? (
         <TopologyCommandView
+          actions={topRightActions}
+          notices={topologyNotices}
           topology={resolvedTopology}
           selected={resolvedSelected}
           spotlightSiteId={spotlightSite?.id}
@@ -7276,7 +7347,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             setSurfaceMode(value as TopologySurfaceMode)
           }
         >
-          {TOPOLOGY_SURFACE_OPTIONS.map(([value, label]) => (
+          {TOPOLOGY_SURFACE_OPTIONS.filter(([value]) => !commandOnly || value === "command").map(([value, label]) => (
             <Select.Option
               key={value}
               label={`View: ${label}`}

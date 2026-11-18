@@ -1,10 +1,10 @@
 
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>NetOps - Catalyst Health</label>
+    <label>NetOps - Catalyst Health (Under Dev)</label>
     <description>Client health and Catalyst Center reports network operations operations.</description>
     <definition><![CDATA[
 {
-	"title": "Network Operations Report",
+	"title": "Catalyst Health (Under Dev)",
 	"description": "Client health and Catalyst Center reports network operations operations.",
 	"inputs": {
 		"input_time_range": {
@@ -45,7 +45,7 @@
 			"options": {
 				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "# Dashboard Metrics Overview",
+				"markdown": "# Dashboard Metrics Overview (Under Dev)",
 				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
@@ -1469,7 +1469,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**Executive-level posture summary** - aggregated KPIs, site comparisons, and trend indicators. Use this tab for leadership briefings and operational readiness reviews."
+				"markdown": "**Executive-level posture summary** - aggregated KPIs, site comparisons, and trend indicators. Use this tab for leadership briefings and operational readiness reviews. (Under Dev)"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1478,7 +1478,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "Enterprise view of **wired and wireless client health** across all sites. Use this tab to confirm client onboarding is healthy and spot connectivity degradation at a macro level."
+				"markdown": "Enterprise view of **wired and wireless client health** across all sites. Use this tab to confirm client onboarding is healthy and spot connectivity degradation at a macro level. (Under Dev)"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1973,7 +1973,7 @@
 			"options": {
 				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "# Client Summary",
+				"markdown": "# Client Summary (Under Dev)",
 				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"

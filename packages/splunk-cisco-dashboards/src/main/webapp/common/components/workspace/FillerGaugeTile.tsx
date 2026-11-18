@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { formatPlainMetricNumber } from '@/common/lib/metricValueFormat';
 import { CanvasScalarTileChrome } from './CanvasScalarTileChrome';
 import {
     clampToRange,
@@ -139,7 +140,7 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
                 <>
                     <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-4xl font-black tracking-tighter leading-none  sui-color-active tabular-nums">
-                            {value}
+                            {numeric !== null ? formatPlainMetricNumber(numeric) : value}
                             {unit}
                         </span>
                     </div>
@@ -147,11 +148,12 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
                         data-tile-control="true"
                         className="flex-1 min-h-[48px] max-h-20 flex flex-col justify-center gap-1 pt-1"
                     >
-                        <div className="h-3 w-full rounded-sm  sui-bg-popup overflow-hidden">
+                        <div className="h-3 w-full rounded-sm overflow-hidden"
+                            style={{ backgroundColor: 'var(--sui-content-disabled, #89919c)' }}>
                             <div
                                 className="h-full rounded-sm transition-[width]"
                                 style={{
-                                    width: `${Math.max(2, widthPct)}%`,
+                                    width: `${widthPct}%`,
                                     backgroundColor: fillColor,
                                 }}
                             />

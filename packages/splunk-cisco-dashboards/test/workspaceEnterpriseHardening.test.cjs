@@ -834,21 +834,6 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /build\.sh --install[\s\S]*?SplunkBase[\s\S]*?--developer[\s\S]*?--fast/,
-  "The current in-app release notes must document SplunkBase defaults and explicit developer workflows",
-);
-assert.match(
-  userGuide,
-  /SplunkBase build, install,[\s\S]*?one[\s\S]*?clean-source packaging path[\s\S]*?exact release-eligible archive/,
-  "The current in-app release notes must document one clean release path for build and install",
-);
-assert.match(
-  userGuide,
-  /successful SplunkBase install[\s\S]*?upload-ready archive[\s\S]*?target(?:&apos;|')s installed build does not affect package/,
-  "The current in-app release notes must document target-independent package construction",
-);
-assert.match(
-  userGuide,
   /Custom Insights workspaces can now be created[\s\S]*?template choices[\s\S]*?circular radio controls/,
   "The current in-app release notes must document workspace creation and radio geometry fixes",
 );
@@ -869,7 +854,7 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /Agentic SOC section headers no longer expose actions[\s\S]*?development-only Searchbase Canvas/,
+  /Removed unavailable Agentic SOC section-header actions/,
   "The current in-app release notes must document removal of release-dead Canvas actions",
 );
 assert.match(
@@ -879,13 +864,8 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /repository-root VERSION file[\s\S]*?Source app\.conf and[\s\S]*?app\.manifest retain placeholders[\s\S]*?allocate the next[\s\S]*?build automatically/,
-  "The current in-app release notes must document VERSION-only release packaging",
-);
-assert.match(
-  userGuide,
-  /patched published npm advisories[\s\S]*?DOMPurify[\s\S]*?fast-uri[\s\S]*?source-map-js[\s\S]*?postcss-selector-parser[\s\S]*?brace-expansion[\s\S]*?sprintf-js[\s\S]*?MapLibre GL JS XSS[\s\S]*?Splunk visualizations continue to compile[\s\S]*?local security patch[\s\S]*?braces[\s\S]*?100 levels[\s\S]*?Dependabot may still flag/,
-  "The current in-app release notes must document dependency security patches and the local build-tool mitigation",
+  /Addressed security vulnerabilities in the map visualization and HTML-sanitization components/,
+  "Customer release notes must describe security outcomes in the shipped app",
 );
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
@@ -1192,7 +1172,8 @@ assert.match(
   rail,
   /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?transition: none;/,
 );
-assert.match(rail, /label="Configure Signal Rail"/);
+assert.doesNotMatch(rail, /label="Configure Signal Rail"/);
+assert.match(profile, /label="Configure Signal Rail"/);
 assert.match(
   rail,
   /const StatusPill = styled\(Badge\)[\s\S]*?STATUS_PILL_TOKENS\[\$status\][\s\S]*?background-color: color-mix\([\s\S]*?50%,[\s\S]*?transparent[\s\S]*?color: \$\{variables\.contentColorActive\}/,
@@ -1302,8 +1283,8 @@ assert.match(
 );
 assert.match(
   globalStyles,
-  /\[data-app-color-scheme='dark'\] \.scd-workspace-modal-surface[\s\S]*?linear-gradient\(155deg, #17263a[\s\S]*?\.scd-workspace-modal-guidance-card/,
-  "Dark drill-down surfaces must retain the navy workspace atmosphere across the shell and guidance cards",
+  /\.scd-workspace-modal-surface[\s\S]*?background-color: var\(--sui-background-popup\);[\s\S]*?background-image: none;[\s\S]*?\.scd-workspace-modal-guidance-card/,
+  "Drill-down surfaces must use solid theme tokens across the shell and guidance cards",
 );
 assert.match(
   appThemeProvider,

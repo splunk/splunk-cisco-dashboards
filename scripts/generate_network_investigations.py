@@ -40,14 +40,6 @@ CARD_TARGETS = {
 
 # Action-only sections add no data sources and therefore no automatic jobs.
 SECTIONS = {
-    'sn_data_center_operations': ('SAN and fabric investigations', [
-        ('SAN congestion evidence', 'Observed MDS transmit wait and recurring congestion. Missing CPU or memory measurements stay unavailable.', ['network_dc_mds_transmit_wait_trend', 'network_dc_mds_repeated_congestion', 'network_dc_mds_switch_resource_trend']),
-        ('Hyperfabric port evidence', 'Observed port rates, directional imbalance and measurement coverage. These are not link-capacity or headroom estimates.', ['network_dc_hyperfabric_port_rate_trend', 'network_dc_hyperfabric_directional_imbalance', 'network_dc_hyperfabric_measurement_coverage']),
-    ]),
-    'sn_secure_infrastructure_posture': ('Certificate investigations', [
-        ('Certificate lifecycle', 'Inspect observed Zeek certificate expiry bands and individual validity dates. Observed certificates are not a complete estate inventory.', ['security_zeek_certificate_expiry_summary', 'security_zeek_certificate_expiry_inventory']),
-        ('Certificate rotation candidates', 'Compare fingerprints observed for the same subject. Multiple certificates can be legitimate and do not establish a failed rotation.', ['security_zeek_certificate_rotation_candidates']),
-    ]),
     'sn_agentic_ops_operational_intelligence': ('Telemetry investigations', [
         ('Ingestion delay and feed observations', 'Compare reporting delay and occupied time buckets for observed sources. Missing sources do not prove a collection outage.', ['operations_cisco_ingestion_delay_by_source', 'operations_cisco_feed_bucket_coverage']),
         ('ISE scalar-field quality', 'Inspect repeated and conflicting policy fields before interpreting policy activity. Requires the policy snapshot feeds.', ['operations_ise_multivalue_field_quality']),
@@ -150,7 +142,9 @@ def new_dashboard(template):
     v['viz_interface_text'] = markdown(title_template, '### IPv6 and interface investigations\nOpen IP-family visibility, denied-destination and interface measurement evidence separately.', 18)
     v['viz_interface_action'] = action('IPv6 and interface evidence', ['network_cross_vendor_ip_family_mix', 'mv_ipv6_decision_visibility', 'network_cross_vendor_ipv6_denied_destinations', 'network_cross_vendor_decision_field_coverage', 'mv_interface_error_counter_rates', 'mv_arista_latest_interface_state', 'mv_arista_interface_error_rates', 'mv_arista_interface_discard_rates', 'mv_arista_interface_transfer_rates', 'mv_arista_bgp_adjacency_messages', 'mv_arista_lanz_queue_observations'])
     layout['structure'] += [block('viz_interface_text', 32, 1420, canvas_width-190, 114), block('viz_interface_action', canvas_width-100, 1440, 56, 56)]
-    d['layout'] = {'options':{'showTitleAndDescription':False}, 'globalInputs':[], 'layoutDefinitions':{'layout_overview':layout}, 'tabs':{'items':[{'label':'Service investigations','layoutId':'layout_overview'}]}}
+    d['layout'] = {'options':{'showTitleAndDescription':False, 'submitButton':False, 'submitOnDashboardLoad':True}, 'globalInputs':[], 'layoutDefinitions':{'layout_overview':layout}, 'tabs':{'items':[{'label':'Service investigations','layoutId':'layout_overview'}]}}
+    from align_operational_dashboards import align
+    align(d, read_view('sn_data_center_operations')[2], VIEW)
     return d
 
 
@@ -165,7 +159,7 @@ def render(text, match, definition):
 
 def outputs():
     result = {}
-    for view in sorted(CARD_TARGETS.keys() | SECTIONS.keys()):
+    for view in sorted(CARD_TARGETS.keys() | SECTIONS.keys() | {'sn_secure_infrastructure_posture', 'sn_data_center_operations'}):
         text, match, definition = read_view(view)
         for card, additions in CARD_TARGETS.get(view, {}).items():
             trigger = definition['visualizations'][f'viz_card_{card}_drilldown_trigger']
@@ -176,7 +170,16 @@ def outputs():
             if len(targets)>24:
                 raise ValueError(f'{view}:{card}: target limit exceeded')
             options['url'] = url(parsed.get('origin',['Investigate drivers'])[0], targets)
-        if view in SECTIONS:
+        if view == 'sn_agentic_ops_operational_intelligence':
+            from align_operational_dashboards import align
+            align(definition, read_view('sn_data_center_operations')[2], view)
+        elif view in {'sn_secure_infrastructure_posture', 'sn_data_center_operations'}:
+            definition['layout']['layoutDefinitions'].pop('layout_catalogue_investigations', None)
+            definition['layout']['tabs']['items'] = [tab for tab in definition['layout']['tabs']['items'] if tab['layoutId'] != 'layout_catalogue_investigations']
+            for key in list(definition['visualizations']):
+                if key.startswith('viz_library_'):
+                    del definition['visualizations'][key]
+        elif view in SECTIONS:
             add_section(definition, *SECTIONS[view])
         result[VIEWS / f'{view}.xml'] = render(text, match, definition)
     # The React preview shares the Zero Trust story and must offer the same

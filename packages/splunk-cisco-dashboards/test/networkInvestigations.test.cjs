@@ -37,9 +37,14 @@ test('new dashboard has exactly six catalogue-backed evidence tables and bounded
     const timePosition = layout.structure.find(({ item }) => item === 'input_time_range').position;
     assert.equal(d.inputs.input_time_range.options.showAdvanced, true);
     assert.ok(timePosition.w >= 360, 'All five shortcuts and the custom-range button need to fit');
-    assert.ok(layout.options.width-timePosition.x-timePosition.w >= 100, 'Keep the custom-range button clear of the overlaid Manager toolbar');
-    assert.equal(layout.options.width, 1120, 'Evidence tables should not shrink below readable desktop text in the app pane');
-    for (let i=1; i<=6; i++) assert.equal(d.visualizations[`viz_evidence_${i}_title`].options.customFontSize, 16, 'Markdown heading multipliers must not clip long card names');
+    const referenceHeader = read('sn_zta_posture').layout.layoutDefinitions.layout_overview.structure;
+    for (const id of ['viz_header_bg', 'viz_header_icon', 'viz_header', 'input_time_range']) {
+        assert.deepEqual(layout.structure.find((item) => item.item === id).position,
+            referenceHeader.find((item) => item.item === id).position,
+            `${id} must match Zero Trust Posture exactly`);
+    }
+    assert.equal(layout.options.width, 1920, 'Evidence cards follow the shared operational canvas');
+    for (let i=1; i<=6; i++) assert.equal(d.visualizations[`viz_evidence_${i}_title`].options.customFontSize, 20, 'Card titles use the shared typography');
     for (const item of layout.structure) {
         assert.ok(d.visualizations[item.item] || d.inputs[item.item]);
         const { x, y, w, h } = item.position;
@@ -71,17 +76,12 @@ test('every new action is bounded, accessible and resolves to the existing catal
     }
 });
 
-test('new investigation tabs add no automatic searches or disconnected elements', () => {
+test('removed investigation tabs are not restored by generated dashboards', () => {
     for (const view of ['sn_data_center_operations', 'sn_secure_infrastructure_posture', 'sn_agentic_ops_operational_intelligence']) {
         const d = read(view);
-        const layout = d.layout.layoutDefinitions.layout_catalogue_investigations;
-        assert.ok(d.layout.tabs.items.some((t) => t.layoutId === 'layout_catalogue_investigations'));
-        const ids = new Set(layout.structure.map((i) => i.item));
-        for (const id of ids) {
-            const v = d.visualizations[id];
-            assert.ok(v || d.inputs[id]);
-            assert.equal(v?.dataSources, undefined, `${view}: ${id}`);
-        }
+        assert.equal(d.layout.layoutDefinitions.layout_catalogue_investigations, undefined);
+        assert.ok(!d.layout.tabs.items.some((t) => t.layoutId === 'layout_catalogue_investigations'));
+        assert.ok(!Object.keys(d.visualizations).some((id) => id.startsWith('viz_library_')));
         assert.equal(Object.keys(d.dataSources).length, view === 'sn_data_center_operations' ? 16 : 6);
     }
 });

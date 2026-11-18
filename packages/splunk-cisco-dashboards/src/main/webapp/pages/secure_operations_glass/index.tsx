@@ -64,6 +64,8 @@ import {
     YAxis,
 } from 'recharts';
 
+import { runManagedSearch } from '@/common/services/splunkSearchService';
+import { metricInvestigationTargets, startMetricInvestigation, type MetricInvestigation } from './metricInvestigation';
 import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
@@ -73,10 +75,20 @@ import {
 import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import {
     asNumber,
+    cloudFirewallVerdicts,
+    chartPieValues,
+    cloudFirewallDetailSearch,
+    toggleCloudVerdict,
     formatNumber,
     getLabelKey,
     getNumericKeys,
     getScalarValue,
+    chartTimeLabels,
+    getTelemetryMessage,
+    dnsCategoryMetricSearch,
+    dlpFindingMetricSearch,
+    identityActivitySearch,
+    summarizeIdentityActivity,
     sanitizeSearchValue,
     sanitizeWildcardSearchValue,
     type SearchRow,
@@ -111,6 +123,7 @@ interface PageContext {
     refreshToken: number;
     filters: Filters;
     showSearchInfo: (record: SearchbaseRecord) => void;
+    showMetricInvestigation: (request: MetricInvestigation) => void;
 }
 
 interface SearchPanelProps {
@@ -128,6 +141,7 @@ interface SearchMetricProps {
     searchId: string;
     label: string;
     preferredFields?: string[];
+    transformSearch?: (spl: string) => string;
     suffix?: string;
     tone?: Tone;
     icon?: SuiIcon;
@@ -297,7 +311,8 @@ const statusToneForValue = (value: unknown): StatusTone => {
     ) {
         return 'good';
     }
-    if (/info|informational|unknown|notable/.test(normalized)) return 'info';
+    if (/unknown|unavailable|unreported/.test(normalized)) return 'neutral';
+    if (/info|informational|notable/.test(normalized)) return 'info';
     return 'neutral';
 };
 
@@ -428,21 +443,73 @@ const SearchActions = ({
         <div className="scd-glass-search-actions">
             <Button
                 appearance="subtle"
+                label={`Information about ${record.searchName}`}
+                hideLabel
                 title={`About ${record.searchName}`}
                 aria-label={`Information about ${record.searchName}`}
                 onClick={() => context.showSearchInfo(record)}
                 icon={<Info size={16} aria-hidden />}
             />
-            <Button
-                appearance="subtle"
-                to={searchUrl}
-                openInNewContext
+            <a
+                href={searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 title={`Open ${record.searchName} in Search`}
-                aria-label={`Open ${record.searchName} in Search`}
-                icon={<ExternalLink size={16} aria-hidden />}
-            />
+                aria-label={`Open ${record.searchName} in Search (opens new window)`}
+            ><ExternalLink size={16} aria-hidden /></a>
         </div>
     );
+};
+
+// These dialogs unmount on close; restore focus explicitly rather than relying
+// on a Modal open=false transition that does not occur on this path.
+const useDialogFocusReturn = (target: React.MutableRefObject<HTMLElement | null>): void => {
+    useEffect(() => () => {
+        if (target.current?.isConnected) target.current.focus({preventScroll: true});
+    }, [target]);
+};
+
+const MetricInvestigationDialog = ({context, request, onClose, returnFocus}: {
+    context: PageContext; request: MetricInvestigation; onClose: () => void;
+    returnFocus: React.MutableRefObject<HTMLElement | null>;
+}): JSX.Element => {
+    useDialogFocusReturn(returnFocus);
+    const source = context.catalogue!.get(request.searchId)!;
+    const targets = useMemo(() => metricInvestigationTargets(source, context.catalogue!), [source, context.catalogue]);
+    const [selected, setSelected] = useState(targets[1]?.id ?? source.id);
+    const record = targets.find(r => r.id === selected) ?? source;
+    const transform = record.id === source.id ? request.transformSearch : undefined;
+    const [result, setResult] = useState<{rows: SearchRow[]; loading: boolean; error: boolean}>({rows: [], loading: true, error: false});
+    useEffect(() => {
+        setResult({rows: [], loading: true, error: false});
+        return startMetricInvestigation(record, context.earliest, transform, async options => {
+                const response = await runManagedSearch(options);
+                return {...response, results: response.results as SearchRow[]};
+            },
+            rows => setResult({rows, loading: false, error: false}),
+            () => setResult({rows: [], loading: false, error: true}));
+    }, [record, context.earliest, context.refreshToken, transform]);
+    const rows = result.rows.slice(0, 200);
+    const columns = [...new Set(rows.flatMap(row => Object.keys(row)))].filter(k => !k.startsWith('_') || k === '_time');
+    return <Modal open closeOnClickAway divider="both" onRequestClose={onClose} returnFocus={returnFocus}
+        style={{width: 'min(1100px, calc(100vw - 32px))'}}>
+        <Modal.Header title={request.label + ' — investigation'} subtitle={source.searchName}/>
+        <Modal.Body className="scd-glass-info-body">
+            <p>Time range: {context.earliest} to now. Headline searches keep their reported scope; sidebar filters do not narrow these totals. Supporting investigations retain their own search conditions and may describe a subset of the headline.</p>
+            <label>Investigation <Select value={record.id} onChange={(_event, {value}) => setSelected(String(value))}>
+                {targets.map(target => <Select.Option key={target.id} value={target.id} label={(target.id === source.id ? 'Headline result — ' : 'Supporting detail — ') + target.searchName}/>) }
+            </Select></label>
+            <p>{plainTextFromHtml(record.explanation || record.description)}</p>
+            <SearchActions context={context} searchId={record.id} transformSearch={transform}/>
+            {result.loading ? <p role="status">Loading investigation…</p> : result.error ?
+                <p role="alert">Search unavailable or timed out. Partial results are not shown. Use Open in Search to investigate.</p> : rows.length === 0 ?
+                <p role="status">No observations returned for this time range. Missing measurements are unknown.</p> :
+                <div className="scd-glass-metric-detail-table"><table><thead><tr>{columns.map(column => <th key={column}>{humanizeColumnLabel(column)}</th>)}</tr></thead>
+                    <tbody>{rows.map((row, index) => <tr key={index}>{columns.map(column => <td key={column}>{displayCell(row[column])}</td>)}</tr>)}</tbody></table></div>}
+            {result.rows.length > 200 && <p role="status">Showing the first 200 rows. Open in Search for the complete result.</p>}
+        </Modal.Body>
+        <Modal.Footer><Button label="Close" onClick={onClose}/></Modal.Footer>
+    </Modal>;
 };
 
 const SearchInfoDialog = ({
@@ -454,6 +521,7 @@ const SearchInfoDialog = ({
     onClose: () => void;
     returnFocus: React.MutableRefObject<HTMLElement | null>;
 }): JSX.Element => {
+    useDialogFocusReturn(returnFocus);
     const description = plainTextFromHtml(
         record.explanation || record.description || record.solution
     );
@@ -575,6 +643,7 @@ const SearchMetric = ({
     searchId,
     label,
     preferredFields = [],
+    transformSearch,
     suffix = '',
     tone = 'default',
     icon: Icon = Activity,
@@ -585,7 +654,9 @@ const SearchMetric = ({
         earliest: context.earliest,
         refreshToken: context.refreshToken,
         count: 10,
+        transformSearch,
     });
+    const telemetryMessage = getTelemetryMessage(state.rows);
     const value = getScalarValue(state.rows, preferredFields);
     const trend = metricTrendForRow(state.rows[0]);
     const TrendIcon =
@@ -603,15 +674,22 @@ const SearchMetric = ({
             <SearchActions
                 context={context}
                 searchId={searchId}
+                transformSearch={transformSearch}
             />
             <div className="scd-glass-metric-label">
                 <Icon size={16} strokeWidth={2} />
                 <span>{label}</span>
             </div>
-            <strong>{state.loading ? '…' : formatNumber(value, suffix)}</strong>
+            <button type="button" className="scd-glass-metric-drilldown"
+                disabled={!context.catalogue?.has(searchId)}
+                aria-label={`Investigate ${label}`} title={`Investigate ${label}`}
+                onClick={() => context.showMetricInvestigation({searchId, label, transformSearch})}>
+                <strong>{state.loading ? '…' : formatNumber(value, suffix)}</strong>
+                <Search size={15} aria-hidden />
+            </button>
             <span className="scd-glass-metric-status">
                 <span>
-                    {state.error ? 'Search unavailable' : 'Live Searchbase result'}
+                    {state.error ? 'Search unavailable' : telemetryMessage ?? (value === null ? 'No reported measurement for this time range' : 'Live Searchbase result')}
                 </span>
                 {!state.loading && !state.error && trend ? (
                     <span
@@ -641,7 +719,7 @@ const SearchChartPanel = ({
         searchId,
         earliest: context.earliest,
         refreshToken: context.refreshToken,
-        count: 200,
+        count: chartKind === 'pie' ? 201 : 200,
     });
     const filteredRows = useFilteredRows(
         state.rows,
@@ -649,19 +727,23 @@ const SearchChartPanel = ({
     );
     const labelKey = getLabelKey(filteredRows);
     const numericKeys = getNumericKeys(filteredRows).slice(0, 4);
+    const isTimeSeries = labelKey === '_time' || /(?:^|[_\s-])(time|date)(?:$|[_\s-])/i.test(labelKey ?? '');
+    const timeLabels = chartTimeLabels(filteredRows.map(row => row[labelKey ?? '']));
+    const axisLabel = isTimeSeries ? timeLabels.tick : compactLabel;
+    const tooltipLabel = isTimeSeries ? timeLabels.tooltip : undefined;
     const colors = CHART_COLORS;
-    const axisColor = 'var(--glass-muted)';
+    const axisColor = 'var(--glass-text)';
     const gridColor = 'var(--glass-border)';
     const tooltipStyle = {
-        background: 'var(--glass-panel-subtle)',
-        border: '1px solid var(--glass-border-strong)',
+        backgroundColor: 'var(--glass-panel-subtle, #131a23)',
+        border: '1px solid var(--glass-border-strong, #66717c)',
         borderRadius: 8,
-        color: 'var(--glass-text)',
+        color: 'var(--glass-text, #ecf0f5)',
         fontSize: 12,
     };
 
     const renderChart = (): React.ReactNode => {
-        if (!labelKey || numericKeys.length === 0) {
+        if (state.loading || state.error || !labelKey || numericKeys.length === 0) {
             return (
                 <EmptyState
                     loading={state.loading}
@@ -671,38 +753,32 @@ const SearchChartPanel = ({
         }
 
         if (chartKind === 'pie') {
-            const valueKey = numericKeys[0];
-            const data = filteredRows.slice(0, 8).map((row) => ({
-                name: compactLabel(row[labelKey]),
-                value: asNumber(row[valueKey]) ?? 0,
-            }));
-            return (
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={data}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius="52%"
-                            outerRadius="78%"
-                            paddingAngle={2}
-                        >
-                            {data.map((entry, index) => (
-                                <Cell
-                                    key={`${entry.name}-${index}`}
-                                    fill={colors[index % colors.length]}
-                                />
-                            ))}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                    </PieChart>
-                </ResponsiveContainer>
-            );
+            if (state.rows.length > 200) return <p role="status">Distribution exceeds the display limit. Open in Search for complete values; partial percentages are not displayed.</p>;
+            const data = chartPieValues(filteredRows, labelKey, numericKeys[0]);
+            if (!data.length) return <EmptyState loading={state.loading} error={state.error} message="No positive measured values in this time range."/>;
+            return <>
+                <div className="scd-glass-pie-plot">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie data={data} dataKey="value" nameKey="name" innerRadius="52%" outerRadius="78%"
+                                paddingAngle={2} stroke="var(--glass-panel)" strokeWidth={2}>
+                                {data.map((entry,index) => <Cell key={entry.name} fill={colors[index % colors.length]}/>)}
+                            </Pie>
+                            <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle}
+                                formatter={(value: number) => Number(value).toLocaleString(undefined,{maximumFractionDigits:2})}/>
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                <dl className="scd-glass-pie-values" aria-label={title + ' values'}>
+                    {data.map((entry,index) => <div key={entry.name}>
+                        <dt><span className="scd-glass-pie-swatch" style={{background:colors[index % colors.length]}} aria-hidden/>{entry.name || '(empty category)'}</dt>
+                        <dd><strong>{entry.value.toLocaleString(undefined,{maximumFractionDigits:2})}</strong> <span>({entry.percent.toFixed(1)}%)</span></dd>
+                    </div>)}
+                </dl>
+            </>;
         }
 
         if (chartKind === 'bar') {
-            const isTimeSeries =
-                labelKey === '_time' || /(?:^|[_\s-])(time|date)(?:$|[_\s-])/i.test(labelKey);
             const barRows = isTimeSeries
                 ? filteredRows.slice(-12)
                 : filteredRows.slice(0, 12);
@@ -719,14 +795,16 @@ const SearchChartPanel = ({
                             dataKey={labelKey}
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
-                            tickFormatter={compactLabel}
+                            tickFormatter={axisLabel}
+                            minTickGap={28}
+                            interval="preserveStartEnd"
                         />
                         <YAxis
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
                             width={42}
                         />
-                        <Tooltip contentStyle={tooltipStyle} />
+                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} labelFormatter={tooltipLabel} />
                         {numericKeys.slice(0, 3).map((key, index) => (
                             <Bar
                                 key={key}
@@ -753,14 +831,16 @@ const SearchChartPanel = ({
                             dataKey={labelKey}
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
-                            tickFormatter={compactLabel}
+                            tickFormatter={axisLabel}
+                            minTickGap={28}
+                            interval="preserveStartEnd"
                         />
                         <YAxis
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
                             width={42}
                         />
-                        <Tooltip contentStyle={tooltipStyle} />
+                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} labelFormatter={tooltipLabel} />
                         {numericKeys.slice(0, 3).map((key, index) => (
                             <Area
                                 key={key}
@@ -789,14 +869,16 @@ const SearchChartPanel = ({
                         dataKey={labelKey}
                         stroke={axisColor}
                         tick={{ fill: axisColor, fontSize: 10 }}
-                        tickFormatter={compactLabel}
+                        tickFormatter={axisLabel}
+                        minTickGap={28}
+                        interval="preserveStartEnd"
                     />
                     <YAxis
                         stroke={axisColor}
                         tick={{ fill: axisColor, fontSize: 10 }}
                         width={42}
                     />
-                    <Tooltip contentStyle={tooltipStyle} />
+                    <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} labelFormatter={tooltipLabel} />
                     {numericKeys.slice(0, 3).map((key, index) => (
                         <Line
                             key={key}
@@ -816,7 +898,7 @@ const SearchChartPanel = ({
         <Panel
             title={title}
             subtitle={subtitle}
-            className={`scd-glass-chart-panel ${className}`}
+            className={`scd-glass-chart-panel ${chartKind === 'pie' ? 'scd-glass-pie-panel' : ''} ${className}`}
             linked
             action={
                 <SearchActions
@@ -903,6 +985,61 @@ const SearchTablePanel = ({
     );
 };
 
+const CloudFirewallVerdictExplorer = ({context}: {context: PageContext}): JSX.Element => {
+    const [selected, setSelected] = useState<string | null>(null);
+    const state = useSearchbaseRows({catalogue: context.catalogue,
+        searchId: 'secure_networking_sse_cloud_firewall_verdict_split', earliest: context.earliest,
+        refreshToken: context.refreshToken, count: 201});
+    const verdicts = cloudFirewallVerdicts(state.rows);
+    const select = (action: string): void => setSelected(current => toggleCloudVerdict(current, action));
+    const transform = useMemo(() => (spl: string) => cloudFirewallDetailSearch(spl, selected), [selected]);
+    const label = selected === null ? 'All verdicts' : selected || '(empty action)';
+    return <>
+        <div className="scd-glass-verdict-filter">
+            <p role="status">Cloud firewall event filter: <strong>{label}</strong></p>
+            <Button label="Clear verdict filter" disabled={selected === null} onClick={() => setSelected(null)}/>
+        </div>
+        <div className="scd-glass-grid-two">
+            <Panel title="Cloud Firewall Verdicts" subtitle="Cisco SSE enforcement distribution — select a slice or value to filter event details" linked
+                action={<SearchActions context={context} searchId="secure_networking_sse_cloud_firewall_verdict_split"/>}>
+                {state.loading || state.error || verdicts.length === 0 ? <EmptyState loading={state.loading} error={state.error}/> : state.rows.length > 200 ? <p role="status">Verdict results reached the display limit. Open in Search for the complete distribution; partial percentages are not displayed.</p> : <>
+                    <p>Total cloud firewall events: <strong>{verdicts.reduce((sum, entry) => sum + entry.value, 0).toLocaleString()}</strong></p>
+                    <div className="scd-glass-verdict-chart">
+                        <ResponsiveContainer width="100%" height="100%"><PieChart>
+                            <Pie data={verdicts} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="76%" paddingAngle={2}
+                                isAnimationActive={false} labelLine={false}
+                                label={({percent, value}) => Number(percent) >= 0.06 ? Number(value).toLocaleString() : ''}
+                                onClick={entry => {const action = entry.payload?.action ?? entry.action; if (typeof action === 'string') select(action);}}>
+                                {verdicts.map((entry,index) => <Cell key={entry.action} fill={CHART_COLORS[index % CHART_COLORS.length]}
+                                    fillOpacity={selected === null || selected === entry.action ? 1 : 0.3}
+                                    stroke={selected === entry.action ? 'var(--glass-text)' : undefined} strokeWidth={selected === entry.action ? 3 : 1}
+                                    role="button" tabIndex={0} cursor="pointer" aria-pressed={selected === entry.action}
+                                    aria-label={`Filter ${entry.name}: ${entry.value.toLocaleString()} events, ${entry.percent.toFixed(1)} percent`}
+                                    onKeyDown={event => {if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); select(entry.action);}}}/>)}
+                            </Pie>
+                            <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={{backgroundColor: 'var(--glass-panel-subtle, #131a23)', border: '1px solid var(--glass-border-strong, #66717c)', color: 'var(--glass-text, #ecf0f5)'}}
+                                formatter={(value: number) => [Number(value).toLocaleString() + ' events', 'Count']}/>
+                        </PieChart></ResponsiveContainer>
+                    </div>
+                    <div className="scd-glass-verdict-values" aria-label="Cloud firewall verdict values">
+                        {verdicts.map((entry,index) => <button type="button" key={entry.action} aria-pressed={selected === entry.action}
+                            onClick={() => select(entry.action)} title={`Filter event details to ${entry.name}`}>
+                            <span className="scd-glass-verdict-swatch" style={{background: CHART_COLORS[index % CHART_COLORS.length]}} aria-hidden/>
+                            <span>{entry.name}</span><strong>{entry.value.toLocaleString()}</strong><span>{entry.percent.toFixed(1)}%</span>
+                        </button>)}
+                    </div>
+                </>}
+            </Panel>
+            <SearchTablePanel key={JSON.stringify([selected,context.earliest,context.refreshToken])} context={context}
+                searchId="secure_networking_sse_security_event_detail" title="Cloud Firewall Event Details"
+                subtitle={`Verdict: ${label}. Up to 50 matching cloud firewall events, prioritized by action and recency. Open in Search for the complete result. Sidebar filters do not narrow this view.`}
+                maxRows={50} useGlobalFilters={false} transformSearch={transform} className="scd-glass-verdict-details"/>
+        </div>
+        <SearchTablePanel context={context} searchId="secure_networking_source_health_by_pillar"
+            title="Secure Networking Source Health" subtitle="Ingestion freshness across security pillars; independent of verdict selection"/>
+    </>;
+};
+
 const SectionBand = ({
     children,
     icon: Icon,
@@ -944,7 +1081,8 @@ const OverviewTab = ({ context }: { context: PageContext }): JSX.Element => (
                 context={context}
                 searchId="secure_networking_sse_dns_blocked_categories"
                 label="DNS Threat Categories"
-                preferredFields={['Block Count']}
+                preferredFields={['category_count']}
+                transformSearch={dnsCategoryMetricSearch}
                 tone="warning"
                 icon={Globe2}
             />
@@ -994,21 +1132,7 @@ const OverviewTab = ({ context }: { context: PageContext }): JSX.Element => (
                 chartKind="bar"
             />
         </div>
-        <div className="scd-glass-grid-two">
-            <SearchChartPanel
-                context={context}
-                searchId="secure_networking_sse_cloud_firewall_verdict_split"
-                title="Cloud Firewall Verdicts"
-                subtitle="Cisco SSE enforcement distribution"
-                chartKind="pie"
-            />
-            <SearchTablePanel
-                context={context}
-                searchId="secure_networking_source_health_by_pillar"
-                title="Secure Networking Source Health"
-                subtitle="Ingestion freshness across security pillars"
-            />
-        </div>
+        <CloudFirewallVerdictExplorer context={context}/>
     </div>
 );
 
@@ -1034,7 +1158,7 @@ const IdentityTab = ({ context }: { context: PageContext }): JSX.Element => (
                 context={context}
                 searchId="secure_networking_sgt_total_assignments_count"
                 label="SGT Assignments"
-                preferredFields={['sgt_assignments']}
+                preferredFields={['total_assignments']}
                 icon={Network}
             />
             <SearchMetric
@@ -1049,7 +1173,7 @@ const IdentityTab = ({ context }: { context: PageContext }): JSX.Element => (
                 context={context}
                 searchId="secure_networking_zta_ztna_session_count"
                 label="ZTNA Sessions"
-                preferredFields={['session_count']}
+                preferredFields={['ztna_sessions']}
                 tone="good"
                 icon={CheckCircle2}
             />
@@ -1269,7 +1393,8 @@ const FirewallTab = ({ context }: { context: PageContext }): JSX.Element => {
                     context={context}
                     searchId="secure_networking_sse_dns_blocked_categories"
                     label="DNS Block Categories"
-                    preferredFields={['Block Count']}
+                    preferredFields={['category_count']}
+                    transformSearch={dnsCategoryMetricSearch}
                     tone="warning"
                     icon={Globe2}
                 />
@@ -1285,7 +1410,8 @@ const FirewallTab = ({ context }: { context: PageContext }): JSX.Element => {
                     context={context}
                     searchId="secure_networking_secure_access_dlp_findings"
                     label="DLP Policy Hits"
-                    preferredFields={['finding_count', 'total_findings']}
+                    preferredFields={['finding_count']}
+                    transformSearch={dlpFindingMetricSearch}
                     tone="warning"
                     icon={Cloud}
                 />
@@ -1809,14 +1935,14 @@ const NetworkTab = ({
                 context={context}
                 searchId="secure_networking_sdwan_apps_health_breakdown"
                 title="SD-WAN Application Experience"
-                chartKind="pie"
+                subtitle="Observed healthy and degraded site trends"
+                chartKind="line"
                 useGlobalFilters={false}
             />
-            <SearchChartPanel
+            <SearchTablePanel
                 context={context}
                 searchId="secure_networking_sdwan_site_health_breakdown"
                 title="SD-WAN Site Health"
-                chartKind="pie"
                 useGlobalFilters={false}
             />
             <SearchTablePanel
@@ -1847,14 +1973,14 @@ const NetworkTab = ({
                 context={context}
                 searchId="secure_networking_meraki_wired_client_count"
                 label="Wired Clients"
-                preferredFields={['wired_clients']}
+                preferredFields={['wired_client_count']}
                 icon={Server}
             />
             <SearchMetric
                 context={context}
                 searchId="secure_networking_meraki_wireless_client_count"
                 label="Wireless Clients"
-                preferredFields={['wireless_clients']}
+                preferredFields={['wireless_client_count']}
                 icon={Wifi}
             />
         </div>
@@ -1939,19 +2065,9 @@ const UserInvestigationTab = ({
     const [draftUser, setDraftUser] = useState('');
     const [appliedUser, setAppliedUser] = useState('');
     const safeUser = sanitizeWildcardSearchValue(appliedUser);
-    const isWildcardSearch = safeUser.includes('*');
     const transformSearch = useMemo(() => {
         if (!safeUser) return undefined;
-        return (spl: string): string => {
-            const aggregateMarker = '\n| stats count as event_count';
-            if (spl.includes(aggregateMarker)) {
-                return spl.replace(
-                    aggregateMarker,
-                    `\n| search identity="${safeUser}"${aggregateMarker}`
-                );
-            }
-            return `${spl}\n| search "Identity"="${safeUser}"`;
-        };
+        return (spl: string): string => identityActivitySearch(spl, safeUser);
     }, [safeUser]);
     const activity = useSearchbaseRows({
         catalogue: context.catalogue,
@@ -1962,52 +2078,8 @@ const UserInvestigationTab = ({
         transformSearch,
         count: 100,
     });
-    const row = activity.rows[0] ?? {};
     const columns = getColumns(activity.rows);
-    const summary = useMemo(() => {
-        if (!isWildcardSearch) {
-            return {
-                totalEvents: row['Total Events'],
-                secondLabel: 'Layers Seen',
-                secondValue: row['Layers Seen'],
-                thirdLabel: 'Fail / Block Layers',
-                thirdValue: row['Fail/Block Layers'],
-                sources: row.Sources,
-                lastSeen: row['Last Seen'],
-            };
-        }
-
-        const sourceSet = new Set<string>();
-        let totalEvents = 0;
-        let identitiesWithBlocks = 0;
-        let lastSeen = '';
-
-        activity.rows.forEach((activityRow) => {
-            totalEvents += asNumber(activityRow['Total Events']) ?? 0;
-            if ((asNumber(activityRow['Fail/Block Layers']) ?? 0) > 0) {
-                identitiesWithBlocks += 1;
-            }
-            String(activityRow.Sources ?? '')
-                .split(',')
-                .map((source) => source.trim())
-                .filter(Boolean)
-                .forEach((source) => sourceSet.add(source));
-            const candidateLastSeen = String(activityRow['Last Seen'] ?? '');
-            if (candidateLastSeen > lastSeen) {
-                lastSeen = candidateLastSeen;
-            }
-        });
-
-        return {
-            totalEvents,
-            secondLabel: 'Matching Identities',
-            secondValue: activity.rows.length,
-            thirdLabel: 'Identities with Blocks',
-            thirdValue: identitiesWithBlocks,
-            sources: Array.from(sourceSet).join(', '),
-            lastSeen,
-        };
-    }, [activity.rows, isWildcardSearch, row]);
+    const summary = useMemo(() => summarizeIdentityActivity(activity.rows), [activity.rows]);
 
     const submit = (event: React.FormEvent): void => {
         event.preventDefault();
@@ -2023,12 +2095,10 @@ const UserInvestigationTab = ({
                     <UserRoundSearch size={28} />
                     <div>
                         <h2>
-                            Trace a user session across Campus Wireless → ISE
-                            Auth → Cloud Firewall → Web Proxy → ZTNA
+                            Review observed identity activity across ISE, ZTNA and firewall sources
                         </h2>
                         <p>
-                            Enter an identity to correlate its activity across
-                            the Secure Networking enforcement stack. Use * for
+                            Enter an identity to review matching observations. Shared identity or timing does not prove a single session or traffic path. Use * for
                             wildcard matches, for example user47*.
                         </p>
                     </div>
@@ -2065,7 +2135,11 @@ const UserInvestigationTab = ({
                         )}`}
                     >
                         <span className="scd-glass-metric-label">{label}</span>
-                        <strong>{safeUser ? displayCell(value) : '—'}</strong>
+                        <button type="button" className="scd-glass-metric-drilldown" disabled={!safeUser}
+                            aria-label={`Investigate ${label}`} title={`Investigate ${label}`}
+                            onClick={() => context.showMetricInvestigation({searchId: 'secure_networking_zta_user_activity_cross_source', label, transformSearch})}>
+                            <strong>{safeUser ? displayCell(value) : '—'}</strong><Search size={15} aria-hidden />
+                        </button>
                         <span className="scd-glass-metric-status">
                             {safeUser ? safeUser : 'Waiting for a username'}
                         </span>
@@ -2317,12 +2391,20 @@ const FilterSidebar = ({
 
 const SecureOperationsGlassPage = (): JSX.Element => {
     const [activeTab, setActiveTab] = useState<TabId>('overview');
+    const [focusedTab, setFocusedTab] = useState<TabId>('overview');
     const [earliest, setEarliest] = useState('-7d@d');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [refreshToken, setRefreshToken] = useState(0);
     const [infoRecord, setInfoRecord] = useState<SearchbaseRecord | null>(null);
     const infoReturnFocusRef = useRef<HTMLElement | null>(null);
+    const metricReturnFocusRef = useRef<HTMLElement | null>(null);
+    const [metricRequest, setMetricRequest] = useState<MetricInvestigation | null>(null);
+    const showMetricInvestigation = useCallback((request: MetricInvestigation): void => {
+        metricReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setMetricRequest(request);
+    }, []);
+    useEffect(() => setMetricRequest(null), [activeTab, earliest, filters]);
     const { catalogue, error: catalogueError } = useSearchbaseCatalogueMap();
 
     useEffect(() => {
@@ -2355,8 +2437,9 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             refreshToken,
             filters,
             showSearchInfo,
+            showMetricInvestigation,
         }),
-        [catalogue, earliest, refreshToken, filters, showSearchInfo]
+        [catalogue, earliest, refreshToken, filters, showSearchInfo, showMetricInvestigation]
     );
 
     const renderTab = (): React.ReactNode => {
@@ -2388,11 +2471,12 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                 <div className="scd-glass-title-block">
                     <div className="scd-glass-title-row">
                         <div>
-                            <h1>Cisco Secure Networking — Operations Glass</h1>
+                            <h1>Security Operations Overview (Preview)</h1>
                             <p>
                                 Security Operations · Identity · Firewall ·
                                 Health · Investigation
                             </p>
+                            <p role="note">Preview—try this dashboard and let us know what works, what’s confusing, or what’s missing.</p>
                         </div>
                     </div>
                     <div className="scd-glass-time">
@@ -2443,6 +2527,9 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             <div
                 className="scd-glass-tabs"
                 aria-label="Dashboard sections"
+                onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedTab(activeTab);
+                }}
                 role="tablist"
             >
                 {TABS.map((tab) => {
@@ -2454,6 +2541,18 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                             className={activeTab === tab.id ? 'is-active' : ''}
                             onClick={() => setActiveTab(tab.id)}
                             role="tab"
+                            tabIndex={focusedTab === tab.id ? 0 : -1}
+                            onFocus={() => setFocusedTab(tab.id)}
+                            onKeyDown={(event) => {
+                                const index = TABS.findIndex(item => item.id === tab.id);
+                                const next = event.key === 'ArrowRight' ? (index + 1) % TABS.length
+                                    : event.key === 'ArrowLeft' ? (index + TABS.length - 1) % TABS.length
+                                    : event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : -1;
+                                if (next < 0) return;
+                                event.preventDefault();
+                                setFocusedTab(TABS[next].id);
+                                document.getElementById(`scd-glass-tab-${TABS[next].id}`)?.focus();
+                            }}
                             id={`scd-glass-tab-${tab.id}`}
                             aria-selected={activeTab === tab.id}
                             aria-controls={`scd-glass-panel-${tab.id}`}
@@ -2517,6 +2616,10 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             <span className="scd-glass-view-id" aria-hidden="true">
                 {titleFromPath()}
             </span>
+            {metricRequest && catalogue?.has(metricRequest.searchId) ? (
+                <MetricInvestigationDialog context={context} request={metricRequest}
+                    onClose={() => setMetricRequest(null)} returnFocus={metricReturnFocusRef}/>
+            ) : null}
             {infoRecord ? (
                 <SearchInfoDialog
                     record={infoRecord}

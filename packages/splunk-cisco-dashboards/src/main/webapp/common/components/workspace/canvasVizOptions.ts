@@ -31,7 +31,7 @@
  *     — names the SPL column to render as a dashed comparison overlay.
  *   - `overlayLabel` (string, default field name) — short label for
  *     the dashed comparison overlay in hover/focus detail views.
- *   - `decimals` (number, 0 ≤ n ≤ 4, default `0`) — decimal places
+ *   - `decimals` (number, 0 ≤ n ≤ 4, default `2`) — decimal places
  *     for the headline value.
  *   - `valueSuffix` (string, default `""`) — appended verbatim after
  *     the headline (e.g. `"%"`, `" Mbps"`).
@@ -189,8 +189,8 @@ export const resolveDecimals = (
     options: Record<string, unknown> | undefined
 ): number => {
     const raw = options?.decimals;
-    const n = coerceFinite(raw, 0);
-    if (!Number.isFinite(n)) return 0;
+    const n = coerceFinite(raw, 2);
+    if (!Number.isFinite(n)) return 2;
     const clamped = Math.max(0, Math.min(4, Math.floor(n)));
     return clamped;
 };

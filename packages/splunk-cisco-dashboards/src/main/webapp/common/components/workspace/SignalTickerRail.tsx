@@ -18,6 +18,7 @@ import {
     X,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { observedSignalSeries, sameSignalSeries, type SignalRailPoint } from '@/common/lib/signalRailSeries';
 import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
 import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
 import { formatMetricNumber } from '@/common/lib/metricValueFormat';
@@ -206,6 +207,7 @@ interface SignalTickerTileVisualState {
     canOpen: boolean;
     delta?: string;
     deltaDir?: SignalRailDeltaDirection;
+    series?: SignalRailPoint[];
 }
 
 const makePendingVisual = (
@@ -233,7 +235,8 @@ const sameVisualState = (
     a?.status === b.status &&
     a?.canOpen === b.canOpen &&
     a?.delta === b.delta &&
-    a?.deltaDir === b.deltaDir;
+    a?.deltaDir === b.deltaDir &&
+    sameSignalSeries(a?.series, b.series);
 
 interface SignalTickerTileChromeProps {
     visual: SignalTickerTileVisualState;
@@ -455,8 +458,9 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             canOpen: Boolean(record?.search),
             delta,
             deltaDir,
+            series: observedSignalSeries(result.source, result.sparkData, result.sparkTimestamps),
         }),
-        [delta, deltaDir, label, record?.search, status, subtitle, valueText]
+        [delta, deltaDir, label, record?.search, status, subtitle, valueText, result.source, result.sparkData, result.sparkTimestamps]
     );
 
     useEffect(() => {
@@ -481,23 +485,23 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
 };
 
 interface SignalTickerRailProps {
+    workspaceId?: string;
     config: SignalTickerConfig;
     catalogueByName: Map<string, SearchbaseRecord> | null;
     metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
     range: TimeRange;
     refreshToken: number;
     paused?: boolean;
-    onOpenEditor: () => void;
 }
 
 export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
+    workspaceId,
     config,
     catalogueByName,
     metricDefaultsBySearchName,
     range,
     refreshToken,
     paused = false,
-    onOpenEditor,
 }) => {
     const [visualById, setVisualById] = useState<
         Record<string, SignalTickerTileVisualState>
@@ -545,6 +549,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                     category: visual.subtitle,
                     delta: visual.delta,
                     deltaDir: visual.deltaDir,
+                    series: visual.series,
                     href: record?.search
                         ? splunkSearchAppUrl(record.search, range, record.dispatchContext)
                         : undefined,
@@ -585,12 +590,14 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                 );
             })}
             <SignalRailTicker
+                key={workspaceId}
+                preferenceScope={workspaceId === 'dc_networking' ? workspaceId : undefined}
+                defaultVariant={workspaceId === 'dc_networking' ? 'original' : undefined}
                 kpis={tickerKpis}
                 density={density}
                 fontSize={fontSize}
                 rows={config.rows}
                 durationSeconds={durationSeconds}
-                onOpenEditor={onOpenEditor}
             />
         </>
     );
@@ -1170,7 +1177,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     id="signal-rail-speed-label"
                                     className="text-xs font-black uppercase tracking-[0.16em] sui-color-default"
                                 >
-                                    Legacy ticker speed
+                                    Rail speed
                                 </span>
                                 <span className="rounded-full  px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em]  sui-bg-section sui-color-default">
                                     {config.speed === 0
@@ -1207,7 +1214,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     }
                                 />
                                 <p className="mt-2 text-xs leading-snug  sui-color-muted">
-                                    The 1CD glass status cards remain static. This speed applies only to optional legacy ticker styles.
+                                    One Cisco Glass stays static. A positive speed moves the other styles, including Minimal Enterprise and Prism Pulse, even when all signals fit. Set speed to Static to stop movement.
                                 </p>
                             </div>
                         </div>

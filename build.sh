@@ -577,6 +577,9 @@ if [[ -z "${SPLUNK_HOME:-}" ]]; then
     fi
 fi
 
+# The packager reads the selected target's build metadata as a safety floor.
+export SPLUNK_HOME
+
 usage() {
     cat <<EOF
 Usage: ./build.sh [options]

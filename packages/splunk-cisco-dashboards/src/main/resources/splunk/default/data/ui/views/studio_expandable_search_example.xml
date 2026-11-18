@@ -1,0 +1,384 @@
+<dashboard version="2" theme="dark">
+    <label>Studio Expand/Collapse Example (Under Dev)</label>
+    <description>Compare native panel visibility with deferred tab searches. Synthetic demonstration data; no Catalyst dashboards are changed.</description>
+    <definition><![CDATA[
+{
+	"title": "Studio Expand/Collapse Example (Under Dev)",
+	"description": "Compare native panel visibility with deferred tab searches. Synthetic demonstration data; no Catalyst dashboards are changed.",
+	"inputs": {
+		"input_time_range": {
+			"type": "input.timerange",
+			"title": "Time range",
+			"options": {
+				"token": "global_time",
+				"defaultValue": "-4h,now"
+			}
+		},
+		"input_clients": {
+			"type": "input.button",
+			"options": {
+				"label": "$eval:label_clients$"
+			},
+			"eventHandlers": [
+				{
+					"type": "drilldown.setToken",
+					"options": {
+						"tokens": [
+							{
+								"token": "show_clients",
+								"value": "$eval:toggle_clients$"
+							}
+						]
+					}
+				}
+			]
+		},
+		"input_devices": {
+			"type": "input.button",
+			"options": {
+				"label": "$eval:label_devices$"
+			},
+			"eventHandlers": [
+				{
+					"type": "drilldown.setToken",
+					"options": {
+						"tokens": [
+							{
+								"token": "show_devices",
+								"value": "$eval:toggle_devices$"
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	"defaults": {
+		"tokens": {
+			"default": {
+				"show_clients": {
+					"value": "false"
+				},
+				"show_devices": {
+					"value": "false"
+				}
+			}
+		}
+	},
+	"visualizations": {
+		"viz_explanation": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "# Native Studio: collapse is not search gating\n\nThis page is a **Dashboard Studio definition**, using only native controls. The rows below are **synthetic demonstration data**, not client or device telemetry.\n\n**Test in View mode.** Both sections start hidden. Wait a few seconds, then open one and inspect **ExecutedAt** or the panel's **Inspect** action. Hidden layout items can still have search subscriptions; a show/hide condition does not promise that a search waits for the click. Time changes can also refresh hidden searches.\n\nThe **Deferred client detail** and **Deferred device detail** tabs use separate searches that native Studio starts when their tab is first selected. Revisited tabs can reuse cached results. This does not promise fresh execution or cancellation when you leave a tab.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
+				"fontSize": "medium"
+			}
+		},
+		"viz_hidden_clients": {
+			"type": "splunk.table",
+			"title": "Visibility-only clients (synthetic)",
+			"dataSources": {
+				"primary": "ds_hidden_clients"
+			},
+			"options": {
+				"count": 10,
+				"backgroundColor": "#131a23"
+			},
+			"containerOptions": {
+				"visibility": {
+					"showConditions": [
+						"condition_clients"
+					]
+				}
+			}
+		},
+		"viz_hidden_devices": {
+			"type": "splunk.table",
+			"title": "Visibility-only devices (synthetic)",
+			"dataSources": {
+				"primary": "ds_hidden_devices"
+			},
+			"options": {
+				"count": 10,
+				"backgroundColor": "#131a23"
+			},
+			"containerOptions": {
+				"visibility": {
+					"showConditions": [
+						"condition_devices"
+					]
+				}
+			}
+		},
+		"viz_client_intro": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "# Deferred client detail\n\nThis tab owns an independent native search. Studio starts it when you first select this tab, unless another consumer requires it. It is not referenced by the first tab or by a search-based token.\n\n**ExecutedAt** records when this demonstration search executed. Returning to the tab can show cached results; use the native panel Refresh action to request fresh results. No automatic cancellation-on-leave is promised. All displayed values are synthetic.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
+				"fontSize": "medium"
+			}
+		},
+		"viz_deferred_client": {
+			"type": "splunk.table",
+			"title": "Deferred client data (synthetic)",
+			"dataSources": {
+				"primary": "ds_deferred_client"
+			},
+			"options": {
+				"count": 10,
+				"backgroundColor": "#131a23"
+			}
+		},
+		"viz_device_intro": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": "# Deferred device detail\n\nThis tab owns an independent native search. Studio starts it when you first select this tab, unless another consumer requires it. It is not referenced by the first tab or by a search-based token.\n\n**ExecutedAt** records when this demonstration search executed. Returning to the tab can show cached results; use the native panel Refresh action to request fresh results. No automatic cancellation-on-leave is promised. All displayed values are synthetic.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
+				"fontSize": "medium"
+			}
+		},
+		"viz_deferred_device": {
+			"type": "splunk.table",
+			"title": "Deferred device data (synthetic)",
+			"dataSources": {
+				"primary": "ds_deferred_device"
+			},
+			"options": {
+				"count": 10,
+				"backgroundColor": "#131a23"
+			}
+		}
+	},
+	"dataSources": {
+		"ds_hidden_clients": {
+			"type": "ds.search",
+			"name": "Studio example - Visibility-only clients",
+			"options": {
+				"query": "| makeresults count=3\n| streamstats count as Row\n| eval Section=\"Visibility-only clients\", SampleValue=Row*10, ExecutedEpoch=now()\n| eval ExecutedAt=strftime(ExecutedEpoch, \"%Y-%m-%d %H:%M:%S %Z\")\n| table Section Row SampleValue ExecutedAt ExecutedEpoch",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			}
+		},
+		"ds_hidden_devices": {
+			"type": "ds.search",
+			"name": "Studio example - Visibility-only devices",
+			"options": {
+				"query": "| makeresults count=3\n| streamstats count as Row\n| eval Section=\"Visibility-only devices\", SampleValue=Row*10, ExecutedEpoch=now()\n| eval ExecutedAt=strftime(ExecutedEpoch, \"%Y-%m-%d %H:%M:%S %Z\")\n| table Section Row SampleValue ExecutedAt ExecutedEpoch",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			}
+		},
+		"ds_deferred_client": {
+			"type": "ds.search",
+			"name": "Studio example - Deferred client tab",
+			"options": {
+				"query": "| makeresults count=3\n| streamstats count as Row\n| eval Section=\"Deferred client tab\", SampleValue=Row*10, ExecutedEpoch=now()\n| eval ExecutedAt=strftime(ExecutedEpoch, \"%Y-%m-%d %H:%M:%S %Z\")\n| table Section Row SampleValue ExecutedAt ExecutedEpoch",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			}
+		},
+		"ds_deferred_device": {
+			"type": "ds.search",
+			"name": "Studio example - Deferred device tab",
+			"options": {
+				"query": "| makeresults count=3\n| streamstats count as Row\n| eval Section=\"Deferred device tab\", SampleValue=Row*10, ExecutedEpoch=now()\n| eval ExecutedAt=strftime(ExecutedEpoch, \"%Y-%m-%d %H:%M:%S %Z\")\n| table Section Row SampleValue ExecutedAt ExecutedEpoch",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			}
+		}
+	},
+	"expressions": {
+		"conditions": {
+			"condition_clients": {
+				"name": "Show clients",
+				"value": "$show_clients$ = \"true\""
+			},
+			"condition_devices": {
+				"name": "Show devices",
+				"value": "$show_devices$ = \"true\""
+			}
+		},
+		"eval": {
+			"toggle_clients": {
+				"name": "toggle_clients",
+				"value": "$show_clients$ = 'true' ? 'false' : 'true'"
+			},
+			"label_clients": {
+				"name": "label_clients",
+				"value": "$show_clients$ = 'true' ? '− Hide clients section' : '+ Show clients section'"
+			},
+			"toggle_devices": {
+				"name": "toggle_devices",
+				"value": "$show_devices$ = 'true' ? 'false' : 'true'"
+			},
+			"label_devices": {
+				"name": "label_devices",
+				"value": "$show_devices$ = 'true' ? '− Hide devices section' : '+ Show devices section'"
+			}
+		}
+	},
+	"layout": {
+		"globalInputs": [
+			"input_time_range"
+		],
+		"options": {},
+		"tabs": {
+			"items": [
+				{
+					"layoutId": "layout_visibility",
+					"label": "Expand / collapse"
+				},
+				{
+					"layoutId": "layout_client",
+					"label": "Deferred client detail"
+				},
+				{
+					"layoutId": "layout_device",
+					"label": "Deferred device detail"
+				}
+			]
+		},
+		"layoutDefinitions": {
+			"layout_visibility": {
+				"type": "grid",
+				"options": {
+					"width": 1200,
+					"height": 860,
+					"backgroundColor": "#0b1118",
+					"display": "auto-scale"
+				},
+				"structure": [
+					{
+						"item": "viz_explanation",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 0,
+							"w": 1200,
+							"h": 260
+						}
+					},
+					{
+						"item": "input_clients",
+						"type": "input",
+						"position": {
+							"x": 0,
+							"y": 260,
+							"w": 1200,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_hidden_clients",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 320,
+							"w": 1200,
+							"h": 240
+						}
+					},
+					{
+						"item": "input_devices",
+						"type": "input",
+						"position": {
+							"x": 0,
+							"y": 560,
+							"w": 1200,
+							"h": 60
+						}
+					},
+					{
+						"item": "viz_hidden_devices",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 620,
+							"w": 1200,
+							"h": 240
+						}
+					}
+				]
+			},
+			"layout_client": {
+				"type": "grid",
+				"options": {
+					"width": 1200,
+					"height": 520,
+					"backgroundColor": "#0b1118",
+					"display": "auto-scale"
+				},
+				"structure": [
+					{
+						"item": "viz_client_intro",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 0,
+							"w": 1200,
+							"h": 240
+						}
+					},
+					{
+						"item": "viz_deferred_client",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 240,
+							"w": 1200,
+							"h": 280
+						}
+					}
+				]
+			},
+			"layout_device": {
+				"type": "grid",
+				"options": {
+					"width": 1200,
+					"height": 520,
+					"backgroundColor": "#0b1118",
+					"display": "auto-scale"
+				},
+				"structure": [
+					{
+						"item": "viz_device_intro",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 0,
+							"w": 1200,
+							"h": 240
+						}
+					},
+					{
+						"item": "viz_deferred_device",
+						"type": "block",
+						"position": {
+							"x": 0,
+							"y": 240,
+							"w": 1200,
+							"h": 280
+						}
+					}
+				]
+			}
+		}
+	},
+	"applicationProperties": {
+		"hideEdit": false,
+		"hideExport": false
+	}
+}
+    ]]></definition>
+</dashboard>

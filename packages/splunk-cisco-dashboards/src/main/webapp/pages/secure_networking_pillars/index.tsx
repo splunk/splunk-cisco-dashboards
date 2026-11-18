@@ -976,7 +976,7 @@ const SecureNetworkingPillarsPage = (): JSX.Element => {
                     </div>
                     <div className="scd-pillar-brand-copy">
                         <Heading level={1} variant="title1">
-                            Secure Networking Pillars
+                            Secure Networking Pillars (Under Dev)
                         </Heading>
                         <p>React-native operational dashboards · side-by-side Studio comparison</p>
                     </div>

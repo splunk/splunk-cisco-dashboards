@@ -1,8 +1,8 @@
 ---
 exportTitle: Splunk Secure Networking Essentials User Guide
 contentOwner: splunk-cisco-dashboards
-version: 1.0.80
-lastUpdated: October 2026
+version: 1.0.90
+lastUpdated: November 2026
 ---
 <!-- Single source of truth for the in-product User Guide and release history. -->
 
@@ -28,17 +28,77 @@ Use the app to:
 | Create or duplicate an executive workspace | **Home > workspace switcher > Edit workspaces** |
 | Add a KPI tile | Open a workspace section and select **Add search** |
 | Save a layout for every viewer | Select **Publish workspace layout** |
-| Configure the shared KPI strip | Select **Configure Signal Rail** |
+| Configure, hide, or show the shared KPI strip | Select the **Configure Signal Rail** sliders icon in the top toolbar, before **Refresh rate**, then toggle **Rail Enabled/Hidden**. The toolbar icon remains available when the rail is hidden. |
 | Investigate a dashboard card | Select **About this metric**, **Investigate drivers**, or **Open in Search** |
 
 ## What’s New / Release Notes {#release-notes}
 
 Browse the current release and recorded historical versions below. The newest release opens by default. Choose a version link or expand a release to read its changes; use **Expand all** to review the full history. Version **1.0.35** was an **alpha** release; the recorded versions **1.0.44 through 1.0.60** were **beta** releases.
 
+::: release Release Notes | November 2026 - Version 1.0.90
+
+### Dashboards and investigations
+
+- Zscaler transfer investigations recognize reported `requestsize` and `responsesize` fields alongside the existing byte aliases.
+- Palo Alto SGT charts and investigations correlate repeated identical source-address and ISE assignment fields. Conflicting values remain unknown.
+- FMC policy investigations and blocked-connection details recognize policy and rule names from FTD syslog as well as canonical connection fields.
+- DNS category investigations show blocked DNS events without mixing in cloud firewall or proxy traffic.
+- Data configuration discovers Infoblox DNS indexes and retains them in network routing. Rerun the routing scan if an earlier configuration omitted these indexes.
+- GlobalProtect failure investigations include explicitly reported legacy portal/gateway authentication failures, including records delivered through PAN system logs.
+- Catalyst client location charts and site filters handle repeated identical location fields. Conflicting locations remain unknown.
+
+- Syslog severity investigations now open the underlying IOS events. Unrecognized severity stays Unknown.
+- Remote Access Health shows no observations when connection outcomes are unavailable, instead of reporting a misleading 0% failure rate.
+
+- Workspace managers can publish a tile visualization as the shared workspace default. Personal choices still take precedence; choose Default to inherit the shared visualization. Publishing leaves other workspaces and search defaults unchanged.
+- Workspace radial gauges keep values clear of the arc, including narrow tiles and long values. Chart descriptions include their reported observations. Security Operations improves keyboard tab navigation, dialog focus return and reduced-motion behavior. Unknown states remain neutral, investigation dialogs use solid theme surfaces, and User Guide printing uses a readable paper palette.
+- Tile configuration keeps the value field full-width, groups suggested fields underneath, and prevents long option summaries from crowding the section controls.
+- DC Networking shows MDS mean health as a readable snapshot value, with history in the MDS health trend. SAN transmit-wait rankings show explicit percent units on a fixed 0–100 scale and identify the top reported interfaces.
+
+- Fixed Minimal Enterprise and Prism Pulse movement when all signals fit. A positive Rail speed now enables movement; Static, Pause, and reduced-motion preferences remain supported.
+
+- Minimal Enterprise and Prism Pulse rail controls float over the cards on hover or keyboard focus without reserving an empty column. On touch devices, they remain visible below the cards.
+
+- Command maps keep controls and summary counts outside the diagram so fabric labels stay clear. Map headings and view controls wrap to fit narrow panels.
+
+- Workspace headers keep consistent spacing between the icon and title, with the subtitle aligned beneath the title.
+
+- Improved **Minimal Enterprise** and **Prism Pulse** Signal Rails with readable labels, explicit health states, and responsive layouts. Existing Signal Orbit and Event Horizon selections now use Minimal Enterprise. One Cisco Glass and the default style are unchanged.
+
+- DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view for observed fabric inventory. Missing health and inter-fabric connections remain unknown.
+
+- Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden. The rail retains Pause and Style controls without a duplicate Configure icon.
+
+- Fixed dark hover-card text in Security Operations charts so category labels and values remain readable on dark backgrounds.
+
+- Improved dark-background chart text in Security Operations Overview. Enforcement by Policy Set now shows full category names, counts and percentages without hover. SD-WAN application experience uses a trend and site health uses a table.
+
+- Cloud Firewall Verdicts now shows counts and percentages, with slice and value selections filtering a matching cloud firewall event-detail table. Select the same verdict again or clear the filter to show all verdicts. Source Health remains independent.
+
+- Security Operations Overview headline values open pop-up investigations with the selected time range and configured supporting detail. Open in Search actions display one new-window icon.
+- Fixed clipped Connected Devices and Active Users values in Building Intelligence by increasing KPI space and repositioning the daily trends.
+
+- **Catalyst Operations (Preview)** provides Dashboard Studio monitoring through **Overview**, **Executive Summary**, and **Client Summary** tabs plus **About**, with client health, device health and issue investigations.
+- Catalyst wired/wireless total and healthy headlines now use matching controller-wide source snapshots. Older late-arriving observations do not replace newer source windows; missing or conflicting healthy counts remain unavailable.
+- Corrected Catalyst client-health totals, unavailable health readings, healthy-client headlines and executive percentage tiles. Detail filters identify their scope separately from all-site summary panels.
+- Security Operations time-chart labels show compact times or dates, with the complete timestamp and timezone on hover.
+- **Security Operations Overview (Preview)** is available for feedback. Corrected identity investigations, distinct DNS-category and DLP-event totals, and headline measurements. Missing telemetry retains its explanation instead of appearing as zero.
+- Added **DC Networking Operations** under **Secure Infrastructure**. It uses the standard header time selector: **4h**, **24h**, **48h**, **7d**, **30d**, and Advanced selection. New visits default to 24h; explicit time context remains honored.
+- Reduced memory consumption in the Hyperfabric observed-port and administratively-enabled-port history searches by aggregating the latest reading per port and time bucket. No search memory-limit increase is required.
+
+### Dashboard creation
+
+- New dashboard IDs follow the title automatically: `Dashboard ABC` becomes `dashboard_abc`. Use **Edit ID** to choose a stable custom ID; IDs are saved in lowercase. The ID field and Edit ID action share a horizontal row with guidance below. Invalid IDs and collisions preserve the form for correction; existing dashboards are not renamed.
+
+### Preview feedback
+
+- Catalyst Operations and Security Operations Overview show **Preview** in their titles. Try the workflows and share what works, what is confusing, or what is missing. Dashboards that remain experimental are labeled **Under Dev** where available and are not part of the released dashboard set.
+
+:::
+
 ::: release Release Notes | October 2026 - Version 1.0.80
 
-- Moved Insights Workspace to native React startup before Splunk navigation and Cisco Cloud Control initialize. This removes the legacy Simple XML loader race behind the shared header's two optional Emotion dependency errors while preserving workspace URLs, setup, navigation, theme choices and the update badge. Native content stays within the available width beside navigation, including when using the skip link. Other classic pages also receive an early dependency bridge; no error handlers, authentication or permissions are disabled.
-- Aligned React Router and React Router DOM at version 7.18.5 so their declared, locked and packaged versions agree.
+- Fixed intermittent Insights Workspace startup and shared-header errors. Workspace URLs, Setup, theme choices and update notifications remain available, and content fits beside the navigation.
 
 - Corrected the intrusion investigation to include the standard CIM `allowed` action alongside legacy alert/detected labels. Renamed its display label to **Intrusion Non-Blocking Action Evidence**, preserving the stanza ID, drill-down links and output columns. Blocked, unknown and conflicting actions remain excluded; the result describes the reporting IDS action rather than end-to-end enforcement or exploit success.
 - Corrected the vendor-neutral and Infoblox TXT/NULL DNS investigations to prefer CIM `record_type` when `query_type` contains an opcode such as Query, while preserving older query-type mappings and the existing output columns. Added field-readiness guidance for DNS response measurements, intrusion tags, missing vendor feeds and unmet investigation conditions. Missing measurements remain unknown; no thresholds or collection settings were changed.
@@ -49,6 +109,11 @@ Browse the current release and recorded historical versions below. The newest re
 - Corrected the historical release classifications: **1.0.35** is alpha, and every recorded version from **1.0.44 through 1.0.60** is beta. Each version expands independently, including the previously nested 1.0.51 and 1.0.50 notes.
 
 ### Insights Workspaces
+
+- Changed DC Networking to chart-first overviews with 27 chart searches and 18 table investigations. Sections start with three charts and support up to nine searches. Trends deduplicate observations within 15-minute buckets; missing data is not filled with zero.
+- Added appropriate default workspace icons for every workspace and the workspace switcher. Upload a replacement in **Edit branding**; **Clear (use default)** restores the workspace's SUI icon without discarding its title or subtitle.
+
+- Added the **DC Networking** workspace and **DC Networking Operations** Dashboard Manager companion, backed by forty-five visible library searches. Review five-product lab coverage, exact inventory matches, reported connections, product details and measurement gaps with a shared time picker and the configured DC index mapping.
 
 - Fixed the **Advanced time range** button being clipped and covered by the Dashboard Manager toolbar on Network Service Investigations. Custom ranges and span selection remain accessible beside the quick time shortcuts.
 - Added **Network Service Investigations** under Secure Infrastructure with six vendor-neutral evidence tables and related vendor, IPv6 and interface investigations. Added catalogue drilldowns to existing Zero Trust, firewall and WAN dashboards plus on-demand SAN/fabric, certificate and telemetry tabs. Preserved existing overview searches and index routing, retained time context, and documented source requirements and missing-data limits.
@@ -69,8 +134,6 @@ Browse the current release and recorded historical versions below. The newest re
 - Removed the Beta label from the app name and navigation labels.
 - **Search quota assessment:** Searchbase now includes Search Quota Impact by Cloud Label, separating disk, user, role, and instance limits, normalizing MB measurements, and preserving missing telemetry. Select the desired assessment period in the time picker; labels use the latest 15 minutes of introspection data.
 
-Release preparation is in progress. Final package/security review, publication, and integrated-cloud validation are pending.
-
 ### Insights Workspaces
 
 - Fixed workspace shortcuts intercepting text entered in the Cisco Cloud Control assistant and other embedded editors. Typing keeps its letters, and workspace shortcuts remain available from the workspace and unfocused page background.
@@ -85,7 +148,7 @@ Release preparation is in progress. Final package/security review, publication, 
 - Aligned the default and **24h** shortcut on the 18 Secure Networking dashboards with the advanced time picker's **Last 24 hours** preset (`-24h@h` through `now`). Custom ranges remain unchanged.
 - Chart-library debug messages are quiet during normal use. To troubleshoot, add `canvasDebug=1` to the page URL query, before any `#` fragment, and enable the browser console's debug/verbose level. Remove the parameter to disable diagnostics. Warnings and errors remain visible. Diagnostic output can contain chart data; review it before sharing logs.
 - Dashboard Manager hides unavailable KPI comparisons when fewer than two valid numeric trend samples exist, including inherited default trends on null or timestamp-only results. Headline values remain unchanged, and unavailable headline colors use the theme default. Constant line and area series receive finite axis bounds; time-based charts omit rows without a valid time coordinate from rendering. Tables and searches keep their original records, and charts add no synthetic samples.
-- Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views. Removed deprecated iteration calls in the packaged chart adapter used by Building Intelligence.
+- Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views.
 
 - Fixed focus after leaving a fullscreen visualization opened with the keyboard or mouse: focus returns to that panel's native **Fullscreen** button, keeping keyboard navigation in context even when the toolbar was hidden.
 - Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
@@ -95,7 +158,7 @@ Release preparation is in progress. Final package/security review, publication, 
 
 - After upgrading, confirm the installed version/build and test with a representative restricted user, including typing in the actual embedded assistant. Local verification does not establish integrated-cloud behavior.
 - Added shared-demo capacity and sign-in troubleshooting guidance. Workspace retries do not increase per-user, role, or stack limits; administrators must size and test expected simultaneous usage.
-- Integrated-cloud AI Canvas creation and cross-launch, restricted-user sharing, and saved CSV export contents still require final release qualification. Cloud Control identity/navigation errors remain under investigation; this release does not claim to resolve them.
+- For integrated Splunk Cloud deployments, verify AI Canvas access, sharing permissions and exported data with the roles that use them. Cloud Control identity and navigation errors are not resolved by these changes.
 :::
 
 ::: release Beta release | October 2026 - Version 1.0.60
@@ -164,7 +227,7 @@ This maintenance release includes the Dashboard Manager reliability and visualiz
 ::: release Beta release | September 2026 - Version 1.0.52
 ### Release overview
 
-Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
+Version 1.0.52 preserves complete large-fleet asset inventories, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
 
 - Made Insights and Dashboard Manager drill-downs use the workspace's navy, cyan, and purple atmosphere instead of a flat black panel, with a consistent dimmed backdrop instead of an ambiguous transparency slider.
 
@@ -205,12 +268,7 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 - Corrected dotted-field quoting in Cisco Spaces device counts, Meraki VPN peer status, and Catalyst client-experience aggregations so Dashboard Studio and Searchbase searches resolve their nested fields instead of returning empty metrics.
 - Corrected first-time topology saves so a workspace without an existing map stanza uses the create endpoint directly instead of producing an expected 404 before retrying.
 - Hardened topology editing against stale-tab overwrites and damaged shared configuration, blocked editing until the canonical map has loaded, preserved intentionally empty maps, and added confirmations for draft discard and factory reset.
-- Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
-- Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
-
-### Packaging and release safety
-
-- Recorded published build 2095 as the durable release-history floor so future packages allocate build 2096 or later even when earlier archives are absent from `dist/`.
+- Added 31 searches: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
 
 ### Upgrade notes
 
@@ -255,10 +313,6 @@ Version 1.0.50 simplifies topology link telemetry configuration, strengthens top
 - Added Cisco IQ lifecycle-risk views and enriched the unified device inventory with AKIPS location, lifecycle findings, and explainable critical or non-critical classification.
 - Kept the searches customer-neutral: no customer index, property, or workspace name is hard-coded, and missing locations remain visible as **Unmapped**.
 
-### Packaging and release safety
-
-- Preserved the verified build-2089 release floor in tracked release history so removing local package artifacts cannot cause a later Splunkbase build number to decrease.
-
 ### Accessibility
 
 - Grouped the telemetry choice as a labeled radio control and connected the ThousandEyes selectors to concise instructions.
@@ -267,7 +321,7 @@ Version 1.0.50 simplifies topology link telemetry configuration, strengthens top
 ::: release Beta release | September 2026 - Version 1.0.49
 ### Release overview
 
-Version 1.0.49 expands secure-networking coverage, repairs workspace and setup reliability, improves accessibility and theme consistency, and strengthens the Splunkbase release path.
+Version 1.0.49 expands secure-networking coverage, repairs workspace and setup reliability, and improves accessibility, theme consistency and shared configuration security.
 
 ### Highlights
 
@@ -296,25 +350,20 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 - Added **Add for me** and **Add for everyone** tile visibility choices.
 - Add search now opens and resets with only this app selected. Entire catalogue remains available for searches from other installed apps.
 - Added configurable Signal Rails, search concurrency, map placement, map height, tile density, typography, section focus, and shared publishing.
-- Agentic SOC section headers no longer expose actions that targeted the development-only Searchbase Canvas. Splunkbase packages omit its customer-inaccessible resources, while explicit developer builds retain the internal surface.
+- Removed unavailable Agentic SOC section-header actions.
 - Open in Search accepts only dashboard-defined safe filter values.
 - Custom Insights workspaces can now be created through the bounded persistence endpoint, and template choices retain circular radio controls.
 - Topology Searchbase bindings now save without false stale-edit conflicts and remain selected after reopening or reloading a workspace.
 - Insights workspace editors, drawers, map controls, Signal Rail controls, topology actions, and Setup retain readable Splunk UI colors in both appearances.
 
-### Accessibility, security, and delivery
+### Accessibility and security
 
 - Topology palette items and key manager/KPI dialogs now support complete keyboard operation. Workspace layers also restore focus when they close.
 - Improved non-color selection cues, focus indicators, control labels, and responsive light and dark contrast.
 - Removed public geocoding of customer site text; site placement uses an offline city list or explicit coordinates.
 - Shared workspace and bounded Dashboard Builder background management support narrow capability delegation.
-- **Dependency security:** patched published npm advisories by upgrading DOMPurify, fast-uri, source-map-js, postcss-selector-parser, and brace-expansion; removing sprintf-js from ESLint's dependency tree; and retaining the MapLibre GL JS XSS remediation, while ensuring Splunk visualizations continue to compile. A maintained local security patch mitigates the build-time braces stack-exhaustion advisory by rejecting brace/parenthesis nesting and AST traversal beyond 100 levels. Installation automatically applies the patch and fails if it cannot be applied; Dependabot may still flag the upstream version until a patched release is published.
-- `build.sh --install` and `--deploy` use the SplunkBase profile by default. Use `--developer` only when internal development resources are required; the explicit `--fast` workflow remains developer-only.
-- SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
-- A successful SplunkBase install creates one upload-ready archive; the target's installed build does not affect package allocation.
-- For a release, change and commit only the repository-root VERSION file. Source app.conf and app.manifest retain placeholders, and generated packages allocate the next build automatically.
-- Added profile-manifest enforcement so Splunkbase packages omit internal-only files that the release does not use.
-- Moved the complete guide and release history into this Markdown source and restored accessible release disclosures, Expand all and Collapse all controls, navigation, search, and complete PDF export.
+- Addressed security vulnerabilities in the map visualization and HTML-sanitization components.
+- Restored accessible release disclosures, Expand all and Collapse all controls, navigation, search, and complete PDF export.
 
 ### Upgrade notes
 
@@ -329,7 +378,7 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 
 - Introduced the Agentic Security Operations Center workspace and accelerated network-data-model searches for its conference catalogue.
 - Added the narrow `ssne_manage_insights_workspaces` capability for shared workspace and topology management.
-- Strengthened package provenance, shared image boundaries, Dashboard Manager editing, and workspace accessibility.
+- Strengthened shared image safeguards, Dashboard Manager editing, and workspace accessibility.
 
 The public package listing is the authoritative record of the exact archive published for this version.
 :::
@@ -562,7 +611,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | Catalyst Center | `cisco:dnac:*`, `cisco:catalyst:center:*` | `index_catalyst` |
 | Firewall | `cisco:asa`, `cisco:ftd*`, `cisco:sfw:*`, `cisco:sourcefire:*`, `cisco:estreamer:*` | `index_firewall` |
 | Identity | `cisco:ise:*`, Windows, and Active Directory | `index_identity`, `index_windows` |
-| Network infrastructure | `cisco:ios*`, `cisco:telemetry`, and network syslog | `index_network` |
+| Network infrastructure | `cisco:ios*`, `cisco:telemetry`, network syslog, `infoblox:dns`, and `ib:dns` | `index_network` |
 | Network detection | Zeek connection, DNS, TLS, HTTP, and notice logs | `index_zeek` |
 | Meraki | `meraki:*` | `index_meraki` |
 | Cisco Spaces | `cisco:spaces:*` | `index_spaces` |
@@ -610,11 +659,11 @@ Secure-networking dashboards default to `-24h@h` through `now`, matching the **L
 | Hybrid Mesh Firewalling | Hybrid Mesh Enforcement; Threat Detection and Enforcement; DLP and Cloud Native Security |
 | Agentic Ops | Operational Intelligence; Secure Networking Assurance; Executive Assurance |
 
-The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Health, Asset Inventory, operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
+The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Operations (Preview), Asset Inventory, operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
 
 ### Dashboard actions
 
-- **About this metric** explains the card's calculation, expected fields, interpretation, and related information.
+- **About this metric** shows the primary chart or table for the selected time range, together with the card's calculation, expected fields, interpretation, and related information. Results load when you open the dialog.
 - **Investigate drivers** opens supporting searches without loading every detail search on the first canvas.
 - **Open in Search** opens the exact SPL with the active dashboard time range and allowed dashboard-defined filters.
 - Dashboard Manager view controls support display options, zoom, export, and cloning for supported dashboards.
@@ -624,12 +673,32 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 The library has three tabs: **Included** contains supplied dashboards, **Yours** contains managed dashboards owned by you, and **Shared** contains managed dashboards shared in the app that you have permission to read, including other users' dashboards. A dashboard you own and share appears in both **Yours** and **Shared**. Existing app-owned dashboards appear in **Shared**. Private dashboards do not appear in **Shared**.
 
 1. Open **More > Dashboard Manager** and select **Create New**.
-2. Enter a title and optional description, then choose who can see the dashboard: **Private** (selected initially) or **Shared in App**. Share a ready dashboard in the app so colleagues can benefit; app sharing requires permission to publish dashboards in this app. You can start privately and change its permissions on Splunk's **Dashboards** page to share it later if your role permits. Select an **Absolute** or **Grid** layout.
+2. Enter a title and optional description. The dashboard ID follows the title in lowercase (`Dashboard ABC` becomes `dashboard_abc`). Select **Edit ID** to choose a custom ID before saving; it stays unchanged when the title changes and cannot be renamed after creation. Then choose who can see the dashboard: **Private** (selected initially) or **Shared in App**. Share a ready dashboard in the app so colleagues can benefit; app sharing requires permission to publish dashboards in this app. You can start privately and change its permissions on Splunk's **Dashboards** page to share it later if your role permits. Select an **Absolute** or **Grid** layout.
 3. Select **Create** once. The button shows **Creating…** while the request is in progress, and the editor opens when creation succeeds.
 
-If the title produces an existing dashboard ID, choose a different title or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
+If an ID already exists, change the ID or title, or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
 
 If the dashboard is saved but app sharing fails, select **Open saved dashboard** to continue with the saved dashboard. If the request cannot be confirmed, check the dashboard library before trying again. Other Dashboard Manager error notifications appear above open dialogs and previews and remain until dismissed.
+
+### Security Operations Overview (Preview)
+
+**Enforcement by Policy Set:** the donut is accompanied by a visible list of complete policy-set names, authentication counts and percentages. Values remain readable without hover or selection. **SD-WAN Application Experience** shows healthy/degraded site trends; **SD-WAN Site Health** lists each site's reported device and tunnel states.
+
+**Cloud Firewall Verdicts:** each slice has a count and percentage in the value list. Select a slice or its value to highlight the verdict and filter **Cloud Firewall Event Details**. The value-list controls also support keyboard selection. Select the same verdict again or use **Clear verdict filter** to show all verdicts. The table displays up to 50 matching events, prioritized by action and recency; use **Open in Search** for the complete search result. The verdict applies before event selection limits. The Source Health table below reports ingestion freshness and does not change with verdict selection. Sidebar filters do not narrow this cloud firewall view.
+
+Select a headline value to open its investigation. The dialog offers the headline result and any configured supporting detail. Supporting searches can describe a subset of the headline, so their row counts may differ. The selected time range is retained; sidebar filters do not narrow the all-site headline totals. Identity investigation values retain the applied username or wildcard.
+
+The dialog loads on demand and requests cancellation when closed. Changing the dashboard tab, time range or sidebar filters closes it. Up to 200 rows are displayed; use **Open in Search** for the complete result. Empty observations and unavailable searches have separate messages. Use **Information** to review the search's meaning.
+
+### Catalyst Operations (Preview)
+
+Catalyst Operations is a Dashboard Studio dashboard with **Overview**, **Executive Summary**, and **Client Summary** tabs plus **About**. Open it from **More > Catalyst Operations > Catalyst Operations (Preview)**. Dashboard Manager provides supported search, investigation and editing actions according to your permissions.
+
+The Site and Client type controls apply to the labeled detail panels; all-site summary panels retain their reported scope. Missing or invalid health readings remain unavailable rather than appearing as measured zero. Use the time selector to choose the investigation window.
+
+Wired and wireless total/healthy headlines use the latest global source window for each controller, matched by source start/end time and client type. The displayed total sums those controller totals. A healthy total is shown only when every included controller has a matching nonnegative healthy reading no greater than its total. An incomplete or conflicting healthy reading stays unavailable; it is not capped or borrowed from an older window. These headlines are snapshots; the separate trend charts retain their historical views.
+
+Catalyst Health remains a separate **Under Dev** dashboard where available; it has not been merged into Catalyst Operations.
 
 ## Insights Workspaces {#workspaces}
 
@@ -642,11 +711,36 @@ Insights Workspaces are reusable, audience-specific views of Searchbase-backed K
 | Workspace | Initial focus |
 | --- | --- |
 | Secure Networking | All five secure-networking pillars |
+| DC Networking | Attention, data coverage, relationships, and five data-center products |
 | Zero Trust Access | Identity, infrastructure, and agentic operations |
 | Network Resilience | Infrastructure, segmentation, firewalling, and agentic operations |
 | Agentic Security Operations Center | DNS, firewall, network detection, and unified investigation |
 | Security Operations | Security, IT health, and custom executive content |
 | Executive Briefing | IT health, security, and building intelligence |
+
+### DC Networking {#workspaces-dc-networking}
+
+The signal rail summarizes Nexus Dashboard critical anomalies, ACI critical faults, Nexus 9000 CPU pressure, SAN transmit wait and Hyperfabric administrative enablement. These are observed measurements; administrative enablement does not establish operational availability. A card without configured health thresholds is labeled **Watching**.
+
+The DC signal rail defaults to **Original** KPI cards with small observed trend lines. Its style selection is saved separately from other workspaces. A signal without sufficient history displays **Trend unavailable**.
+
+The map uses the standard **Command** view and shows up to three named fabrics reported by Nexus Dashboard. Fabrics are ranked by observed active critical anomalies, then all observed active anomalies, within the selected time range. A fabric appears only when inventory and a reported account/controller identity are available. Node numbers indicate the displayed rank. The small fabric set fits the available map space as equal peers. Critical or warning colors reflect reported active anomalies; overall health remains unknown. Fabric details state the observed connectivity and how many named fabrics were eligible. Inter-fabric links are unreported.
+
+Select a fabric to inspect its reported source and open the map evidence search. The search uses the workspace time range and includes the same three fabrics and their active-anomaly counts for comparison. Complete inventory remains available in the search library. Use related library searches for endpoint/port evidence and exact-serial inventory matches. Those records answer different questions; they do not establish inter-fabric traffic paths.
+
+Open **DC Networking** from the workspace switcher. Start with **What needs my attention?**, confirm five-product coverage and observation age, then follow **Investigate related evidence** into product details and related observations. The packaged sections cover Nexus Dashboard, ACI, Nexus 9000, MDS / SAN Analytics through NDFC, and Nexus Hyperfabric. This demo labels its existing observations as lab data.
+
+Use the shared time picker to change the overview window; the same time applies to charts, table drilldowns and Search. Section launch links carry the time into **DC Networking Operations**, the self-contained SSNE companion. For the full product workflow, open the Cisco DC Networking App from Splunk Apps after verifying its version and available views. All DC workspace searches use the existing `index_dc` macro directly, so the configured DC index mapping remains the single routing contract. Account/fabric/device filters narrow observations within that mapping; they never replace it.
+
+Missing data remains unknown. Hyperfabric administrative enablement does not establish availability, and a counter record without measured rates does not establish throughput. SAN Analytics capability inventory does not establish flow performance. Exact serial matches identify shared inventory; reported endpoint/port records identify connections. Neither establishes a traffic path or proves the cause of an incident.
+
+Each DC section ships with **nine selected searches and nine visible tiles**. Line and area trends, bucket columns, ranked bars, radial gauges and fill gauges match the question being asked. Gauges use measured percentages only. Use the section tile-count control and **Add search** to customize the selection; existing personal tile-count preferences remain in place until reset. Tables remain available through **Investigate related evidence**. Trends show latest observations per entity in each 15-minute bucket, not a guaranteed continuous snapshot; empty buckets stay unavailable.
+
+Critical share shows a percentage headline with a red trend for classified active Nexus Dashboard anomalies and ACI faults. Recognized severities, including Medium, form the denominator; cleared and unclassified observations are excluded. Gauges, chart annotations and composition views follow the active app theme; explicit configured gauge colors remain supported.
+
+Each workspace has an appropriate **React SUI icon** by default. Open **Edit branding** to upload an image. Uploaded images take precedence; **Clear (use default)** and saving restores the SUI icon while keeping the other branding fields.
+
+To demonstrate quick dashboard creation, select **Dashboard Manager > Create New**, then **Add Searchbase**. Search **DC Networking Workspace**, select the questions you need, and choose **Add selected**. The searches bring their SPL, descriptions and visualization defaults. Save the new dashboard with a separate name to preserve the companion. Scoped DC dashboards stay in Dashboard Manager so native conversion cannot drop their filters.
 
 ### Create a workspace {#workspaces-create-a-workspace}
 
@@ -681,6 +775,10 @@ The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboa
 **SGT assignment coverage:** The Secure Networking workspace includes `secure_networking_sgt_assignment_coverage_trend` in Scalable Network Segmentation, replacing SGACL Enforcement Activity Trend. Select **View coverage by site/device** to open `secure_networking_sgt_assignment_coverage_by_site_device`. Coverage is the percentage of successful ISE authentication events with one usable, non-default SGT. Missing, default, and conflicting tag values remain in the denominator; the selected-window percentage is weighted by event count. Repeated authentications count repeatedly, so this measures reported authentication coverage rather than distinct endpoints or SGACL enforcement. An empty window reports no observations, with no coverage percentage. The detail retains missing or ambiguous site/device context and returns at most 1,000 groups; `TotalGroups` and `DetailRowsTruncated` indicate additional groups. Existing shared or personal layout overrides retain their saved tiles; a workspace manager can replace the old tile and publish the layout to adopt this change.
 
 ### Configure the Signal Rail
+
+Use **Style** on the rail to choose a personal presentation. **Minimal Enterprise** uses neutral cards with full labels, values, categories, and explicit health badges. **Prism Pulse** uses a restrained angled critical panel, placing the first critical signal first while keeping the other signals in relative order. Its small trends use timestamped observations; unavailable trends remain marked as unavailable. Both layouts adapt to the rail's available width, using two rows when needed to keep labels readable. Rows, text size, density, speed, Pause, and Search controls remain available. Pause and Style float over the cards when you hover over the rail or focus it with the keyboard, without reserving an empty column; they stay visible while the style menu is open. On touch devices, these controls remain visible below the cards. A positive **Rail speed** moves Minimal Enterprise and Prism Pulse even when every signal fits. Set speed to **Static** to stop movement, or use **Pause** to inspect signals. Hovering over the rail or moving keyboard focus into it also pauses movement while you interact. With motion disabled, scroll horizontally if needed. Reduced-motion preferences disable automatic movement. Search shortcuts are visible and keyboard accessible. Existing Signal Orbit and Event Horizon selections now use Minimal Enterprise. Other style selections, One Cisco Glass, and the default style are unchanged.
+
+The new styles draw trends only from real timestamped search observations, using up to the latest 60 samples. A headline-only search shows **No trend**; no synthetic trend is drawn. The halos and background lighting are decoration, not measurements or network links. Health labels use the existing search thresholds; **Watching** continues to indicate an unclassified or unavailable health state. The inline summary prioritizes critical signals, then warnings, then watching; hover over it for all health counts. These three styles use a dark presentation surface in either app appearance. Two-row and larger-text preferences can increase the rail height.
 
 Signal Rail membership and order are shared workspace configuration. Speed, density, and KPI text size are per-user preferences. Signal Rail searches are prioritized during initial loading. The Agentic Security Operations Center workspace also avoids dispatching searches from collapsed sections and supports a personal one-to-four concurrent-search setting.
 

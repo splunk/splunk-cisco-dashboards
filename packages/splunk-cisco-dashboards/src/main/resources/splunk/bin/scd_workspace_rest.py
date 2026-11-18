@@ -75,7 +75,7 @@ _WORKSPACE_FIELDS = frozenset(
     )
 )
 _LAYOUT_FIELDS = frozenset(
-    ("tiles", "searchbase_additions", "visible_count", "updated_at", "updated_by")
+    ("tiles", "searchbase_additions", "visible_count", "viz_overrides", "updated_at", "updated_by")
 )
 _SIGNAL_ITEM_FIELDS = frozenset(
     (
@@ -143,9 +143,9 @@ _STANZA_RULES = {
 }
 
 _LONG_FIELDS = frozenset(
-    ("tiles", "searchbase_additions", "sections", "default_visible_sections", "items")
+    ("tiles", "searchbase_additions", "sections", "default_visible_sections", "items", "viz_overrides")
 )
-_JSON_FIELDS = frozenset(("section_titles", "payload_json"))
+_JSON_FIELDS = frozenset(("section_titles", "payload_json", "viz_overrides"))
 _CONTROL_FIELDS = frozenset(("output_mode",))
 
 
@@ -285,6 +285,10 @@ def validate_settings(conf_name, stanza_name, raw_settings):
                 raise ValueError('Field "{}" must contain a JSON object.'.format(key))
             if key == "payload_json":
                 validate_topology_payload(parsed)
+            if key == "viz_overrides":
+                valid = {"area", "line", "column", "bar", "singlevalue", "table", "barbreakdown", "pie", "singlevalueradial", "fillergauge", "markergauge"}
+                if len(parsed) > 256 or any(not re.fullmatch(r"[a-z0-9_]{1,128}", tile) or tile in {"__proto__", "constructor", "prototype"} or not isinstance(viz, str) or viz not in valid for tile, viz in parsed.items()):
+                    raise ValueError("Visualization defaults must map valid tile IDs to supported visualization types (at most 256 tiles).")
         settings[key] = value
     return settings
 

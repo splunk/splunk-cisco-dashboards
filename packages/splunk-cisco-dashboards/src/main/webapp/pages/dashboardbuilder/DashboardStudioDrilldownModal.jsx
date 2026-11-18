@@ -16,6 +16,7 @@ import { DashboardContextProvider } from '@splunk/dashboard-context';
 import { DashboardCore } from '@splunk/dashboard-core';
 import DOMPurify from 'dompurify';
 import styled from 'styled-components';
+import { applyDcNetworkingScope } from '../../common/lib/dcNetworkingScope';
 import SearchbaseDrilldownGuidance from '../../common/components/workspace/SearchbaseDrilldownGuidance';
 import { WorkspaceModalShell } from '../../common/components/workspace/WorkspaceModalShell';
 import {
@@ -74,6 +75,7 @@ const DashboardStudioDrilldownModal = ({
     targetIds,
     timeRange,
     ownerApp,
+    dcScope,
     preset,
     featureFlags,
     iconRegistry,
@@ -129,8 +131,14 @@ const DashboardStudioDrilldownModal = ({
     }, [open, ownerApp, searchEntries]);
 
     const { resolvedSearches, missingTargetIds } = useMemo(
-        () => resolveDashboardDrilldownSearches(searchEntries || [], targetIds),
-        [searchEntries, targetIds],
+        () => {
+            const resolved = resolveDashboardDrilldownSearches(searchEntries || [], targetIds);
+            if (!dcScope) { return resolved; }
+            return { ...resolved, resolvedSearches: resolved.resolvedSearches.map((entry) => ({
+                ...entry, content: { ...entry.content, search: applyDcNetworkingScope(entry.content.search, dcScope) },
+            })) };
+        },
+        [searchEntries, targetIds, dcScope],
     );
 
     useEffect(() => {
@@ -147,16 +155,14 @@ const DashboardStudioDrilldownModal = ({
     }, [activeIndex, resolvedSearches.length]);
 
     const activeSearch = resolvedSearches[activeIndex] || resolvedSearches[0];
-    const activeDefinition = useMemo(
-        () =>
-            activeSearch && !isMetricInfo
-                ? buildDashboardDrilldownDefinition(activeSearch, timeRange, {
-                      width: resultWidth,
-                      height: DRILLDOWN_RESULT_HEIGHT,
-                  })
-                : undefined,
-        [activeSearch, isMetricInfo, resultWidth, timeRange],
-    );
+    const activeDefinition = useMemo(() => {
+        if (!activeSearch) { return undefined; }
+        const definition = buildDashboardDrilldownDefinition(activeSearch, timeRange, {
+            width: resultWidth, height: DRILLDOWN_RESULT_HEIGHT,
+        });
+        if (dcScope) { definition.dataSources.ds_drilldown_target.options.dcScope = dcScope; }
+        return definition;
+    }, [activeSearch, resultWidth, timeRange, dcScope]);
     const activeMetadata = useMemo(
         () => getDashboardDrilldownMetadata(activeSearch),
         [activeSearch],
@@ -164,7 +170,7 @@ const DashboardStudioDrilldownModal = ({
 
     useLayoutEffect(() => {
         const container = resultContainerRef.current;
-        if (!open || isMetricInfo || !activeSearch || !container) {
+        if (!open || !activeSearch || !container) {
             setResultWidth(0);
             return undefined;
         }
@@ -184,7 +190,7 @@ const DashboardStudioDrilldownModal = ({
         const observer = new ResizeObserver(updateResultWidth);
         observer.observe(container);
         return () => observer.disconnect();
-    }, [activeSearch, isMetricInfo, open]);
+    }, [activeSearch, open]);
 
     const activeClassification = [activeMetadata.category, activeMetadata.subCategory].filter(
         Boolean,
@@ -265,7 +271,7 @@ const DashboardStudioDrilldownModal = ({
             }
             subtitle={
                 isMetricInfo
-                    ? 'Primary metric definition, calculation, interpretation, and source.'
+                    ? 'Primary metric results, calculation, interpretation, and source.'
                     : 'Searchbase evidence that helps explain what changed and what drove it.'
             }
             onClose={onRequestClose}
@@ -371,42 +377,40 @@ const DashboardStudioDrilldownModal = ({
                             )}
                         </div>
 
-                        {!isMetricInfo && (
-                            <div className="dashboard-builder-drilldown-result-shell">
-                                <div
-                                    ref={resultContainerRef}
-                                    className="dashboard-builder-drilldown-dashboard"
-                                    aria-busy={resultWidth <= 0}
-                                >
-                                    {resultWidth > 0 ? (
-                                        <DashboardContextProvider
-                                            key={dashboardKey}
-                                            preset={preset}
-                                            featureFlags={featureFlags}
-                                            iconRegistry={iconRegistry}
-                                            timezone={timezone}
-                                            initialDefinition={activeDefinition}
-                                            initialMode="view"
-                                        >
-                                            <DashboardCore
-                                                width={resultWidth}
-                                                height={DRILLDOWN_RESULT_HEIGHT}
-                                            />
-                                        </DashboardContextProvider>
-                                    ) : (
-                                        <div
-                                            role="status"
-                                            className="dashboard-builder-drilldown-loading"
-                                        >
-                                            <WaitSpinner size="large" />
-                                            <ScreenReaderContent>
-                                                Preparing drill-down visualization…
-                                            </ScreenReaderContent>
-                                        </div>
-                                    )}
-                                </div>
+                        <div className="dashboard-builder-drilldown-result-shell">
+                            <div
+                                ref={resultContainerRef}
+                                className="dashboard-builder-drilldown-dashboard"
+                                aria-busy={resultWidth <= 0}
+                            >
+                                {resultWidth > 0 ? (
+                                    <DashboardContextProvider
+                                        key={dashboardKey}
+                                        preset={preset}
+                                        featureFlags={featureFlags}
+                                        iconRegistry={iconRegistry}
+                                        timezone={timezone}
+                                        initialDefinition={activeDefinition}
+                                        initialMode="view"
+                                    >
+                                        <DashboardCore
+                                            width={resultWidth}
+                                            height={DRILLDOWN_RESULT_HEIGHT}
+                                        />
+                                    </DashboardContextProvider>
+                                ) : (
+                                    <div
+                                        role="status"
+                                        className="dashboard-builder-drilldown-loading"
+                                    >
+                                        <WaitSpinner size="large" />
+                                        <ScreenReaderContent>
+                                            Preparing drill-down visualization…
+                                        </ScreenReaderContent>
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
 
                         {!isMetricInfo && (
                             <div className="dashboard-builder-drilldown-actions">

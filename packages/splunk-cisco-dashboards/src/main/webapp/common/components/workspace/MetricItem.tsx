@@ -24,7 +24,8 @@ import { cn } from '@/common/lib/utils';
 import {
     formatCompactMetricNumber,
     formatMetricNumber,
-    toFiniteMetricNumber,
+    formatMetricDisplayValue,
+    formatPlainMetricNumber,
 } from '@/common/lib/metricValueFormat';
 import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type {
@@ -280,20 +281,11 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     const [isFocusOpen, setIsFocusOpen] = React.useState(false);
     const focusReturnRef = React.useRef<HTMLElement | null>(null);
     const isMock = source === 'mock';
-    const numericValue = toFiniteMetricNumber(value);
-    const renderedText =
-        abbreviateMajorValue &&
-        numericValue !== null &&
-        unit !== '%' &&
-        unit !== 'ms' &&
-        unit !== 'Mbps'
-            ? formatMetricNumber(numericValue, unit)
-            : `${value}${unit}`;
+    const renderedText = formatMetricDisplayValue(value, unit, abbreviateMajorValue);
     const displayChange =
         typeof change === 'number' &&
-        Number.isFinite(change) &&
-        abbreviateTrendValue
-            ? formatCompactMetricNumber(change)
+        Number.isFinite(change)
+            ? (abbreviateTrendValue ? formatCompactMetricNumber(change) : formatPlainMetricNumber(change))
             : change;
     const isNoData = typeof value === 'number' && Number.isNaN(value);
     const statusVizColor: Partial<Record<MetricStatus, string>> = {
@@ -310,7 +302,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
         unit !== 'ms' &&
         unit !== 'Mbps'
             ? formatMetricNumber(n, unit)
-            : `${n.toLocaleString()}${unit}`;
+            : `${formatPlainMetricNumber(n)}${unit}`;
     const hasExpandableChart = vizType !== 'singlevalue' && sparkData.length > 0;
 
     const openDetailFromFocus = React.useCallback(() => {
@@ -595,7 +587,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             unit !== 'ms' &&
                             unit !== 'Mbps'
                                 ? formatMetricNumber(n, unit)
-                                : `${n.toLocaleString()}${unit}`
+                                : `${formatPlainMetricNumber(n)}${unit}`
                         }
                         title={sparkTitle}
                     />

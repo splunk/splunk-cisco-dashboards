@@ -1,3 +1,6 @@
+import { resolveWorkspaceVisualization } from "@/common/config/workspaceVisualizations";
+import WorkspaceDefaultIcon from "@/common/components/workspace/WorkspaceDefaultIcon";
+import { dcScopeDashboardUrl } from "@/common/lib/dcNetworkingScope";
 import React, {
   useCallback,
   useEffect,
@@ -251,7 +254,7 @@ import { cn } from "@/common/lib/utils";
 // =============================================================================
 
 const APP_NAME = "splunk-cisco-dashboards";
-const WORKSPACE_MENU_WIDTH_PX = 200;
+const WORKSPACE_MENU_WIDTH_PX = 280;
 const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 
 // Default subtitle shown beneath the workspace title when no per-user
@@ -261,18 +264,6 @@ const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 // out-of-the-box value for fresh deployments.
 const DEFAULT_HEADER_SUBTITLE = "Splunk Secure Networking Essentials";
 const DEFAULT_HEADER_TITLE_FALLBACK = "Your Organization Name";
-const DEFAULT_LOGO_DATA_URI =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ' +
-      'stroke="white" stroke-width="1.8" stroke-linecap="round" ' +
-      'stroke-linejoin="round"><circle cx="12" cy="12" r="2.25"/>' +
-      '<circle cx="5.5" cy="7" r="1.65"/><circle cx="18.5" cy="7" r="1.65"/>' +
-      '<circle cx="5.5" cy="17" r="1.65"/><circle cx="18.5" cy="17" r="1.65"/>' +
-      '<path d="M7 8.2 10.2 10.7M16.9 8.2 13.8 10.7M7 15.8 10.2 13.3M16.9 15.8 13.8 13.3"/>' +
-      '<path d="M4 12h3M17 12h3"/></svg>',
-  );
-
 const splunkLocalePrefix = (): string => {
   if (typeof window === "undefined") return "/en-US";
   const match = window.location.pathname.match(
@@ -1912,6 +1903,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   if (showTable) {
     return (
       <TableCardLeaf
+        sbRecord={sbRecord}
         effective={effective}
         dispatchedConfig={dispatchedConfig}
         searchbaseId={sbRecord?.id}
@@ -1929,6 +1921,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   if (showBarBreakdown) {
     return (
       <BarBreakdownCardLeaf
+        sbRecord={sbRecord}
         effective={effective}
         dispatchedConfig={dispatchedConfig}
         searchbaseId={sbRecord?.id}
@@ -2003,7 +1996,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       isCustomized={Boolean(override)}
       vizOverride={sparklineVizOverride}
       hidePeak={override?.hidePeak}
-      hideDelta={override?.hideDelta}
+      hideDelta={override?.hideDelta ?? (sbRecord?.vizOptions?.showDelta === false)}
       hideOverlay={override?.hideOverlay}
       compactDensity={compactDensity}
     />
@@ -2011,6 +2004,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 };
 
 interface CommonLeafProps {
+  sbRecord?: SearchbaseRecord | null;
   effective: MetricConfig;
   dispatchedConfig: MetricConfig;
   searchbaseId?: string;
@@ -2237,14 +2231,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
       isCustomized={isCustomized}
-      sparkTitle={
-        // The chart itself is no longer a click target — the
-        // ExternalLink icon next to the tile label is the
-        // explicit drilldown affordance. We keep `sparkTitle`
-        // around as a hover hint so users still discover the
-        // per-bucket Recharts tooltip.
-        drilldownSpl ? "Hover for date and value" : undefined
-      }
+      sparkTitle={effective.label}
       noDataReason={result.noDataReason}
       rangeLabel={result.rangeLabel}
     />
@@ -2259,6 +2246,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
  * health badge math identical to before this branch existed.
  */
 const TableCardLeaf: React.FC<CommonLeafProps> = ({
+  sbRecord,
   effective,
   dispatchedConfig,
   searchbaseId,
@@ -2287,6 +2275,10 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
     );
   }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
+  const overviewColumns = sbRecord?.vizOptions?.overviewColumns;
+  const displayColumns = Array.isArray(overviewColumns)
+    ? overviewColumns.filter((field): field is string => typeof field === "string" && result.columns.includes(field))
+    : result.columns;
   return (
     <TableTile
       label={effective.label}
@@ -2297,7 +2289,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
       thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
       rows={result.rows}
-      columns={result.columns}
+      columns={displayColumns}
       totalRowCount={result.totalRowCount}
       source={result.source}
       openInSearchHref={drilldownHref}
@@ -2323,6 +2315,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
  * aggregate health badge math is unchanged.
  */
 const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
+  sbRecord,
   effective,
   dispatchedConfig,
   searchbaseId,
@@ -2353,6 +2346,9 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
 
   return (
     <BarBreakdownTile
+      unit={effective.unit}
+      maximum={typeof sbRecord?.vizOptions?.max === "number" ? sbRecord.vizOptions.max : undefined}
+      showTotal={sbRecord?.vizOptions?.showTotal !== false}
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
@@ -2712,8 +2708,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const [logoSrc, setLogoSrc] = useState<string>(() =>
     insightsWorkspace.hideDefaultLogo
       ? ""
-      : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
-        DEFAULT_LOGO_DATA_URI,
+      : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) || "",
   );
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
@@ -2743,8 +2738,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setLogoSrc(
       insightsWorkspace.hideDefaultLogo
         ? ""
-        : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
-          DEFAULT_LOGO_DATA_URI,
+        : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) || "",
     );
   }, [
     insightsWorkspace.defaultLogoSrc,
@@ -2752,10 +2746,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     insightsWorkspace.id,
   ]);
 
+  const isDcNetworking = insightsWorkspace.sourceWorkspace === "dc_networking";
+
+
   // ------------------------------ Time + refresh ------------------------------
   const [timeRange, setTimeRange] = useState<TimeRange>(
     () =>
-      TIME_RANGE_OPTIONS.find((o) => o.label === DEFAULT_TIME_RANGE_LABEL) ??
+      TIME_RANGE_OPTIONS.find((o) => o.label === (isDcNetworking ? "Last 4 hours" : DEFAULT_TIME_RANGE_LABEL)) ??
       TIME_RANGE_OPTIONS[1],
   );
   const [selectedPriorityDrilldownView, setSelectedPriorityDrilldownView] =
@@ -4282,7 +4279,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // gets the hook to re-read storage (now empty) and fall back to
   // the canonical CUSTOMER_TOPOLOGY factory.
   const [topologyResetKey, setTopologyResetKey] = useState(0);
-  const workspaceTopology = getWorkspaceTopology(insightsWorkspace.id);
+  const workspaceTopology = getWorkspaceTopology(isDcNetworking ? "dc_networking" : insightsWorkspace.id);
 
   // Read the persisted topology so the dashboard header can show the
   // user's edited name / subtitle from the topology editor (instead of
@@ -4500,6 +4497,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         thresholdUnit: current?.unit,
         usedSavedSearches,
         currentVizOverride: ov?.vizOverride,
+        currentSharedVizOverride: current?.section ? workspaceLayout[current.section]?.vizOverrides?.[tileId] : undefined,
         currentHidePeak: ov?.hidePeak,
         currentHideDelta: ov?.hideDelta,
         currentHideOverlay: ov?.hideOverlay,
@@ -4510,10 +4508,38 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           : undefined,
       });
     },
-    [effectiveSectionMeta, overrides, usedSavedSearches],
+    [effectiveSectionMeta, overrides, usedSavedSearches, workspaceLayout],
   );
 
   const closePicker = useCallback(() => setPickerContext(null), []);
+
+  const [sharedVisualizationStatus, setSharedVisualizationStatus] = useState<"idle" | "saving" | "error">("idle");
+  useEffect(() => setSharedVisualizationStatus("idle"), [pickerContext?.tileId]);
+  const handleSaveSharedVisualization = async (viz: MetricOverride["vizOverride"] | null): Promise<void> => {
+    const section = insightsWorkspace.sections.find(item => item.id === pickerContext?.sectionId)?.id;
+    if (!canManageWorkspaceConfig || !section || !pickerContext) return;
+    const tileId = pickerContext.tileId;
+    const existing = workspaceLayout[section] ?? {
+      tiles: getFactoryTileOrder(section, baseMetricConfig.filter(metric => metric.section === section)),
+      visibleCount: sectionTileCounts[section],
+    };
+    const vizOverrides = {...existing.vizOverrides};
+    if (viz) vizOverrides[tileId] = viz;
+    else delete vizOverrides[tileId];
+    const next = {...existing, vizOverrides};
+    setSharedVisualizationStatus("saving");
+    try {
+      await saveWorkspaceLayout(insightsWorkspace, {[section]: next}, workspaceLayout);
+      setWorkspaceLayout(previous => ({...previous, [section]: next}));
+      const personal = {...overrides[tileId]};
+      delete personal.vizOverride;
+      setOverride(tileId, personal);
+      setSharedVisualizationStatus("idle");
+      setPickerContext(null);
+    } catch {
+      setSharedVisualizationStatus("error");
+    }
+  };
 
   const handlePickerApply = useCallback(
     (tileId: string, override: MetricOverride) => {
@@ -4845,6 +4871,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         Math.min(sectionTileBounds.maxCount, sectionMetrics.length),
       );
       next[section] = {
+        vizOverrides: workspaceLayout[section]?.vizOverrides,
         tiles: effectiveOrder,
         visibleCount,
         searchbaseAdditions: Array.from(
@@ -4919,8 +4946,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     return { ...base, savedSearch: undefined, spl: undefined };
   };
 
-  const mapPrimaryBaseCfg = mapFooterKpiConfig[0];
-  const mapSecondaryBaseCfg = mapFooterKpiConfig[1];
+  const mapPrimaryBaseCfg = isDcNetworking ? undefined : mapFooterKpiConfig[0];
+  const mapSecondaryBaseCfg = isDcNetworking ? undefined : mapFooterKpiConfig[1];
   const effectiveMapPrimaryCfg = useMemo<MapFooterKpiConfig>(
     () =>
       mapPrimaryBaseCfg
@@ -5103,35 +5130,19 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
          * accidentally fire the same reveal.
          */}
         <div
-          className={cn(
-            "flex min-w-0 flex-1 items-center pr-3 group/branding",
-            effectiveLogoSrc ? "gap-3" : "gap-0",
-          )}
+          className="grid min-w-0 flex-1 items-center pr-3 group/branding"
+          style={{ gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: 12 }}
         >
-          {effectiveLogoSrc ? (
-            <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
-              <img
-                src={effectiveLogoSrc}
-                alt="Dashboard logo"
-                className="w-full h-full object-contain"
-                onError={() => {
-                  // If a future non-data default logo fails to
-                  // load, recover to the neutral built-in mark
-                  // instead of leaving a broken image in the
-                  // executive header. User-uploaded data URIs
-                  // are self-contained and managed by the
-                  // branding editor.
-                  if (logoSrc !== DEFAULT_LOGO_DATA_URI) {
-                    setLogoSrc(DEFAULT_LOGO_DATA_URI);
-                  }
-                }}
-              />
-            </div>
-          ) : null}
-          <div className="min-w-0">
+          <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0"
+            style={{ gridColumn: 1, gridRow: 1 }}>
+            {effectiveLogoSrc ? <img src={effectiveLogoSrc} alt={`${insightsWorkspace.label} icon`}
+              className="w-full h-full object-contain" onError={() => setLogoSrc("")} /> :
+              <WorkspaceDefaultIcon workspace={insightsWorkspace} />}
+          </div>
+          <div className="contents">
             <div
               className="flex min-w-0 items-center"
-              style={{ columnGap: spacingSmall }}
+              style={{ columnGap: spacingSmall, gridColumn: 2, gridRow: 1 }}
             >
               <Heading
                 level={1}
@@ -5157,6 +5168,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   {workspaces.map((workspace) => (
                     <Menu.Item
                       key={workspace.id}
+                      startAdornment={<span className="sui-color-info" style={{ display: "inline-flex", width: 20, height: 20, flex: "0 0 20px", overflow: "hidden" }}>
+                        {normalizeSharedImageSource(workspace.defaultLogoSrc) ? <img src={normalizeSharedImageSource(workspace.defaultLogoSrc)} alt="" style={{ width: 20, height: 20, objectFit: "contain" }} /> : <WorkspaceDefaultIcon workspace={workspace} size={20} />}
+                      </span>}
                       onClick={() =>
                         rememberLastWorkspace(workspace.id, workspaces)
                       }
@@ -5182,22 +5196,23 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   )}
                 </Menu>
               </Dropdown>
+              {canManageWorkspaceConfig ? (
+              <button
+                type="button"
+                onClick={() => setBrandingEditorOpen(true)}
+                title="Edit branding (title, subtitle, logo)"
+                aria-label="Edit branding (title, subtitle, logo)"
+                className="flex-shrink-0 p-1 rounded sui-color-default  sui-hover-color-info  sui-hover-bg-overlay opacity-0 group-hover/branding:opacity-100 focus-visible:opacity-100 transition"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
+              ) : null}
             </div>
-            <p className="mt-1 truncate text-xs font-medium leading-none  sui-color-default">
+            <p className="mt-1 truncate text-xs font-medium leading-none  sui-color-default"
+              style={{ gridColumn: 2, gridRow: 2 }}>
               {effectiveSubtitle}
             </p>
           </div>
-          {canManageWorkspaceConfig ? (
-          <button
-            type="button"
-            onClick={() => setBrandingEditorOpen(true)}
-            title="Edit branding (title, subtitle, logo)"
-            aria-label="Edit branding (title, subtitle, logo)"
-            className="flex-shrink-0 p-1 rounded sui-color-default  sui-hover-color-info  sui-hover-bg-overlay opacity-0 group-hover/branding:opacity-100 focus-visible:opacity-100 transition"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-          </button>
-          ) : null}
         </div>
 
         <div
@@ -5211,6 +5226,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             />
           </div>
           <TimeRangeControl range={timeRange} onChange={setTimeRange} />
+          <Button
+            appearance="subtle"
+            hideLabel
+            icon={<Settings2 aria-hidden="true" />}
+            label="Configure Signal Rail"
+            title="Configure Signal Rail"
+            onClick={openSignalTickerEditor}
+          />
           <Select
             appearance="subtle"
             className="scd-header-refresh-rate"
@@ -5451,6 +5474,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       </header>
 
       <SignalTickerRail
+        workspaceId={insightsWorkspace.id}
         config={signalTickerConfig}
         catalogueByName={
           signalTickerPersistenceStatus === "loading"
@@ -5466,7 +5490,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           pickerContext !== null ||
           activeDetailTable !== null
         }
-        onOpenEditor={openSignalTickerEditor}
       />
 
       {/* Customer-pinned, app-local drill-down. Hidden by default
@@ -5751,7 +5774,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   key={section}
                   title={meta.title}
                   linkText={meta.linkText}
-                  href={meta.href}
+                  href={isDcNetworking ? dcScopeDashboardUrl({}, timeRange.earliest, timeRange.latest) : meta.href}
                   // Height level influences both
                   // proportional growth on roomy
                   // screens and the hard min-height
@@ -5895,7 +5918,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                     ? "right"
                                     : "auto"
                                 }
-                                override={overrides[cfg.id]}
+                                override={resolveWorkspaceVisualization(overrides[cfg.id], workspaceLayout[section]?.vizOverrides?.[cfg.id])}
                                 searchbaseByName={runtimeSearchbaseByName}
                                 searchbaseById={runtimeSearchbaseById}
                                 searchbaseDrilldowns={searchbaseDrilldowns}
@@ -5984,8 +6007,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   mapHeightMode === "match-workspace" && "flex-1 min-h-0",
                 )}
               >
-                <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-[12rem] flex-1">
+                <TopologyPanelHeader>
+                  <div>
                     <Heading
                       level={2}
                       variant="title3"
@@ -6003,7 +6026,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       onChange={updateRegionalView}
                     />
                   </div>
-                </div>
+                </TopologyPanelHeader>
 
                 {regionalView === "map" ? (
                   <MapViewport>
@@ -6037,6 +6060,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     <CustomerTopologyMap
                       key={`${insightsWorkspace.id}-${topologyResetKey}`}
                       topology={workspaceTopology}
+                      commandOnly={isDcNetworking}
                       canManageTopology={canManageSharedTopology}
                       earliestTime={timeRange.earliest}
                       latestTime={timeRange.latest}
@@ -6277,6 +6301,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         onPublishWorkspaceLayout={
           canManageWorkspaceConfig ? handlePublishWorkspaceLayout : undefined
         }
+        onSaveSharedVisualization={canManageWorkspaceConfig ? handleSaveSharedVisualization : undefined}
+        sharedVisualizationStatus={sharedVisualizationStatus}
         workspaceLayoutStatus={workspaceLayoutStatus}
         canManageFactoryConfig={canManageFactoryConfig}
         onSaveFactoryTileConfig={handleSaveFactoryTileConfig}
@@ -6332,14 +6358,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         subtitlePlaceholder={
           insightsWorkspace.headerSubtitle || DEFAULT_HEADER_SUBTITLE
         }
-        logoFallbackSrc={logoSrc}
+        logoFallbackSrc=""
+        defaultIcon={<WorkspaceDefaultIcon workspace={insightsWorkspace} />}
         onSave={async (next) => {
           if (!canManageWorkspaceConfig) return false;
           const saved = await persistWorkspacePatch({
             headerTitle: next.title,
             headerSubtitle: next.subtitle,
             defaultLogoSrc:
-              next.logoDataUri ?? insightsWorkspace.defaultLogoSrc,
+              next.logoDataUri ?? "",
             hideDefaultLogo: next.logoDataUri
               ? false
               : insightsWorkspace.hideDefaultLogo,
@@ -7532,6 +7559,26 @@ const MapViewport = styled.div`
   min-height: 400px;
 `;
 
+const TopologyPanelHeader = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${variables.spacingSmall};
+  margin-bottom: ${variables.spacingSmall};
+
+  > div:first-child {
+    flex: 1 1 14rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  h2 {
+    margin: 0;
+  }
+`;
+
 interface KpiCardProps {
   label: string;
   value: string;
@@ -8552,6 +8599,7 @@ interface BrandingEditorModalProps {
   /** Image src to display in the "current logo" preview when no
    * override logo is set. Lets the user see what they're replacing. */
   logoFallbackSrc: string;
+  defaultIcon: React.ReactNode;
   onSave: (next: BrandingOverride) => boolean | Promise<boolean>;
   onResetToDefaults: () => void;
 }
@@ -8581,6 +8629,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   titlePlaceholder,
   subtitlePlaceholder,
   logoFallbackSrc,
+  defaultIcon,
   onSave,
   onResetToDefaults,
 }) => {
@@ -8754,9 +8803,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                   className="w-full h-full object-contain"
                 />
               ) : (
-                <span className="text-center text-xs font-bold leading-tight">
-                  No logo
-                </span>
+                <>{defaultIcon}</>
               )}
             </div>
             <div className="flex flex-col gap-1.5">

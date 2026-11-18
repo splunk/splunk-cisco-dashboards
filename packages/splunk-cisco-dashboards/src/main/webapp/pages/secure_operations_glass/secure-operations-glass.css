@@ -363,7 +363,8 @@
     white-space: nowrap;
 }
 
-#scan-root .scd-glass-metric > strong {
+#scan-root .scd-glass-metric > strong,
+#scan-root .scd-glass-metric-drilldown strong {
     color: var(--glass-text);
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     font-size: clamp(23px, 2vw, 31px);
@@ -484,21 +485,25 @@
 }
 
 #scan-root .scd-glass-tone-good > strong,
+#scan-root .scd-glass-tone-good .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-good .scd-glass-metric-label svg {
     color: var(--glass-good);
 }
 
 #scan-root .scd-glass-tone-warning > strong,
+#scan-root .scd-glass-tone-warning .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-warning .scd-glass-metric-label svg {
     color: var(--glass-warning);
 }
 
 #scan-root .scd-glass-tone-critical > strong,
+#scan-root .scd-glass-tone-critical .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-critical .scd-glass-metric-label svg {
     color: var(--glass-critical);
 }
 
 #scan-root .scd-glass-tone-info > strong,
+#scan-root .scd-glass-tone-info .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-info .scd-glass-metric-label svg {
     color: var(--glass-info);
 }
@@ -1924,7 +1929,67 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    #scan-root .scd-glass-spin {
+    #scan-root .scd-glass-spin,
+    #scan-root .scd-glass-map-marker-wave {
         animation: none;
     }
 }
+
+#scan-root .scd-glass-metric-drilldown {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 10px;
+    max-width: 100%;
+    padding: 0;
+    text-align: left;
+}
+
+#scan-root .scd-glass-metric-drilldown strong {
+    min-width: 0;
+    margin-top: 0;
+}
+
+#scan-root .scd-glass-metric-drilldown svg { flex-shrink: 0; }
+#scan-root .scd-glass-metric-drilldown:hover { text-decoration: underline; }
+#scan-root .scd-glass-metric-drilldown:focus-visible { outline: 2px solid #00bceb; outline-offset: 4px; }
+#scan-root .scd-glass-metric-drilldown:disabled { cursor: default; }
+
+.scd-glass-metric-detail-table { max-height: 52vh; overflow: auto; }
+.scd-glass-metric-detail-table table { border-collapse: collapse; min-width: 100%; font-size: 13px; }
+.scd-glass-metric-detail-table th,
+.scd-glass-metric-detail-table td { border-bottom: 1px solid var(--sui-border-color, #66717c); padding: 8px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+
+
+#scan-root .scd-glass-verdict-chart { height: 260px; min-width: 0; }
+#scan-root .scd-glass-verdict-chart .recharts-sector:focus-visible { outline: 2px solid #00bceb; outline-offset: 3px; }
+#scan-root .scd-glass-verdict-values { display: grid; gap: 5px; }
+#scan-root .scd-glass-verdict-values button {
+    align-items: center; display: grid; grid-template-columns: 12px minmax(0,1fr) auto auto;
+    gap: 10px; padding: 7px 9px; text-align: left; cursor: pointer;
+    background: var(--glass-panel-subtle); color: var(--glass-text);
+    border: 1px solid var(--glass-border); border-radius: 6px;
+}
+#scan-root .scd-glass-verdict-values button[aria-pressed="true"],
+#scan-root .scd-glass-verdict-values button:focus-visible { outline: 2px solid #00bceb; outline-offset: 1px; }
+#scan-root .scd-glass-verdict-swatch { width: 10px; height: 10px; border-radius: 2px; }
+#scan-root .scd-glass-verdict-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#scan-root .scd-glass-verdict-details .scd-glass-table-wrap { max-height: 430px; }
+
+
+/* Keep chart text readable on the dark operational surface. */
+#scan-root .scd-glass-chart .recharts-cartesian-axis-tick-value { fill: var(--glass-text); opacity: 1; }
+#scan-root .scd-glass-chart-panel .scd-glass-panel-header p { color: var(--glass-muted); }
+#scan-root .scd-glass .recharts-default-tooltip .recharts-tooltip-label { color: var(--glass-text); }
+#scan-root .scd-glass-chart-panel.scd-glass-pie-panel .scd-glass-panel-body { height: auto; min-height: 228px; }
+#scan-root .scd-glass-pie-panel .scd-glass-chart { height: auto; min-height: 0; }
+#scan-root .scd-glass-pie-plot { height: 200px; min-width: 0; }
+#scan-root .scd-glass-pie-values { color: var(--glass-text); display: grid; gap: 8px; margin: 0; padding: 6px 5px 10px; }
+#scan-root .scd-glass-pie-values > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 3px 12px; border-top: 1px solid var(--glass-border); padding-top: 6px; }
+#scan-root .scd-glass-pie-values dt { min-width: 0; overflow-wrap: anywhere; }
+#scan-root .scd-glass-pie-values dd { color: var(--glass-text); margin: 0; font-variant-numeric: tabular-nums; }
+#scan-root .scd-glass-pie-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; }

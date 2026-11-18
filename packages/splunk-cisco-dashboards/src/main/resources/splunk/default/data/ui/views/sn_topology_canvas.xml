@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="topology_canvas_v1_bootstrap.js">
-    <label>Network Topology Canvas</label>
+    <label>Network Topology Canvas (Under Dev)</label>
     <row>
         <panel>
             <html>

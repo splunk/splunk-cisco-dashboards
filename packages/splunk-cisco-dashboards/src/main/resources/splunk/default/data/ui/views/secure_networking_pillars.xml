@@ -3,7 +3,7 @@
      available through their existing Dashboard Manager routes for comparison. -->
 <dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="application.js,secure_networking_pillars_bootstrap.js">
-    <label>Secure Networking Pillars (React Preview)</label>
+    <label>Secure Networking Pillars (Under Dev)</label>
     <description>Native React proof of concept for the five Secure Networking pillar dashboards.</description>
     <row>
         <panel>

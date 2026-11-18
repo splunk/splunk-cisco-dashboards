@@ -271,17 +271,25 @@ const safeVisualizationType = (value) => {
     return /^splunk\.[a-z0-9_.-]+$/i.test(normalizedValue) ? normalizedValue : 'splunk.table';
 };
 
+// Older catalogues used these aliases for grouped series. Studio accepts auto.
+// Copy the options so opening a modal never mutates catalogue metadata.
+const normalizeVisualizationOptions = (options) => ({
+    ...options,
+    ...(['unstacked', 'default'].includes(options.stackMode) ? { stackMode: 'auto' } : {}),
+});
+
 const parseVisualizationOptions = (value) => {
     if (!value) {
         return {};
     }
     if (typeof value === 'object' && !Array.isArray(value)) {
-        return value;
+        return normalizeVisualizationOptions(value);
     }
 
     try {
         const options = JSON.parse(value);
-        return options && typeof options === 'object' && !Array.isArray(options) ? options : {};
+        return options && typeof options === 'object' && !Array.isArray(options)
+            ? normalizeVisualizationOptions(options) : {};
     } catch (_error) {
         return {};
     }

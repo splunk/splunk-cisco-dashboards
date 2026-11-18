@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="m365_activity_monitoring_bootstrap.js">
-    <label>M365 Activity Monitoring</label>
+    <label>M365 Activity Monitoring (Under Dev)</label>
     <description>Modern M365 activity monitoring experience cloned from the dashboard view pattern and rendered with React, Recharts, Tailwind CSS, Lucide icons, and React Router.</description>
     <row>
         <panel>

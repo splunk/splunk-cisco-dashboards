@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import Button from '@splunk/react-ui/Button';
 import { ActionButton } from '@splunk/dashboard-action-buttons';
+import Magnifier from '@splunk/react-icons/Magnifier';
+import PropTypes from 'prop-types';
 import { getSearches } from '../../common/lib/searchbase';
+import { applyDcNetworkingScope } from '../../common/lib/dcNetworkingScope';
 import {
     resolveOpenSearchQuery,
     resolveOpenSearchToken,
 } from '../../common/lib/openSearchTokenResolution';
 
-import Magnifier from '@splunk/react-icons/Magnifier';
 
 const ActionButtonIcon = <Magnifier />;
 const DEFAULT_EARLIEST = '-24h@h';
@@ -20,7 +23,7 @@ const resolveSearchApp = (appName) =>
         ? appName.trim()
         : DEFAULT_SEARCH_APP;
 
-const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources }) => {
+const CustomOpenSearch = ({ dashboardApi, itemDefinition, dataSources, standalone = false, label = 'Open in Search' }) => {
     const [disabled, setDisabled] = useState(true);
     const [splSearch, setSplSearch] = useState();
     const [searchApp, setSearchApp] = useState(DEFAULT_SEARCH_APP);
@@ -29,13 +32,11 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
     const [latest, setLatest] = useState('now');
 
     useEffect(() => {
-        if (searches.length === 0) {
-            const getSearchesList = async () => {
-                const data = await getSearches();
-                setSearches(data.entry);
-            };
-            getSearchesList();
-        }
+        const getSearchesList = async () => {
+            const data = await getSearches();
+            setSearches(data.entry);
+        };
+        getSearchesList();
     }, []);
 
     const resolveTokenValue = useCallback(
@@ -76,8 +77,8 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
     useEffect(() => {
         if (searches.length > 0) {
             if (itemDefinition.dataSources) {
-                var spl = undefined;
-                var dataSourceRegistry = undefined;
+                let spl;
+                let dataSourceRegistry;
                 if (dashboardApi.dataSourceRegistry) {
                     dataSourceRegistry = dashboardApi.dataSourceRegistry;
                 } else if (dashboardApi.getDataSourceRegistry) {
@@ -116,7 +117,13 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
                             (s) => s.name === primaryDataSource.options.ref,
                         );
                         if (search) {
-                            spl = search.content.search;
+                            const resolvedOptions = dataSourceRegistry.getDataSourceController(primaryDataSourceId)?.def?.options || primaryDataSource.options;
+                            try {
+                                spl = applyDcNetworkingScope(search.content.search, resolvedOptions.dcScope);
+                            } catch {
+                                setDisabled(true);
+                                return;
+                            }
                             setSearchApp(resolveSearchApp(search.content.dispatch_context));
                             setResolvedTimeRange(
                                 dataSourceRegistry.getDataSourceController(primaryDataSourceId)?.def
@@ -153,23 +160,50 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
         setResolvedTimeRange,
     ]);
 
+    const SearchButton = standalone ? Button : ActionButton;
     return (
-        <ActionButton
-            title="Open in Search"
-            aria-label="Open in Search"
+        <SearchButton
+            title={label}
+            aria-label={label}
+            {...(standalone ? { appearance: 'subtle', hideLabel: true, label } : {})}
             data-test="CustomOpenSearchButton" // for testing
-            onClick={() =>
+            onClick={() => {
+                const registry = dashboardApi.dataSourceRegistry || dashboardApi.getDataSourceRegistry?.();
+                const currentParameters = registry?.getDataSourceController(itemDefinition.dataSources?.primary)?.def?.options?.queryParameters;
+                const currentEarliest = resolveTokenValue(currentParameters?.earliest) || earliest;
+                const currentLatest = resolveTokenValue(currentParameters?.latest) || latest;
                 window.open(
                     `/app/${searchApp}/search?earliest=${encodeURIComponent(
-                        earliest,
-                    )}&latest=${encodeURIComponent(latest)}&q=${encodeURIComponent(splSearch)}`,
+                        currentEarliest,
+                    )}&latest=${encodeURIComponent(currentLatest)}&q=${encodeURIComponent(splSearch)}`,
                     '_blank',
-                )
-            }
+                );
+            }}
             icon={ActionButtonIcon} // icon for this button
             disabled={disabled}
         />
     );
+};
+
+const sourceShape = PropTypes.shape({
+    type: PropTypes.string,
+    options: PropTypes.shape({
+        query: PropTypes.string,
+        ref: PropTypes.string,
+        extend: PropTypes.string,
+        queryParameters: PropTypes.shape({ earliest: PropTypes.string, latest: PropTypes.string }),
+    }),
+});
+CustomOpenSearch.propTypes = {
+    standalone: PropTypes.bool,
+    label: PropTypes.string,
+    dashboardApi: PropTypes.shape({
+        getDefinition: PropTypes.func,
+        getDataSourceRegistry: PropTypes.func,
+        dataSourceRegistry: PropTypes.shape({ getDataSourceController: PropTypes.func }),
+    }).isRequired,
+    itemDefinition: PropTypes.shape({ dataSources: PropTypes.shape({ primary: PropTypes.string }) }).isRequired,
+    dataSources: PropTypes.objectOf(sourceShape).isRequired,
 };
 
 export default CustomOpenSearch;

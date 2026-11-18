@@ -10,6 +10,8 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useSplunkTheme } from '@splunk/themes';
+import { formatPlainMetricNumber } from '@/common/lib/metricValueFormat';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import {
     InfoTooltip,
@@ -69,7 +71,7 @@ const coerceNumber = (raw: unknown): number => {
 };
 
 const formatCount = (n: number): string =>
-    n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    formatPlainMetricNumber(n);
 
 const NoDataState: React.FC<{
     noDataReason?: NoDataReason;
@@ -128,6 +130,8 @@ export const PieTile: React.FC<PieTileProps> = ({
     className,
 }) => {
     const [isFocusOpen, setIsFocusOpen] = useState(false);
+    const theme = useSplunkTheme();
+    const chartThemeKey = theme.colorScheme === 'dark' ? 'enterpriseDark' : 'enterprise';
     const dimensionCol = columns[0];
     const valueCol = columns[1];
 
@@ -157,6 +161,7 @@ export const PieTile: React.FC<PieTileProps> = ({
     const overflowCount = Math.max(0, chartData.length - visibleSlices.length);
     const hasData = visibleSlices.length > 0;
     const total = chartData.reduce((acc, e) => acc + e.value, 0);
+    const accessibleSummary = `${label} ranked horizontal bar chart. Total ${formatCount(total)}. ${chartData.map(item => `${item.name}: ${formatCount(item.value)}`).join('; ')}`;
 
     const colors = useMemo(() => {
         const fromOptions = (seriesColors ?? []).filter(
@@ -209,13 +214,13 @@ export const PieTile: React.FC<PieTileProps> = ({
             showXMajorGridLines: false,
             showYMajorGridLines: false,
             seriesColors: colors,
-            backgroundColor: '#131a23',
+            backgroundColor: theme.backgroundColorSection,
         }),
-        [colors]
+        [colors, theme.backgroundColorSection]
     );
     const focusStudioOptions = useMemo(
-        () => ({ ...studioOptions, backgroundColor: '#131a23' }),
-        [studioOptions]
+        () => ({ ...studioOptions, backgroundColor: theme.backgroundColorSection }),
+        [studioOptions, theme.backgroundColorSection]
     );
     return (
         <div
@@ -284,7 +289,7 @@ export const PieTile: React.FC<PieTileProps> = ({
             {hasData ? (
                 <div
                     role="img"
-                    aria-label={`${label} ranked horizontal bar chart. Total ${formatCount(total)}.`}
+                    aria-label={accessibleSummary}
                     title="Ranked category values are shown on the chart"
                     data-tile-control="true"
                     className="relative mt-0.5 flex min-h-[118px] flex-1"
@@ -293,7 +298,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                         <StudioBar
                             width="100%"
                             height="100%"
-                            themeKey="enterpriseDark"
+                            themeKey={chartThemeKey}
                             options={studioOptions}
                             dataSources={studioDataSources}
                         />
@@ -326,14 +331,14 @@ export const PieTile: React.FC<PieTileProps> = ({
             >
                 <div
                     role="img"
-                    aria-label={`Expanded ${label} ranked horizontal bar chart. Total ${formatCount(total)}.`}
+                    aria-label={`Expanded ${accessibleSummary}`}
                     className="relative h-full min-h-[320px] rounded-[10px] border sui-border-default sui-bg-section p-3"
                 >
                     <React.Suspense fallback={<ChartLoadingState />}>
                         <StudioBar
                             width="100%"
                             height="100%"
-                            themeKey="enterpriseDark"
+                            themeKey={chartThemeKey}
                             options={focusStudioOptions}
                             dataSources={studioDataSources}
                         />
