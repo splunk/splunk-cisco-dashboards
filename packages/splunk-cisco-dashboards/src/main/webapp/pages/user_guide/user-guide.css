@@ -245,6 +245,121 @@
     color: var(--scd-guide-fg);
 }
 
+/* The Markdown renderer emits semantic elements rather than the former
+ * hand-authored list/code classes. Restore their typography inside prose only,
+ * so host resets cannot flatten the document or affect guide navigation. */
+#scan-root .scd-guide-markdown .scd-guide-section-body p {
+    line-height: 1.65;
+    margin: 0 0 1em;
+    overflow-wrap: anywhere;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body ul,
+#scan-root .scd-guide-markdown .scd-guide-section-body ol {
+    list-style-position: outside;
+    margin: 0.75em 0 1em;
+    padding-inline-start: 1.6em;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body ul {
+    list-style-type: disc;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body ol {
+    list-style-type: decimal;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body li {
+    line-height: 1.65;
+    list-style-type: inherit;
+    margin-block: 0.5em;
+    padding-inline-start: 0.2em;
+    overflow-wrap: anywhere;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body :is(h3, h4, h5, h6) {
+    color: var(--scd-guide-fg);
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 1.25em 0 0.5em;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body a {
+    color: var(--scd-guide-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body :not(pre) > code {
+    background: var(--scd-guide-page-bg);
+    border: 1px solid var(--scd-guide-border-weak);
+    border-radius: 3px;
+    color: var(--scd-guide-fg);
+    font-size: 0.9em;
+    padding: 0.1em 0.3em;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-code {
+    border: 1px solid var(--scd-guide-border-weak);
+    border-radius: 6px;
+    margin: 1em 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-code-label {
+    background: var(--scd-guide-panel-bg);
+    border-bottom: 1px solid var(--scd-guide-border-weak);
+    color: var(--scd-guide-fg-muted);
+    font-size: 0.85em;
+    font-weight: 700;
+    padding: 0.5em 1em;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-code pre {
+    background: var(--scd-guide-page-bg);
+    border: 0;
+    color: var(--scd-guide-fg);
+    font-size: 0.9em;
+    line-height: 1.6;
+    margin: 0;
+    overflow-x: auto;
+    padding: 1em;
+    white-space: pre;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-code pre > code {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font-size: inherit;
+    padding: 0;
+    white-space: inherit;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-section-body blockquote {
+    border-inline-start: 3px solid var(--scd-guide-accent);
+    color: var(--scd-guide-fg-default);
+    line-height: 1.65;
+    margin: 1em 0;
+    padding-inline-start: 1em;
+}
+
+#scan-root .scd-guide-markdown .scd-guide-table-wrap {
+    margin-block: 1em;
+    max-width: 100%;
+}
+
+#scan-root .scd-guide-markdown :is(.scd-guide-section-body, .scd-guide-release-body) > :first-child {
+    margin-top: 0;
+}
+
+#scan-root .scd-guide-markdown :is(.scd-guide-section-body, .scd-guide-release-body) > :last-child {
+    margin-bottom: 0;
+}
+
 #scan-root .scd-guide-prose {
     display: grid;
     gap: 14px;
