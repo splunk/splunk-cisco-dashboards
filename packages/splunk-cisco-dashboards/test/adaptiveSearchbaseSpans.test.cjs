@@ -295,7 +295,8 @@ for (const name of new Set([
 }
 
 for (const name of pickerAdaptiveBins) {
-  assert.match(stanzaBody(name), /^date_updated = 2026-09-03$/m);
+  const updated = stanzaBody(name).match(/^date_updated = (\d{4}-\d{2}-\d{2})$/m)?.[1];
+  assert.ok(updated >= '2026-09-03', `${name} must retain the adaptive-bin revision or a newer update`);
 }
 
 assert.match(

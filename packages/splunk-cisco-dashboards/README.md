@@ -10,6 +10,8 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Catalyst client location charts and site filters handle repeated identical location fields. Conflicting locations remain unknown.
+
 - Syslog severity investigations now open the underlying IOS events. Unrecognized severity stays Unknown.
 - Remote Access Health shows no observations when connection outcomes are unavailable, instead of reporting a misleading 0% failure rate.
 

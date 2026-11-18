@@ -60,6 +60,20 @@ test('remote-access health requires observed attempts and never fabricates a hea
     assert.match(query, /WindowFailureRatePct=if\(WindowAttempts>0,round\(WindowFailures\/WindowAttempts\*100,1\),null\(\)\)/);
     assert.doesNotMatch(query, /appendpipe|WindowAttempts=0|WindowFailureRatePct=0/);
 });
+test('Catalyst site consumers collapse identical location values before string operations', () => {
+    const xml = fs.readFileSync(path.join(root, 'src/main/resources/splunk/default/data/ui/views/netops_catalyst_operations.xml'), 'utf8');
+    const definition = JSON.parse(xml.match(/<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/)[1]);
+    const queries = [
+        ...Object.values(stanzas).map(block => block.split('search = ')[1] || ''),
+        ...Object.values(definition.dataSources).map(ds => ds.options?.query || ''),
+    ].filter(query => query.includes('leafSiteId=mvindex(split(rtrim(siteHierarchyId'));
+    assert.equal(queries.length, 9);
+    for (const query of queries) {
+        assert.match(query, /foreach siteHierarchy siteHierarchyId/);
+        assert.match(query, /if\(mvcount\(mvdedup\('<<FIELD>>'\)\)=1,mvindex\(mvdedup\('<<FIELD>>'\),0\),null\(\)\)/);
+        assert.ok(query.indexOf('foreach siteHierarchy') < query.indexOf('rtrim(siteHierarchyId'));
+    }
+});
 test('wireless traffic totals normalize duplicate multivalue counters before arithmetic', () => {
     for (const id of ['client_summary_ds_client_traffic_by_band', 'client_summary_ds_top_ssids_by_traffic']) {
         const query = stanzas[id].split('search = ')[1];
