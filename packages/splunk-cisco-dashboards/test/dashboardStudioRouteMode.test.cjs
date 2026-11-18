@@ -590,7 +590,7 @@ assert.match(
 );
 assert.match(
   remoteAccessAttemptsStanza,
-  /WindowFailureRatePct=if\(WindowAttempts>0,round\(WindowFailures\/WindowAttempts\*100,1\),0\)/,
+  /WindowFailureRatePct=if\(WindowAttempts>0,round\(WindowFailures\/WindowAttempts\*100,1\),null\(\)\)/,
   "Remote Access Health must headline the selected-window failed-attempt rate",
 );
 assert.ok(

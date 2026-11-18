@@ -42,6 +42,24 @@ test('Active alerts navigates to an existing alert detail search', () => {
     assert.match(stanzas[id], /DATAMODEL=Cisco_ThousandEyes.Alerts/);
     assert.match(stanzas[id], /"Alert ID"/);
 });
+test('syslog investigation retains the overview source and preserves unknown severity', () => {
+    const overview = stanzas.it_critical_systems_syslog_severity_distribution;
+    const target = overview.match(/^drilldown_stanza_id = (.+)$/m)[1];
+    assert.equal(target, 'it_critical_systems_syslog_event_detail');
+    const detail = stanzas[target].split('search = ')[1];
+    assert.match(detail, /`index_network` sourcetype="cisco:ios"/);
+    assert.match(detail, /table _time host severity facility mnemonic _raw TotalEvents RowsTruncated/);
+    assert.match(detail, /sort 1000 - _time/);
+    assert.equal(detail.match(/\| eval severity=(.+)/)[1], overview.match(/\| eval severity=(.+)/)[1]);
+    assert.match(detail, /1==1,"Unknown"/);
+    assert.match(stanzas.it_critical_systems_inventory_unreachable_detail, /drilldown_stanza_id = it_critical_systems_ds_base_devicehealth/);
+});
+test('remote-access health requires observed attempts and never fabricates a healthy denominator', () => {
+    const query = stanzas.secure_networking_zta_ravpn_connection_attempts_trend.split('search = ')[1];
+    assert.ok(query.indexOf('where outcome IN ("Connected","Failed")') < query.indexOf('| timechart'));
+    assert.match(query, /WindowFailureRatePct=if\(WindowAttempts>0,round\(WindowFailures\/WindowAttempts\*100,1\),null\(\)\)/);
+    assert.doesNotMatch(query, /appendpipe|WindowAttempts=0|WindowFailureRatePct=0/);
+});
 test('wireless traffic totals normalize duplicate multivalue counters before arithmetic', () => {
     for (const id of ['client_summary_ds_client_traffic_by_band', 'client_summary_ds_top_ssids_by_traffic']) {
         const query = stanzas[id].split('search = ')[1];

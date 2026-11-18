@@ -39,6 +39,9 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Syslog severity investigations now open the underlying IOS events. Unrecognized severity stays Unknown.
+- Remote Access Health shows no observations when connection outcomes are unavailable, instead of reporting a misleading 0% failure rate.
+
 - Workspace managers can publish a tile visualization as the shared workspace default. Personal choices still take precedence; choose Default to inherit the shared visualization. Publishing leaves other workspaces and search defaults unchanged.
 - Workspace radial gauges keep values clear of the arc, including narrow tiles and long values. Chart descriptions include their reported observations. Security Operations improves keyboard tab navigation, dialog focus return and reduced-motion behavior. Unknown states remain neutral, investigation dialogs use solid theme surfaces, and User Guide printing uses a readable paper palette.
 - Tile configuration keeps the value field full-width, groups suggested fields underneath, and prevents long option summaries from crowding the section controls.
