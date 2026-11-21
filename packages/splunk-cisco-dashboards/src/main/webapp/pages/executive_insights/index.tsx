@@ -95,6 +95,7 @@ import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 import AppearanceMenuItems from "@/common/components/AppearanceMenuItems";
 import { secureNetworkingEssentialsCatalogUrl } from "@/common/lib/appCatalogUrl";
 import { buildWorkspaceDrilldownDefinition } from "@/common/lib/dashboardDrilldown";
+import { splunkSearchbaseEditUrl } from "@/common/lib/splunkSearchUrl";
 import { normalizeSharedImageSource } from "@/common/lib/imageSource";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
@@ -1365,14 +1366,6 @@ const splunkSearchAppUrl = (
     latest: range.latest,
   });
   return `/${locale}/app/${resolveSearchAppName(appName)}/search?${params.toString()}`;
-};
-
-const splunkSearchbaseEditUrl = (stanzaId: string): string => {
-  const path =
-    typeof window !== "undefined" ? window.location.pathname : "/en-US";
-  const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
-  const locale = localeMatch ? localeMatch[1] : "en-US";
-  return `/${locale}/app/searchbase/start#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
 };
 
 type MetricDetailTableColumnKind = "text" | "status" | "metric";

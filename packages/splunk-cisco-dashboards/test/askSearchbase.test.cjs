@@ -16,17 +16,20 @@ const exportsFromSource = {};
 new Function("exports", outputText)(exportsFromSource);
 const { rankSearchbaseMatches } = exportsFromSource;
 
-test("Searchbase deep links support Basic Information and preserve the SPL and catalogue routes", () => {
+test("Searchbase record links open at Basic Information and preserve the catalogue route", () => {
   const source = fs.readFileSync(path.resolve(__dirname, "../src/main/webapp/common/lib/splunkSearchUrl.ts"), "utf8");
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   });
   const library = {};
-  new Function("exports", outputText)(library);
+  const loadUrls = new Function("exports", "window", outputText);
+  loadUrls(library);
   const route = "/en-US/app/searchbase/start";
-  assert.equal(library.splunkSearchbaseEditUrl("device health", "basic-information"), `${route}#/edit/device%20health#basic-information`);
-  assert.equal(library.splunkSearchbaseEditUrl("device_health"), `${route}#/edit/device_health#search-spl`);
-  assert.equal(library.splunkSearchbaseEditUrl(undefined, "basic-information"), route);
+  assert.equal(library.splunkSearchbaseEditUrl("device health"), `${route}#/edit/device%20health#basic-information`);
+  assert.equal(library.splunkSearchbaseEditUrl(), route);
+  const localized = {};
+  loadUrls(localized, { location: { pathname: "/fr-FR/app/splunk-cisco-dashboards/workspace_insights" } });
+  assert.equal(localized.splunkSearchbaseEditUrl("device_health"), "/fr-FR/app/searchbase/start#/edit/device_health#basic-information");
 });
 
 test("Searchbase discovery distinguishes a missing app from an unavailable registry", async () => {

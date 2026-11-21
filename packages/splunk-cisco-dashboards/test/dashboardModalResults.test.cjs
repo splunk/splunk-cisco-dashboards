@@ -6,6 +6,9 @@ const ts = require('typescript');
 const React = require('react');
 const source = fs.readFileSync(path.resolve(__dirname, '../src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx'), 'utf8');
 const output = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
+const urlSource = fs.readFileSync(path.resolve(__dirname, '../src/main/webapp/common/lib/splunkSearchUrl.ts'), 'utf8');
+const urlModule = {};
+new Function('exports', ts.transpileModule(urlSource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(urlModule);
 const Shell = () => null;
 const Core = () => null;
 const Provider = () => null;
@@ -35,7 +38,7 @@ function render(mode, width = 800) {
         '../../common/icons/SuiIcon': { ExternalLink: Component, Info: Component, Search: Component },
         '../../common/lib/splunk': { addDash: () => {} },
         '../../common/lib/searchbase': { getSearches: () => {} },
-        '../../common/lib/splunkSearchUrl': { splunkSearchAppUrl: () => '/search' },
+        '../../common/lib/splunkSearchUrl': urlModule,
         '../../common/lib/dcNetworkingScope': { applyDcNetworkingScope: (query) => query + ' | search Account="lab"' },
         '../../common/lib/dashboardDrilldown': {
             resolveDashboardDrilldownSearches: () => ({ resolvedSearches: entries, missingTargetIds: [] }),
@@ -64,6 +67,7 @@ for (const mode of ['metric-info', 'drilldown']) {
         const result = render(mode);
         assert.equal(result.nodes.filter((node) => node.type === Core).length, 1);
         assert.equal(result.nodes.filter((node) => node.type === Guidance).length, 1);
+        assert.equal(result.tree.props.openInSearchbaseHref, '/en-US/app/searchbase/start#/edit/primary#basic-information');
         assert.equal(result.builds.length, 1);
         assert.equal(result.builds[0][1], result.timeRange);
         assert.match(result.builds[0][0].content.search, /Account="lab"/);

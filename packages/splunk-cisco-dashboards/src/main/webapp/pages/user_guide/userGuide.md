@@ -39,6 +39,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 - **Ask AI (Preview):** Find and review matching Searchbase searches from a monitoring question. Review the top matches, show more results, or add a search to a workspace section.
 - **Workspace drilldowns:** Open a tile’s drilldown to view full-height results. Switch between named views when there are related searches, or open **Search guidance** for the active view. Returning to results restores your table sort and scroll position.
+- **Searchbase links:** Opening a saved search from the app starts at **Basic Information**.
 
 :::
 

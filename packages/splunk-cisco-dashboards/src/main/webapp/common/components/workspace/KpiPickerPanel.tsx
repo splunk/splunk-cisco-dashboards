@@ -35,6 +35,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
+import { splunkSearchbaseEditUrl } from "@/common/lib/splunkSearchUrl";
 import Badge from "@splunk/react-ui/Badge";
 import Button from "@splunk/react-ui/Button";
 import Card from "@splunk/react-ui/Card";
@@ -702,17 +703,11 @@ const labelFromSearchName = (searchName: string): string => {
   return (parts[parts.length - 1] || searchName).slice(0, 80);
 };
 
-const getSplunkWebLocalePrefix = (): string => {
-  if (typeof window === "undefined") return "/en-US";
-  const match = window.location.pathname.match(/^\/([^/]+)\/app\//);
-  return match ? `/${match[1]}` : "/en-US";
-};
-
 const buildSearchbaseEditUrl = (entry: SearchbaseRecord): string | null => {
   const stanza = entry.id.trim();
   if (!stanza) return null;
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  return `${origin}${getSplunkWebLocalePrefix()}/app/searchbase/start#/edit/${encodeURIComponent(stanza)}#search-spl`;
+  return `${origin}${splunkSearchbaseEditUrl(stanza)}`;
 };
 
 const configuredDrilldownNamesFor = (

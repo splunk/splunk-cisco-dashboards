@@ -26,7 +26,7 @@ import {
 } from '../../common/icons/SuiIcon';
 import { addDash } from '../../common/lib/splunk';
 import { getSearches } from '../../common/lib/searchbase';
-import { splunkSearchAppUrl } from '../../common/lib/splunkSearchUrl';
+import { splunkSearchAppUrl, splunkSearchbaseEditUrl } from '../../common/lib/splunkSearchUrl';
 import {
     buildDashboardDrilldownDefinition,
     getDashboardDrilldownMetadata,
@@ -53,13 +53,6 @@ const DrilldownWorkflow = styled.div`
     border-bottom: 1px solid ${variables.borderColorWeak};
     background: ${variables.backgroundColorPage};
 `;
-
-const splunkSearchbaseEditUrl = (stanzaId) => {
-    const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
-    const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
-    const locale = localeMatch ? localeMatch[1] : 'en-US';
-    return `/${locale}/app/searchbase/start#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
-};
 
 const getSearchApp = (entry, fallbackApp) => {
     const content = entry?.content || {};

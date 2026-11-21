@@ -337,7 +337,7 @@ export default function AskAi({
                                             : 'View this saved search and its details in the Searchbase app.'} wrapContent>
                                             <Link appearance="standalone" openInNewContext
                                                 aria-label={`${searchbaseLabel}: ${record.searchName} (opens in new window)`}
-                                                to={splunkSearchbaseEditUrl(ambiguous ? undefined : record.id, 'basic-information')}>
+                                                to={splunkSearchbaseEditUrl(ambiguous ? undefined : record.id)}>
                                                 {searchbaseLabel}
                                             </Link>
                                         </Tooltip>

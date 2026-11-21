@@ -18,6 +18,7 @@ import ChartColumn from '@splunk/react-icons/ChartColumn';
 import Modal from '@splunk/react-ui/Modal';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { plainTextFromHtml } from '../../common/services/searchbaseCatalogue';
+import { splunkSearchbaseEditUrl } from '../../common/lib/splunkSearchUrl';
 
 const ALL_APPS = '__all_apps__';
 const DEFAULT_APP = 'splunk-cisco-dashboards';
@@ -69,13 +70,6 @@ const sortedUnique = (values) =>
     [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
 
 const normalizeSearchKey = (value) => String(value || '').trim().toLowerCase();
-
-const splunkSearchbaseEditUrl = (stanzaId) => {
-    const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
-    const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
-    const locale = localeMatch ? localeMatch[1] : 'en-US';
-    return `/${locale}/app/searchbase/start#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
-};
 
 const isTableSearch = (search) => normalizeSearchKey(search.defaultViz) === 'splunk.table';
 
