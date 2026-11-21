@@ -1,3 +1,4 @@
+import { SplSyntax } from '@/common/components/SplSyntax';
 /**
  * CustomerTopologyMap
  *
@@ -3177,162 +3178,6 @@ const formatMbps = (value?: number, loading?: boolean): string =>
       ? "Loading…"
       : "Awaiting"
     : `${value.toLocaleString()} Mbps`;
-
-const SPL_COMMANDS = new Set([
-  "append",
-  "appendcols",
-  "bin",
-  "chart",
-  "dedup",
-  "eval",
-  "eventstats",
-  "fields",
-  "filldown",
-  "fillnull",
-  "head",
-  "inputlookup",
-  "join",
-  "lookup",
-  "makeresults",
-  "makemv",
-  "mvexpand",
-  "predict",
-  "rename",
-  "rex",
-  "search",
-  "sort",
-  "spath",
-  "stats",
-  "streamstats",
-  "table",
-  "tail",
-  "timechart",
-  "tstats",
-  "union",
-  "where",
-]);
-
-const SPL_KEYWORDS = new Set([
-  "and",
-  "as",
-  "by",
-  "case",
-  "coalesce",
-  "earliest",
-  "false",
-  "if",
-  "in",
-  "isnotnull",
-  "isnull",
-  "latest",
-  "like",
-  "lower",
-  "match",
-  "max",
-  "min",
-  "not",
-  "null",
-  "or",
-  "round",
-  "sum",
-  "tonumber",
-  "tostring",
-  "true",
-  "values",
-]);
-
-const renderSplBlock = (spl: string): React.ReactNode =>
-  spl.split("\n").map((line, lineIndex) => (
-    <React.Fragment key={`spl-line-${lineIndex}`}>
-      {renderSplLine(line, lineIndex)}
-      {lineIndex < spl.split("\n").length - 1 ? "\n" : null}
-    </React.Fragment>
-  ));
-
-const renderSplLine = (line: string, lineIndex: number): React.ReactNode[] => {
-  const pattern =
-    /(`[^`]*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\|\s*[A-Za-z_][A-Za-z0-9_]*|\b\d+(?:\.\d+)?\b|\b[A-Za-z_][A-Za-z0-9_.:{}-]*\b)/g;
-  const parts = line.split(pattern);
-
-  return parts.map((part, partIndex) => {
-    if (!part) return null;
-
-    const key = `spl-${lineIndex}-${partIndex}`;
-
-    if (part.startsWith("`") && part.endsWith("`")) {
-      return (
-        <span key={key} className="sui-color-warning">
-          {part}
-        </span>
-      );
-    }
-
-    if (
-      (part.startsWith('"') && part.endsWith('"')) ||
-      (part.startsWith("'") && part.endsWith("'"))
-    ) {
-      return (
-        <span key={key} className="sui-color-positive">
-          {part}
-        </span>
-      );
-    }
-
-    if (part.startsWith("|")) {
-      const command = part.slice(1).trim();
-      return (
-        <React.Fragment key={key}>
-          <span className="sui-color-info">|</span>
-          {command ? (
-            <>
-              {" "}
-              <span className="sui-color-info">{command}</span>
-            </>
-          ) : null}
-        </React.Fragment>
-      );
-    }
-
-    if (/^\d+(?:\.\d+)?$/.test(part)) {
-      return (
-        <span key={key} className="sui-color-warning">
-          {part}
-        </span>
-      );
-    }
-
-    const normalized = part.toLowerCase();
-    if (SPL_COMMANDS.has(normalized)) {
-      return (
-        <span key={key} className="sui-color-info">
-          {part}
-        </span>
-      );
-    }
-
-    if (SPL_KEYWORDS.has(normalized)) {
-      return (
-        <span key={key} className="sui-color-info">
-          {part}
-        </span>
-      );
-    }
-
-    if (part.includes("=") || part.includes(".")) {
-      return (
-        <span key={key} className="sui-color-default sui-color-active">
-          {part}
-        </span>
-      );
-    }
-
-    return (
-      <span key={key} className="sui-color-active">
-        {part}
-      </span>
-    );
-  });
-};
 
 const normalizeStatus = (raw: unknown): TopologyStatus | null => {
   if (raw === null || raw === undefined) return null;
@@ -8284,7 +8129,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                             : "sui-bg-section sui-focus-ring",
                         )}
                       >
-                        {renderSplBlock(selectedSpl)}
+                        <SplSyntax spl={selectedSpl} />
                       </pre>
                     </button>
                   ) : selectedSpl ? (
@@ -8296,7 +8141,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
                           : "sui-bg-section sui-focus-ring",
                       )}
                     >
-                      {renderSplBlock(selectedSpl)}
+                      <SplSyntax spl={selectedSpl} />
                     </pre>
                   ) : (
                     <p className="text-xs sui-color-default leading-relaxed">

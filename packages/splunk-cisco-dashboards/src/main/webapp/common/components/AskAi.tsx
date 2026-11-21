@@ -6,10 +6,13 @@ import Heading from '@splunk/react-ui/Heading';
 import Message from '@splunk/react-ui/Message';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
+import Tooltip from '@splunk/react-ui/Tooltip';
 import { addLeadingSearchCommand } from '@splunk/splunk-utils/search';
 import { variables } from '@splunk/themes';
 import styled from 'styled-components';
 import SearchbaseDrilldownGuidance from '@/common/components/workspace/SearchbaseDrilldownGuidance';
+import { SplSyntax } from '@/common/components/SplSyntax';
+import { WORKSPACE_ADD_HELP, type WorkspaceAddScope } from '@/common/components/workspace/workspaceAddHelp';
 import { getCurrentSplunkUsername, userScopedStorageKey } from '@/common/config/insightsWorkspaces';
 import { splunkSearchAppUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankSearchbaseMatches } from '@/common/services/askSearchbase';
@@ -82,7 +85,7 @@ function rememberQuestion(question: string): void {
 interface Destination {
     id: string;
     title: string;
-    add: (record: SearchbaseRecord) => Promise<'added' | 'already-present'>;
+    add: (record: SearchbaseRecord, scope: WorkspaceAddScope) => Promise<'added' | 'already-present'>;
 }
 
 interface AskAiProps {
@@ -90,6 +93,7 @@ interface AskAiProps {
     contextId?: string;
     range?: SplunkSearchTimeRange & { label?: string };
     destinations?: readonly Destination[];
+    canManageWorkspace?: boolean;
 }
 
 interface Result {
@@ -97,7 +101,7 @@ interface Result {
     records: SearchbaseRecord[];
 }
 
-export default function AskAi({ context, contextId = context, range, destinations }: AskAiProps) {
+export default function AskAi({ context, contextId = context, range, destinations, canManageWorkspace = false }: AskAiProps) {
     const trigger = useRef<HTMLButtonElement | null>(null);
     const pending = useRef<object | null>(null);
     const activeContext = useRef(contextId);
@@ -144,22 +148,24 @@ export default function AskAi({ context, contextId = context, range, destination
     }
 
     const destination = destinations?.find(({ id }) => id === destinationId);
-    async function add(record: SearchbaseRecord) {
-        if (!destination || adding) return;
+    async function add(record: SearchbaseRecord, scope: WorkspaceAddScope) {
+        if (!destination || adding || (scope === 'workspace' && !canManageWorkspace)) return;
         const targetContext = contextId;
         setAdding(true);
         setFeedback(null);
         try {
-            const outcome = await destination.add(record);
+            const outcome = await destination.add(record, scope);
             if (activeContext.current === targetContext) {
+                const visibility = scope === 'workspace' ? 'everyone' : 'you';
                 const text = outcome === 'already-present'
-                    ? `${record.searchName} is already in ${destination.title}.`
-                    : `Added ${record.searchName} to ${destination.title} for you.`;
+                    ? `${record.searchName} is already in ${destination.title} for ${visibility}.`
+                    : `Added ${record.searchName} to ${destination.title} for ${visibility}.`;
                 setFeedback({ text });
             }
-        } catch {
+        } catch (error) {
             if (activeContext.current === targetContext) {
-                setFeedback({ text: `Could not add the search to ${destination.title}. Try again.`, error: true });
+                const text = error instanceof Error ? error.message : `Could not add the search to ${destination.title}. Try again.`;
+                setFeedback({ text, error: true });
             }
         } finally {
             setAdding(false);
@@ -235,14 +241,22 @@ export default function AskAi({ context, contextId = context, range, destination
                                 </details>
                                 <details>
                                     <summary>View SPL</summary>
-                                    <pre tabIndex={0}><code>{record.search}</code></pre>
+                                    <pre tabIndex={0}><code><SplSyntax spl={record.search} /></code></pre>
                                 </details>
                                 {needsInputs && <p>This search needs inputs from its original view.</p>}
                                 <ActionRow>
                                     {!needsInputs && <Button appearance="secondary" label="Open in Search" openInNewContext
                                         to={splunkSearchAppUrl(addLeadingSearchCommand(record.search), range, record.dispatchContext)} />}
-                                    {!needsInputs && destination && <Button appearance="secondary" label="Add for me" disabled={adding}
-                                        onClick={() => { void add(record); }} />}
+                                    {!needsInputs && destination && <>
+                                        <Tooltip content={WORKSPACE_ADD_HELP.personal}>
+                                            <Button appearance="secondary" label="Add for me" disabled={adding}
+                                                onClick={() => { void add(record, 'personal'); }} />
+                                        </Tooltip>
+                                        {canManageWorkspace && <Tooltip content={WORKSPACE_ADD_HELP.workspace}>
+                                            <Button appearance="secondary" label="Add for everyone" disabled={adding}
+                                                onClick={() => { void add(record, 'workspace'); }} />
+                                        </Tooltip>}
+                                    </>}
                                 </ActionRow>
                             </SearchCard>;
                         })}

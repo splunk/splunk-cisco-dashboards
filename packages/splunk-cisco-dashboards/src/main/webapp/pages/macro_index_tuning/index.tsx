@@ -1,3 +1,4 @@
+import { SplSyntax } from '@/common/components/SplSyntax';
 import React, {
   useCallback,
   useEffect,
@@ -8456,7 +8457,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               Fast scan SPL
             </summary>
             <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed sui-color-active">
-              {searchSpl || "# Loading searchbase SPL..."}
+              <SplSyntax spl={searchSpl || "# Loading searchbase SPL..."} />
             </pre>
           </details>
 
@@ -8465,7 +8466,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               CIM discovery SPL
             </summary>
             <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed sui-color-active">
-              {resolvedCimSearchSpl}
+              <SplSyntax spl={resolvedCimSearchSpl} />
             </pre>
           </details>
         </div>

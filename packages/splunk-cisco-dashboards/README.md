@@ -10,7 +10,7 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
-- **Ask AI (Preview):** Describe what you want to monitor to find existing Searchbase searches. Review their SPL and available descriptions, explanations, solutions, and references. Open a search in Splunk Search or add it to your personal workspace view. This preview uses the Searchbase catalogue to find matches. SPL generation is planned for a later version.
+- **Ask AI (Preview):** Describe what you want to monitor to find existing Searchbase searches. Review color-coded SPL and available descriptions, explanations, solutions, and references. Open a search in Splunk Search, add it to your personal workspace view, or add it for everyone if you manage the workspace. Hover over either add action for visibility guidance. This preview uses the Searchbase catalogue to find matches. SPL generation is planned for a later version.
 - **New dashboards:** DC Networking Operations, Catalyst Operations (Preview), and Security Operations Overview (Preview).
 - **Better workspaces:** Cleaner Signal Rails, maps, charts, and layouts, with shared visualization defaults.
 - **More reliable metrics:** Corrected client-health totals, filters, and missing-data handling.

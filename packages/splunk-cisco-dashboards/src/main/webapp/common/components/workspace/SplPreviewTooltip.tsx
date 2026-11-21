@@ -1,11 +1,13 @@
 import React, {
     useEffect,
     useLayoutEffect,
-    useMemo,
     useRef,
     useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { variables } from '@splunk/themes';
+import styled from 'styled-components';
+import { SplSyntax } from '@/common/components/SplSyntax';
 import { Code2, X } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 
@@ -30,95 +32,6 @@ interface SplPreviewTooltipProps {
     maxWidth?: number;
 }
 
-const SPL_COMMANDS = new Set([
-    'append',
-    'appendcols',
-    'appendpipe',
-    'bin',
-    'chart',
-    'collect',
-    'dedup',
-    'eval',
-    'eventstats',
-    'fields',
-    'filldown',
-    'fillnull',
-    'head',
-    'inputlookup',
-    'join',
-    'lookup',
-    'makeresults',
-    'makemv',
-    'mvexpand',
-    'outputlookup',
-    'predict',
-    'rename',
-    'rex',
-    'search',
-    'sort',
-    'spath',
-    'stats',
-    'streamstats',
-    'table',
-    'tail',
-    'timechart',
-    'tstats',
-    'union',
-    'where',
-]);
-
-const SPL_KEYWORDS = new Set([
-    'and',
-    'as',
-    'by',
-    'case',
-    'coalesce',
-    'earliest',
-    'false',
-    'if',
-    'in',
-    'isnotnull',
-    'isnull',
-    'latest',
-    'like',
-    'lower',
-    'match',
-    'max',
-    'min',
-    'not',
-    'null',
-    'or',
-    'round',
-    'sum',
-    'tonumber',
-    'tostring',
-    'true',
-    'values',
-    'avg',
-    'cidrmatch',
-    'count',
-    'first',
-    'last',
-    'len',
-    'mvcount',
-    'mvjoin',
-    'relative_time',
-    'replace',
-    'split',
-    'strftime',
-    'strptime',
-]);
-
-const SPL_OPERATOR_KEYWORDS = new Set([
-    'and',
-    'as',
-    'by',
-    'from',
-    'in',
-    'or',
-    'where',
-]);
-
 const POPOVER_MAX_WIDTH = 760;
 const POPOVER_GAP = 8;
 const VIEWPORT_PADDING = 12;
@@ -129,16 +42,13 @@ const SPLUNK_EDITOR_COLORS = {
     borderSoft: '#52616b',
     text: '#d7dde2',
     muted: '#9aa6af',
-    pipe: '#7f8b96',
-    command: '#5da7ff',
-    function: '#cf6edc',
-    logical: '#f6a23b',
-    string: '#5fd6a5',
-    macro: '#d6b34b',
-    number: '#f19f5d',
-    operator: '#f0a04b',
-    field: '#d2d8dd',
 } as const;
+
+const PreviewSource = styled.div`
+    background-color: ${variables.backgroundColorSection};
+    border-color: ${variables.borderColor};
+    color: ${variables.syntaxColorDefault};
+`;
 
 interface TooltipCoords {
     left: number;
@@ -196,118 +106,6 @@ const clampPopoverPosition = (
     ),
 });
 
-const renderSplLine = (line: string, lineIndex: number): React.ReactNode[] => {
-    const pattern =
-        /(`[^`]*`|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\|\s*[A-Za-z_][A-Za-z0-9_]*|\b\d+(?:\.\d+)?\b|\b[A-Za-z_][A-Za-z0-9_.:{}-]*\b|!=|>=|<=|=|>|<|\+|-|\*|\/)/g;
-    const parts = line.split(pattern);
-
-    return parts.map((part, partIndex) => {
-        if (!part) return null;
-        const key = `spl-${lineIndex}-${partIndex}`;
-
-        if (part.startsWith('`') && part.endsWith('`')) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.macro }}>
-                    {part}
-                </span>
-            );
-        }
-
-        if (
-            (part.startsWith('"') && part.endsWith('"')) ||
-            (part.startsWith("'") && part.endsWith("'"))
-        ) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.string }}>
-                    {part}
-                </span>
-            );
-        }
-
-        if (part.startsWith('|')) {
-            const command = part.slice(1).trim();
-            return (
-                <React.Fragment key={key}>
-                    <span style={{ color: SPLUNK_EDITOR_COLORS.pipe }}>|</span>
-                    {command ? (
-                        <>
-                            {' '}
-                            <span style={{ color: SPLUNK_EDITOR_COLORS.command }}>
-                                {command}
-                            </span>
-                        </>
-                    ) : null}
-                </React.Fragment>
-            );
-        }
-
-        if (/^\d+(?:\.\d+)?$/.test(part)) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.number }}>
-                    {part}
-                </span>
-            );
-        }
-
-        if (/^(?:!=|>=|<=|=|>|<|\+|-|\*|\/)$/.test(part)) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.operator }}>
-                    {part}
-                </span>
-            );
-        }
-
-        const normalized = part.toLowerCase();
-        if (SPL_OPERATOR_KEYWORDS.has(normalized)) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.logical }}>
-                    {part}
-                </span>
-            );
-        }
-
-        if (SPL_COMMANDS.has(normalized)) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.command }}>
-                    {part}
-                </span>
-            );
-        }
-
-        if (SPL_KEYWORDS.has(normalized)) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.function }}>
-                    {part}
-                </span>
-            );
-        }
-
-        if (part.includes('.') || part.includes(':')) {
-            return (
-                <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.field }}>
-                    {part}
-                </span>
-            );
-        }
-
-        return (
-            <span key={key} style={{ color: SPLUNK_EDITOR_COLORS.text }}>
-                {part}
-            </span>
-        );
-    });
-};
-
-const renderSplBlock = (spl: string): React.ReactNode => {
-    const lines = spl.split('\n');
-    return lines.map((line, lineIndex) => (
-        <React.Fragment key={`spl-line-${lineIndex}`}>
-            {renderSplLine(line, lineIndex)}
-            {lineIndex < lines.length - 1 ? '\n' : null}
-        </React.Fragment>
-    ));
-};
-
 export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
     title,
     spl,
@@ -328,7 +126,6 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
         TooltipCoords,
         'left' | 'top'
     > | null>(null);
-    const highlightedSpl = useMemo(() => renderSplBlock(spl), [spl]);
 
     const openTooltip = () => {
         dragRef.current = null;
@@ -526,13 +323,10 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                               </button>
                           </div>
                       </div>
-                      <div
+                      <PreviewSource
                           aria-label="SPL preview source"
                           className="max-h-[34rem] overflow-auto rounded-b-lg border px-3 py-3 font-mono sui-color-default leading-6"
                           style={{
-                              backgroundColor: SPLUNK_EDITOR_COLORS.editor,
-                              borderColor: SPLUNK_EDITOR_COLORS.border,
-                              color: SPLUNK_EDITOR_COLORS.text,
                               textShadow: 'none',
                               fontSize: `${12.5 * fontScale}px`,
                               lineHeight: `${22 * fontScale}px`,
@@ -543,17 +337,16 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                               style={{ backgroundColor: 'transparent', color: 'inherit' }}
                           >
                               {spl.trim() ? (
-                                  highlightedSpl
+                                  <SplSyntax spl={spl} />
                               ) : (
                                   <span
                                       className="italic"
-                                      style={{ color: SPLUNK_EDITOR_COLORS.muted }}
                                   >
                                       No SPL found for this search.
                                   </span>
                               )}
                           </code>
-                      </div>
+                      </PreviewSource>
                       {footnote && (
                           <div
                               className="border-t px-3 py-2 font-mono text-xs"

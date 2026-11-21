@@ -24,7 +24,9 @@ import Chip from "@splunk/react-ui/Chip";
 import CollapsiblePanel from "@splunk/react-ui/CollapsiblePanel";
 import ControlGroup from "@splunk/react-ui/ControlGroup";
 import Drawer from "@splunk/react-ui/Drawer";
+import Tooltip from "@splunk/react-ui/Tooltip";
 import AskAi from "@/common/components/AskAi";
+import { WORKSPACE_ADD_HELP } from "@/common/components/workspace/workspaceAddHelp";
 import Dropdown from "@splunk/react-ui/Dropdown";
 import Heading from "@splunk/react-ui/Heading";
 import Layout from "@splunk/react-ui/Layout";
@@ -3953,25 +3955,34 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     ) => {
       if (!record.id) return;
       const recordReference = searchbaseRecordReference(record);
-      if (destination === "workspace" && !canManageWorkspaceConfig) {
-        window.alert(
-          "You do not have permission to change this shared workspace.",
-        );
-        return;
+      const shared = destination === "workspace";
+      if (shared && !canManageWorkspaceConfig) {
+        throw new Error("You do not have permission to change this shared workspace.");
       }
-      const sectionMetrics = metricConfig.filter((m) => m.section === section);
-      const visibleSectionMetrics = renderMetricConfig.filter(
+      if (shared && (!searchbaseRecords || !allSearchbaseRecords)) {
+        throw new Error("Wait for the workspace catalogue to finish loading, then try again.");
+      }
+      const currentSharedAdditions = workspaceLayout[section]?.searchbaseAdditions ?? [];
+      // Shared layout writes must never include a viewer's personal additions,
+      // tile order, hidden tiles, or page size.
+      const sharedMetrics = shared ? [
+        ...baseMetricConfig,
+        ...buildAddedOverviewMetricConfig(
+          searchbaseRecords, allSearchbaseRecords, sharedSectionTileAdditions,
+          insightsWorkspace, baseMetricConfig,
+        ),
+      ] : metricConfig;
+      const sectionMetrics = sharedMetrics.filter((m) => m.section === section);
+      const visibleSectionMetrics = shared ? sectionMetrics : renderMetricConfig.filter(
         (m) => m.section === section,
       );
       const canonicalIds = getFactoryTileOrder(section, visibleSectionMetrics);
-      const orderedIds = getSectionTileOrder(section, canonicalIds);
+      const orderedIds = shared ? canonicalIds : getSectionTileOrder(section, canonicalIds);
       const sectionMaxAvailable = Math.min(
         sectionTileBounds.maxCount,
         orderedIds.length,
       );
-      const configuredMetricIds = new Set(
-        orderedIds.slice(0, sectionMaxAvailable),
-      );
+      const configuredMetricIds = new Set(shared ? orderedIds : orderedIds.slice(0, sectionMaxAvailable));
       const currentSearchbaseIds = new Set(
         visibleSectionMetrics
           .filter((metric) => configuredMetricIds.has(metric.id))
@@ -3991,7 +4002,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       }
 
       const currentVisibleCount = Math.min(
-        sectionTileCounts[section],
+        shared ? (workspaceLayout[section]?.visibleCount ?? insightsWorkspace.fallbackTileCount) : sectionTileCounts[section],
         Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length),
       );
 
@@ -4026,8 +4037,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         return "added" as const;
       }
 
-      const currentSharedAdditions =
-        workspaceLayout[section]?.searchbaseAdditions ?? [];
       const nextSectionLayout = {
         ...(workspaceLayout[section] ?? { tiles: [] }),
         tiles: nextOrder,
@@ -4053,22 +4062,25 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           workspaceLayout,
         );
         setWorkspaceLayout(nextLayout);
-        applyPersonalViewState();
+        for (const reference of sectionTileAdditions[section] ?? []) {
+          if (searchbaseReferenceMatchesRecord(reference, record, currentSearchbaseOwnerApp)) {
+            removeSectionTile(section, reference);
+          }
+        }
         setWorkspaceLayoutStatus("saved");
         window.setTimeout(() => setWorkspaceLayoutStatus("idle"), 2400);
+        return "added" as const;
       } catch (error) {
         console.error("[insights] failed to add shared workspace tile", error);
         setWorkspaceLayoutStatus("error");
-        window.alert(
-          error instanceof Error
-            ? error.message
-            : "Could not add this search to the shared workspace.",
-        );
         window.setTimeout(() => setWorkspaceLayoutStatus("idle"), 4000);
+        throw error;
       }
     },
     [
       addSectionTile,
+      allSearchbaseRecords,
+      baseMetricConfig,
       canManageWorkspaceConfig,
       currentSearchbaseOwnerApp,
       getFactoryTileOrder,
@@ -4076,6 +4088,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       insightsWorkspace,
       metricConfig,
       renderMetricConfig,
+      removeSectionTile,
+      searchbaseRecords,
+      sectionTileAdditions,
+      sharedSectionTileAdditions,
       sectionTileBounds.maxCount,
       sectionTileCounts,
       changeSectionTileCount,
@@ -5231,11 +5247,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             context={effectiveTitle}
             contextId={insightsWorkspace.id}
             range={timeRange}
+            canManageWorkspace={canManageWorkspaceConfig}
             destinations={insightsWorkspace.sections.map(({ id, title }) => ({
               id,
               title,
-              add: async (record) => {
-                const outcome = await handleAddSearchToSection(id, record, "personal");
+              add: async (record, scope) => {
+                const outcome = await handleAddSearchToSection(id, record, scope);
                 if (!outcome) throw new Error("Could not add the search.");
                 return outcome;
               },
@@ -6261,11 +6278,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           canManageWorkspace={canManageWorkspaceConfig}
           returnFocus={addTileReturnFocusRef}
           onAdd={async (record, destination) => {
-            await handleAddSearchToSection(
-              addTilePickerState.section,
-              record,
-              destination,
-            );
+            try {
+              await handleAddSearchToSection(addTilePickerState.section, record, destination);
+            } catch (error) {
+              window.alert(error instanceof Error ? error.message : "Could not add this search to the shared workspace.");
+            }
           }}
           onRemove={(record) =>
             handleRemoveAddedSearchFromSection(
@@ -7079,11 +7096,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
             <ControlGroup
               controlsLayout="none"
-              help={
-                addDestination === "workspace"
-                  ? "Adds the tile to the shared workspace for every viewer. Viewers can still personalize their view."
-                  : "Only you will see the tile in this workspace and browser."
-              }
+              help={WORKSPACE_ADD_HELP[addDestination]}
+              tooltip={canManageWorkspace
+                ? `Add for me. ${WORKSPACE_ADD_HELP.personal} Add for everyone. ${WORKSPACE_ADD_HELP.workspace}`
+                : WORKSPACE_ADD_HELP.personal}
               label="Visibility"
             >
               {canManageWorkspace ? (
@@ -7093,8 +7109,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   }
                   value={addDestination}
                 >
-                  <RadioBar.Option label="Add for me" value="personal" />
-                  <RadioBar.Option label="Add for everyone" value="workspace" />
+                  <RadioBar.Option label="Add for me" value="personal" title={WORKSPACE_ADD_HELP.personal} />
+                  <RadioBar.Option label="Add for everyone" value="workspace" title={WORKSPACE_ADD_HELP.workspace} />
                 </RadioBar>
               ) : (
                 <StaticContent>Add for me</StaticContent>
@@ -7411,7 +7427,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                               openInNewContext
                               to={searchbaseUrl}
                             />
-                            {action}
+                            {alreadyAdded ? action : <Tooltip content={WORKSPACE_ADD_HELP[addDestination]}>{action}</Tooltip>}
                           </Layout>
                         )}
                         subtitle={

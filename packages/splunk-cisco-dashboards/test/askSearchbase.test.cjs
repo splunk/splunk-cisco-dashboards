@@ -5,6 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const ts = require("typescript");
+const React = require("react");
+const { renderToStaticMarkup } = require("react-dom/server");
 
 const sourcePath = path.resolve(__dirname, "../src/main/webapp/common/services/askSearchbase.ts");
 const { outputText } = ts.transpileModule(fs.readFileSync(sourcePath, "utf8"), {
@@ -64,4 +66,19 @@ test("uses source hints in SPL to supplement a strong catalogue match", () => {
     rankSearchbaseMatches([similarSource, crossVendor, denied], "Find Palo Alto firewall denied connections"),
     [denied, crossVendor],
   );
+});
+
+test("SPL highlighting preserves whitespace, quotes, and copyable search text", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/main/webapp/common/components/SplSyntax.tsx"), "utf8");
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
+  });
+  const highlighted = {};
+  new Function("exports", "require", outputText)(highlighted, require);
+  const spl = '`index_catalyst`\n|   where status="up" AND count>=2';
+  const html = renderToStaticMarkup(React.createElement(highlighted.SplSyntax, { spl }));
+  assert.match(html, /data-spl-token="command"[^>]*>\|   where/);
+  assert.match(html, /data-spl-token="macro"/);
+  assert.match(html, /data-spl-token="string"/);
+  assert.equal(html.replace(/<[^>]*>/g, "").replaceAll("&quot;", '"').replaceAll("&gt;", ">"), spl);
 });
