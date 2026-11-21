@@ -1997,12 +1997,20 @@ function scdSetupRenderPackageReviewStep(root) {
         : `${readyCount} of ${prerequisites.length} packages ready`,
     ),
   );
+  if (blockingPrerequisites.length) {
+    const packageNames = new Intl.ListFormat("en").format(
+      blockingPrerequisites.map((item) => item.name),
+    );
+    readinessCopy.appendChild(
+      scdSetupElement("span", "", `Resolve ${packageNames} to continue.`),
+    );
+  }
   readinessCopy.appendChild(
     scdSetupElement(
       "span",
       "",
       attentionPrerequisites.length
-        ? `${attentionPrerequisites.length} package${attentionPrerequisites.length === 1 ? "" : "s"} need attention.`
+        ? `${attentionPrerequisites.length} package${attentionPrerequisites.length === 1 ? " needs" : "s need"} attention.`
         : "No package action is required.",
     ),
   );
