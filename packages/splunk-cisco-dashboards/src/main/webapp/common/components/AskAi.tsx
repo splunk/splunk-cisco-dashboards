@@ -3,10 +3,8 @@ import Button from '@splunk/react-ui/Button';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Drawer from '@splunk/react-ui/Drawer';
-import Dropdown from '@splunk/react-ui/Dropdown';
 import Heading from '@splunk/react-ui/Heading';
 import Link from '@splunk/react-ui/Link';
-import Menu from '@splunk/react-ui/Menu';
 import Message from '@splunk/react-ui/Message';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
@@ -345,25 +343,20 @@ export default function AskAi({
                                         </Tooltip>
                                     )}
                                     {!needsInputs && destination && (
-                                        canManageWorkspace ? (
-                                            <Dropdown toggle={<Button appearance="secondary" label="Add" isMenu disabled={adding}
-                                                aria-label={`Add ${record.searchName} to ${destination.title}`} />}>
-                                                {({ toggleId }) => (
-                                                    <Menu aria-labelledby={toggleId}
-                                                        style={{ width: `min(280px, calc(100vw - ${variables.spacingXXLarge}))` }}>
-                                                        <Menu.Item description={WORKSPACE_ADD_HELP.personal} descriptionPosition="bottom"
-                                                            onClick={() => { void add(record, 'personal'); }}>Add for me</Menu.Item>
-                                                        <Menu.Item description={WORKSPACE_ADD_HELP.workspace} descriptionPosition="bottom"
-                                                            onClick={() => { void add(record, 'workspace'); }}>Add for everyone</Menu.Item>
-                                                    </Menu>
-                                                )}
-                                            </Dropdown>
-                                        ) : (
+                                        <ActionRow>
                                             <Tooltip content={WORKSPACE_ADD_HELP.personal}>
                                                 <Button appearance="secondary" label="Add for me" disabled={adding}
+                                                    aria-label={`Add for me: ${record.searchName} to ${destination.title}`}
                                                     onClick={() => { void add(record, 'personal'); }} />
                                             </Tooltip>
-                                        )
+                                            {canManageWorkspace && (
+                                                <Tooltip content={WORKSPACE_ADD_HELP.workspace}>
+                                                    <Button appearance="secondary" label="Add for everyone" disabled={adding}
+                                                        aria-label={`Add for everyone: ${record.searchName} to ${destination.title}`}
+                                                        onClick={() => { void add(record, 'workspace'); }} />
+                                                </Tooltip>
+                                            )}
+                                        </ActionRow>
                                     )}
                                 </ActionRow>
                                 <CollapsiblePanel appearance="subtle" title="Search details" inset={false}>
