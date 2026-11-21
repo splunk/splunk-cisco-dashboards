@@ -16,6 +16,19 @@ const exportsFromSource = {};
 new Function("exports", outputText)(exportsFromSource);
 const { rankSearchbaseMatches } = exportsFromSource;
 
+test("Searchbase deep links support Basic Information and preserve the SPL and catalogue routes", () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/main/webapp/common/lib/splunkSearchUrl.ts"), "utf8");
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  });
+  const library = {};
+  new Function("exports", outputText)(library);
+  const route = "/en-US/app/searchbase/start";
+  assert.equal(library.splunkSearchbaseEditUrl("device health", "basic-information"), `${route}#/edit/device%20health#basic-information`);
+  assert.equal(library.splunkSearchbaseEditUrl("device_health"), `${route}#/edit/device_health#search-spl`);
+  assert.equal(library.splunkSearchbaseEditUrl(undefined, "basic-information"), route);
+});
+
 test("Searchbase discovery distinguishes a missing app from an unavailable registry", async () => {
   const source = fs.readFileSync(path.resolve(__dirname, "../src/main/webapp/common/lib/searchbase.js"), "utf8");
   const { outputText } = ts.transpileModule(source, {

@@ -63,14 +63,17 @@ export const splunkSearchAppUrl = (
     return `/${locale}/app/${resolveSearchAppName(appName)}/search?${params.toString()}`;
 };
 
-/** Build a URL to the Searchbase catalogue or the SPL editor for a stanza. */
-export const splunkSearchbaseEditUrl = (stanzaId?: string): string => {
+/** Build a URL to the Searchbase catalogue or a section of a stanza's editor. */
+export const splunkSearchbaseEditUrl = (
+    stanzaId?: string,
+    section: 'basic-information' | 'search-spl' = 'search-spl',
+): string => {
     const path =
         typeof window !== 'undefined' ? window.location.pathname : '/en-US';
     const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
     const locale = localeMatch ? localeMatch[1] : 'en-US';
     const startUrl = `/${locale}/app/searchbase/start`;
-    return stanzaId === undefined ? startUrl : `${startUrl}#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
+    return stanzaId === undefined ? startUrl : `${startUrl}#/edit/${encodeURIComponent(stanzaId)}#${section}`;
 };
 
 /** Open the Splunk Search drilldown in a new tab. No-op on the
