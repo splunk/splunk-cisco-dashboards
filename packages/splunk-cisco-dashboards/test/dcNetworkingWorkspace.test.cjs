@@ -219,6 +219,41 @@ test('non-additive bars omit the summed headline while existing count bars retai
     assert.match(counted, /Total 150/);
 });
 
+test('table results show Splunk sparkline arrays and JSON with readable trends', () => {
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const sparkline = load('src/main/webapp/common/components/workspace/TableSparkline.tsx', {
+        '@/common/lib/metricValueFormat': { formatPlainMetricNumber: String },
+    });
+    const { TableTile } = load('src/main/webapp/common/components/workspace/TableTile.tsx', {
+        './TableSparkline': sparkline,
+        './tableSort': load('src/main/webapp/common/components/workspace/tableSort.ts'),
+        './InfoTooltip': { InfoTooltip: () => null },
+        './TileActionMenu': { TileActionMenu: () => null, TileDrilldownButton: () => null },
+        '@/common/icons/SuiIcon': { ArrowDown: () => null, ArrowUp: () => null, ArrowUpDown: () => null },
+        '@/common/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
+    });
+    const marker = '##__SPARKLINE__##';
+    const html = renderToStaticMarkup(React.createElement(TableTile, {
+        label: 'Bridge domains',
+        columns: ['Bridge domain', 'Health Trend'],
+        rows: [
+            { 'Bridge domain': 'One', 'Health Trend': JSON.stringify([marker, '0', '100', null, '50']) },
+            { 'Bridge domain': 'Two', 'Health Trend': [marker, 42] },
+            { 'Bridge domain': 'Three', 'Health Trend': [marker, null, '', 'invalid'] },
+        ],
+    }));
+
+    assert.doesNotMatch(html, /##__SPARKLINE__##|Sort by Health Trend/);
+    assert.match(html, /Sort by Bridge domain/);
+    assert.match(html, /First observed 0\. Latest observed 50\. Low 0\. High 100\./);
+    assert.match(html, /Trend with 1 sample\. First observed 42\./);
+    assert.match(html, /No trend samples/);
+    assert.match(html, /<path d="M[^M"]+M[^M"]+"/);
+    assert.match(html, /<circle /);
+    assert.equal(sparkline.isTableSparkline('[1, 2, 3]'), false);
+});
+
 test('all DC searches honor the existing index macro without literal index routing', () => {
     for (const id of stanzas.keys()) {
         assert.ok(spl(id).startsWith('`index_dc` '), id);

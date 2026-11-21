@@ -22,6 +22,7 @@ import {
     type InfoTooltipDetailSection,
 } from './InfoTooltip';
 import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
+import { isTableSparkline, TableSparkline } from './TableSparkline';
 import { cn } from '@/common/lib/utils';
 import type {
     DataSource,
@@ -194,15 +195,21 @@ export const TableTile: React.FC<TableTileProps> = ({
         column: null,
         direction: null,
     });
+    const sparklineColumns = useMemo(() => new Set(columns.filter((column) => {
+        const values = rows.map((row) => row[column]);
+        return values.some(isTableSparkline) && values.every((value) =>
+            value === null || value === undefined || value === '' || isTableSparkline(value)
+        );
+    })), [columns, rows]);
 
     useEffect(() => {
         if (
             sortState.column &&
-            !columns.includes(sortState.column)
+            (!columns.includes(sortState.column) || sparklineColumns.has(sortState.column))
         ) {
             setSortState({ column: null, direction: null });
         }
-    }, [columns, sortState.column]);
+    }, [columns, sortState.column, sparklineColumns]);
 
     const cycleSort = useCallback((column: string) => {
         setSortState((current) => {
@@ -223,9 +230,9 @@ export const TableTile: React.FC<TableTileProps> = ({
     );
 
     const sortKind = useMemo(() => {
-        if (!sortState.column || !sortState.direction) return null;
+        if (!sortState.column || !sortState.direction || sparklineColumns.has(sortState.column)) return null;
         return detectColumnSortKind(sortState.column, rows);
-    }, [rows, sortState.column, sortState.direction]);
+    }, [rows, sortState.column, sortState.direction, sparklineColumns]);
 
     const displayRows = useMemo(() => {
         const { column, direction } = sortState;
@@ -341,14 +348,15 @@ export const TableTile: React.FC<TableTileProps> = ({
                             aria-label={`${label} results`}
                             className="w-full text-xs leading-tight border-collapse"
                         >
-                            <thead className="sui-bg-page sui-bg-popup sticky top-0 z-10">
+                        <thead className="sticky top-0 z-10 sui-bg-popup">
                                 <tr>
                                     {columns.map((col, idx) => {
-                                        const isSorted =
-                                            sortState.column === col &&
-                                            sortState.direction !== null;
-                                        const SortIcon = isSorted
-                                            ? sortState.direction === 'asc'
+                                        const isSparkline = sparklineColumns.has(col);
+                                        const direction = !isSparkline && sortState.column === col
+                                            ? sortState.direction
+                                            : null;
+                                        const SortIcon = direction
+                                            ? direction === 'asc'
                                                 ? ArrowUp
                                                 : ArrowDown
                                             : ArrowUpDown;
@@ -358,11 +366,9 @@ export const TableTile: React.FC<TableTileProps> = ({
                                                 key={col}
                                                 scope="col"
                                                 aria-sort={
-                                                    isSorted
-                                                        ? sortState.direction === 'asc'
-                                                            ? 'ascending'
-                                                            : 'descending'
-                                                        : 'none'
+                                                    direction
+                                                        ? direction === 'asc' ? 'ascending' : 'descending'
+                                                        : undefined
                                                 }
                                                 className={cn(
                                                     'p-0 font-semibold text-xs uppercase tracking-wide  sui-color-default whitespace-nowrap border-b  sui-border-default',
@@ -371,33 +377,32 @@ export const TableTile: React.FC<TableTileProps> = ({
                                                         : 'text-left'
                                                 )}
                                             >
-                                                <button
-                                                    type="button"
-                                                    data-tile-control="true"
-                                                    onClick={() => cycleSort(col)}
-                                                    title={`Sort by ${col}`}
-                                                    className={cn(
-                                                        'group inline-flex w-full items-center gap-0.5 px-2 py-1 transition-colors rounded-sm',
-                                                        'sui-hover-bg-section sui-hover-bg-floating',
-                                                        'focus:outline-none focus:ring-2 sui-focus-ring focus:ring-offset-0',
-                                                        alignRight
-                                                            ? 'justify-end'
-                                                            : 'justify-start',
-                                                        isSorted &&
-                                                            'sui-color-info'
-                                                    )}
-                                                >
-                                                    <span>{col}</span>
-                                                    <SortIcon
+                                                {isSparkline ? (
+                                                    <span className="inline-block px-2 py-1">{col}</span>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        data-tile-control="true"
+                                                        onClick={() => cycleSort(col)}
+                                                        title={`Sort by ${col}`}
                                                         className={cn(
-                                                            'h-2.5 w-2.5 flex-shrink-0 sui-stroke-default',
-                                                            isSorted
-                                                                ? 'opacity-100'
-                                                                : 'opacity-0 group-hover:opacity-40'
+                                                            'group inline-flex w-full items-center gap-0.5 px-2 py-1 transition-colors rounded-sm',
+                                                            'sui-hover-bg-floating',
+                                                            'focus:outline-none focus:ring-2 sui-focus-ring focus:ring-offset-0',
+                                                            alignRight ? 'justify-end' : 'justify-start',
+                                                            direction && 'sui-color-info'
                                                         )}
-                                                        aria-hidden="true"
-                                                    />
-                                                </button>
+                                                    >
+                                                        <span>{col}</span>
+                                                        <SortIcon
+                                                            className={cn(
+                                                                'h-2.5 w-2.5 flex-shrink-0 sui-stroke-default',
+                                                                direction ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
+                                                            )}
+                                                            aria-hidden="true"
+                                                        />
+                                                    </button>
+                                                )}
                                             </th>
                                         );
                                     })}
@@ -412,7 +417,8 @@ export const TableTile: React.FC<TableTileProps> = ({
                                         {columns.map((col, colIdx) => {
                                             const raw = row[col];
                                             const numeric = numericColumnFlags[colIdx];
-                                            const display = formatCellValue(raw);
+                                            const isSparkline = isTableSparkline(raw);
+                                            const display = isSparkline ? undefined : formatCellValue(raw);
                                             return (
                                                 <td
                                                     key={col}
@@ -424,7 +430,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                                     )}
                                                     title={display}
                                                 >
-                                                    {display}
+                                                    {isSparkline ? <TableSparkline value={raw} /> : display}
                                                 </td>
                                             );
                                         })}

@@ -90,6 +90,7 @@ import { MetricItem } from '@/common/components/workspace/MetricItem';
 import { PieTile } from '@/common/components/workspace/PieTile';
 import { SingleValueRadialTile } from '@/common/components/workspace/SingleValueRadialTile';
 import { SortableMetricCard } from '@/common/components/workspace/SortableMetricCard';
+import { isTableSparkline, TableSparkline } from '@/common/components/workspace/TableSparkline';
 import { TableTile } from '@/common/components/workspace/TableTile';
 import { InfoTooltip } from '@/common/components/workspace/InfoTooltip';
 import { SplPreviewTooltip } from '@/common/components/workspace/SplPreviewTooltip';
@@ -154,6 +155,13 @@ const CATALOGUE_PAGE_SIZE = 25;
 
 const CanvasFeedbackMessage = styled(Message)`
     height: 100%;
+`;
+
+const CanvasSearch = styled(ThemeAwareSearch)`
+    && input[role='searchbox'] {
+        border: 0;
+        box-shadow: none;
+    }
 `;
 
 const catalogueAppLabel = (
@@ -2129,7 +2137,7 @@ const SearchbaseDetailTableModal: React.FC<{
     refreshToken: number;
     onClose: () => void;
 }> = ({ config, range, refreshToken, onClose }) => {
-    const [rows, setRows] = useState<Array<Record<string, string>>>([]);
+    const [rows, setRows] = useState<Array<Record<string, string | unknown[]>>>([]);
     const [columns, setColumns] = useState<SearchbaseDetailTableColumn[]>(
         config.columns
     );
@@ -2168,13 +2176,12 @@ const SearchbaseDetailTableModal: React.FC<{
                         ? config.columns
                         : inferDetailTableColumns(rawRows);
                 const nextRows = rawRows.map((row) => {
-                    const detailRow: Record<string, string> = {};
+                    const detailRow: Record<string, string | unknown[]> = {};
                     for (const column of nextColumns) {
-                        detailRow[column.field] = readRowString(
-                            row,
-                            column.field,
-                            column.fallback ?? ''
-                        );
+                        const value = row[column.field];
+                        detailRow[column.field] = Array.isArray(value) && isTableSparkline(value)
+                            ? value
+                            : readRowString(row, column.field, column.fallback);
                     }
                     return detailRow;
                 });
@@ -2306,16 +2313,10 @@ const SearchbaseDetailTableModal: React.FC<{
                                 </tr>
                             ) : (
                                 rows.map((row, rowIndex) => {
-                                    const rowKey =
-                                        (config.rowKeyField &&
-                                            row[config.rowKeyField]) ||
-                                        displayColumns
-                                            .map((column) => row[column.field])
-                                            .join('|') ||
-                                        'detail-row';
+                                    const rowKey = config.rowKeyField && row[config.rowKeyField];
                                     return (
                                         <tr
-                                            key={`${rowKey}-${rowIndex}`}
+                                            key={`${typeof rowKey === 'string' ? rowKey : 'detail-row'}-${rowIndex}`}
                                             className="transition-colors  sui-hover-bg-section"
                                         >
                                             {displayColumns.map((column, index) => (
@@ -2332,7 +2333,9 @@ const SearchbaseDetailTableModal: React.FC<{
                                                             'max-w-xs truncate'
                                                     )}
                                                 >
-                                                    {row[column.field]}
+                                                    {isTableSparkline(row[column.field]) ? (
+                                                        <TableSparkline value={row[column.field]} />
+                                                    ) : String(row[column.field] ?? '')}
                                                 </td>
                                             ))}
                                         </tr>
@@ -3375,10 +3378,10 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             <Drawer.Body>
                 <div>
                     <ControlGroup hideLabel label="Search">
-                        <ThemeAwareSearch
+                        <CanvasSearch
                             inputRef={searchInputRef}
                             onChange={(_event, { value }) => setQuery(value)}
-                            placeholder="Search by name, description, or tag"
+                            placeholder="Search by name, description, or SPL"
                             value={query}
                         />
                     </ControlGroup>
@@ -5364,12 +5367,12 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <span id="searchbase-tile-search-label" className="sr-only">
                                 Search tiles by name or query
                             </span>
-                            <ThemeAwareSearch
+                            <CanvasSearch
                                 value={tileSearchQuery}
                                 onChange={(_event, { value }) =>
                                     setTileSearchQuery(value)
                                 }
-                                placeholder="Search tiles by name or query..."
+                                placeholder="Search tiles by name or SPL"
                                 disabled={tiles.length === 0 || autoAdvanceActive}
                                 labelledBy="searchbase-tile-search-label"
                             />
@@ -5377,7 +5380,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                         <div
                             role="group"
                             aria-label="Filter tiles by last observed search result"
-                            className="inline-flex h-11 max-w-full overflow-hidden rounded-md border   p-1 sui-border-default sui-bg-page"
+                            className="inline-flex min-h-11 max-w-full flex-wrap gap-1 rounded-md border p-1 sui-border-default sui-bg-page"
                         >
                             {TILE_RESULT_FILTER_OPTIONS.filter((option) =>
                                 tileResultFilterIsVisible(
@@ -5407,14 +5410,14 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         title={option.title}
                                         aria-pressed={selected}
                                         className={cn(
-                                            'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 sui-focus-ring sm:px-3',
+                                            'inline-flex min-h-8 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 sui-focus-ring sm:px-3',
                                             selected
                                                 ? option.value === 'failed'
                                                     ? 'sui-bg-notification-negative shadow-sm sui-color-active'
-                                                    : 'sui-bg-section  shadow-sm sui-bg-section sui-color-active'
+                                                    : 'sui-bg-section shadow-sm sui-color-active'
                                                 : option.value === 'failed'
-                                                ? 'sui-color-negative sui-hover-bg-negative sui-hover-color-negative'
-                                                : 'sui-color-muted   sui-color-default sui-hover-bg-overlay sui-hover-color-active'
+                                                ? 'sui-color-negative sui-hover-bg-notification-negative sui-hover-color-active'
+                                                : 'sui-color-default sui-hover-bg-overlay sui-hover-color-active'
                                         )}
                                     >
                                         <Icon className="h-3.5 w-3.5 flex-shrink-0" />
@@ -5423,8 +5426,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             className={cn(
                                                 'rounded-full px-1.5 py-0.5 text-xs leading-none',
                                                 selected
-                                                    ? 'sui-bg-section sui-color-current sui-bg-page'
-                                                    : 'sui-bg-section  sui-bg-popup sui-color-default'
+                                                    ? 'sui-bg-page sui-color-active'
+                                                    : 'sui-bg-popup sui-color-default'
                                             )}
                                         >
                                             {count.toLocaleString()}
