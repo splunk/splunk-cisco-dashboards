@@ -75,6 +75,7 @@ const CatalogueDetails = styled.dl`
 
 const QUESTION_STORAGE_KEY = 'scd:ask-ai:question';
 const SEARCHBASE_LISTING_URL = 'https://splunkbase.splunk.com/app/7188';
+const RESULT_BATCH_SIZE = 5;
 
 function readQuestion(): string {
     if (!getCurrentSplunkUsername()) return '';
@@ -115,6 +116,7 @@ interface Result {
     question: string;
     records: SearchbaseRecord[];
     ambiguousIds: Set<string>;
+    visibleCount: number;
 }
 
 export default function AskAi({
@@ -127,6 +129,7 @@ export default function AskAi({
 }: AskAiProps) {
     const iconGradientId = useId();
     const trigger = useRef<HTMLButtonElement | null>(null);
+    const nextResultToFocus = useRef<number | null>(null);
     const pending = useRef<object | null>(null);
     const activeContext = useRef(contextId);
     const [open, setOpen] = useState(false);
@@ -159,6 +162,7 @@ export default function AskAi({
         if (!submitted || pending.current || adding) return;
         const request = {};
         pending.current = request;
+        nextResultToFocus.current = null;
         setLoading(true);
         setResult(null);
         setFeedback(null);
@@ -168,10 +172,14 @@ export default function AskAi({
             if (pending.current === request) {
                 const records = rankSearchbaseMatches(catalogue, submitted);
                 // Searchbase's editor route accepts a stanza ID without its owning app.
-                const ambiguousIds = new Set(records.filter(({ id, ownerApp }) =>
-                    catalogue.some((entry) => entry.id === id && entry.ownerApp !== ownerApp),
-                ).map(({ id }) => id));
-                setResult({ question: submitted, records, ambiguousIds });
+                const ownerById = new Map<string, string>();
+                const ambiguousIds = new Set<string>();
+                for (const { id, ownerApp } of catalogue) {
+                    const firstOwner = ownerById.get(id);
+                    if (firstOwner === undefined) ownerById.set(id, ownerApp);
+                    else if (firstOwner !== ownerApp) ambiguousIds.add(id);
+                }
+                setResult({ question: submitted, records, ambiguousIds, visibleCount: Math.min(RESULT_BATCH_SIZE, records.length) });
             }
         } catch {
             if (pending.current === request) {
@@ -212,10 +220,17 @@ export default function AskAi({
 
     function clear() {
         resumedQuestion.current = '';
+        nextResultToFocus.current = null;
         setQuestion('');
         setResult(null);
         setFeedback(null);
         rememberQuestion('');
+    }
+
+    function showMoreResults() {
+        if (!result || result.visibleCount >= result.records.length) return;
+        nextResultToFocus.current = result.visibleCount;
+        setResult({ ...result, visibleCount: Math.min(result.visibleCount + RESULT_BATCH_SIZE, result.records.length) });
     }
 
     function openDrawer() {
@@ -274,7 +289,7 @@ export default function AskAi({
                     {result && <>
                         <Heading level={2} variant="title3">Searchbase matches</Heading>
                         <p role="status">{result.records.length
-                            ? `${result.records.length} matches for “${result.question}”`
+                            ? `Showing ${result.visibleCount} of ${result.records.length} ${result.records.length === 1 ? 'match' : 'matches'} for “${result.question}”.`
                             : `No close matches for “${result.question}”. Try a product name, metric, or data source.`}</p>
                         {result.records.length > 0 && <p>Searches open with the time range <strong>{range?.label ?? 'Last 24 hours'}</strong>.</p>}
                         {Boolean(result.records.length && destinations?.length) && (
@@ -285,13 +300,18 @@ export default function AskAi({
                                 </Select>
                             </ControlGroup>
                         )}
-                        {result.records.map((record) => {
+                        {result.records.slice(0, result.visibleCount).map((record, index) => {
                             const categoryLabel = [record.category, record.subCategory].filter(Boolean).join(' · ');
                             const needsInputs = /\$[\w.]+\$/.test(record.search);
                             const ambiguous = result.ambiguousIds.has(record.id);
                             const searchbaseLabel = ambiguous ? 'Browse Searchbase' : 'Open in Searchbase';
                             return <SearchCard key={`${record.ownerApp}:${record.id}`}>
-                                <Heading level={3} variant="title4">{record.searchName}</Heading>
+                                <Heading level={3} variant="title4" tabIndex={-1} elementRef={(heading) => {
+                                    if (heading && nextResultToFocus.current === index) {
+                                        nextResultToFocus.current = null;
+                                        heading.focus();
+                                    }
+                                }}>{record.searchName}</Heading>
                                 {categoryLabel && <p>{categoryLabel}</p>}
                                 <details>
                                     <summary>Search details</summary>
@@ -339,6 +359,11 @@ export default function AskAi({
                                 </ActionRow>
                             </SearchCard>;
                         })}
+                        {result.visibleCount < result.records.length && (
+                            <ActionRow>
+                                <Button appearance="secondary" label="Show more results" onClick={showMoreResults} />
+                            </ActionRow>
+                        )}
                     </>}
                 </Content>
             </Drawer.Body>

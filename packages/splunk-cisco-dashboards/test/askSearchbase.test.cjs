@@ -63,6 +63,14 @@ test("matches a plain-language question and prefers a title over incidental meta
   );
 });
 
+test("returns all ranked product matches past the first five for both question phrasings", () => {
+  const catalogue = Array.from({ length: 12 }, (_, index) =>
+    record(`catalyst_${index}`, `Catalyst Center Metric ${String(index).padStart(2, "0")}`));
+  const unordered = [record("unrelated", "ThousandEyes Test Health"), ...catalogue.slice().reverse()];
+  assert.deepEqual(rankSearchbaseMatches(unordered, "What do I have for Catalyst Center?"), catalogue);
+  assert.deepEqual(rankSearchbaseMatches(unordered, "What searches do I have for Catalyst Center?"), catalogue);
+});
+
 test("keeps qualified matches across apps and excludes hidden, empty, and weak matches", () => {
   const allowed = record("retry_rates", "Payment Gateway Retry Rates", { ownerApp: "customer-app" });
   const sameId = record("retry_rates", "Payment Gateway Retry Rates");

@@ -1,7 +1,7 @@
 import type { SearchbaseRecord } from './searchbaseCatalogue';
 
 const QUESTION_WORDS = new Set(
-    'a across an and are build by can chart create dashboard day days did do each find for from get give has have hour hours how i in is last me minute minutes monitor most of on over past please search show the time to top trend was week weeks were what when where which with workspace'.split(' '),
+    'a across an and are build by can chart create dashboard day days did do each find for from get give has have hour hours how i in is last me minute minutes monitor most of on over past please search searches show the time to top trend was week weeks were what when where which with workspace'.split(' '),
 );
 
 const normalize = (value: string): string =>
@@ -50,5 +50,5 @@ export const rankSearchbaseMatches = (
         first.record.searchName.localeCompare(second.record.searchName) ||
         first.record.ownerApp.localeCompare(second.record.ownerApp) ||
         first.record.id.localeCompare(second.record.id),
-    ).slice(0, 5).map(({ record }) => record);
+    ).map(({ record }) => record);
 };
