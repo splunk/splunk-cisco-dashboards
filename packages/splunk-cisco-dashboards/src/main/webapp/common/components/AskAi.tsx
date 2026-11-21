@@ -286,12 +286,13 @@ export default function AskAi({
                             </ControlGroup>
                         )}
                         {result.records.map((record) => {
+                            const categoryLabel = [record.category, record.subCategory].filter(Boolean).join(' · ');
                             const needsInputs = /\$[\w.]+\$/.test(record.search);
                             const ambiguous = result.ambiguousIds.has(record.id);
                             const searchbaseLabel = ambiguous ? 'Browse Searchbase' : 'Open in Searchbase';
                             return <SearchCard key={`${record.ownerApp}:${record.id}`}>
                                 <Heading level={3} variant="title4">{record.searchName}</Heading>
-                                <p>{[record.ownerApp, record.category, record.subCategory].filter(Boolean).join(' · ')}</p>
+                                {categoryLabel && <p>{categoryLabel}</p>}
                                 <details>
                                     <summary>Search details</summary>
                                     <SearchbaseDrilldownGuidance metadata={{ ...record, title: record.searchName }} appearance="inline" />
@@ -299,9 +300,6 @@ export default function AskAi({
                                         {record.tags.length > 0 && <><dt>Tags</dt><dd>{record.tags.join(', ')}</dd></>}
                                         {record.defaultViz && <><dt>Default visualization</dt><dd>{record.defaultViz}</dd></>}
                                         <dt>Search ID</dt><dd><code>{record.id}</code></dd>
-                                        {record.dispatchContext && record.dispatchContext !== record.ownerApp && (
-                                            <><dt>Runs in Splunk app</dt><dd>{record.dispatchContext}</dd></>
-                                        )}
                                     </CatalogueDetails>
                                 </details>
                                 <details>
