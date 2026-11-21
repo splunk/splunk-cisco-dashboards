@@ -47,9 +47,10 @@
 
 /* Native controls still use Tailwind for layout. SUI components supply their
  * own focus treatment; this tokenized fallback protects custom controls that
- * intentionally suppress the browser outline. */
+ * intentionally suppress the browser outline. The Add search field uses
+ * SUI's focus ring on the search container. */
 :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
-  :where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  :where(button, a[href], input, select, textarea, [tabindex]):not(:where(.scd-add-search-input input[role="searchbox"])):focus-visible {
   outline: 2px solid var(--sui-focus-color);
   outline-offset: 2px;
 }

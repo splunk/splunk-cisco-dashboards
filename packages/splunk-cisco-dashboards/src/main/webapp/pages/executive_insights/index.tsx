@@ -7036,6 +7036,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             <ControlGroup hideLabel label="Search">
               <StyledSearch
                 aria-controls="overview-add-search-results"
+                className="scd-add-search-input"
                 inputRef={searchInputRef}
                 onChange={(_event, { value }) => setQuery(value)}
                 placeholder="Search by name, description, or tag"
