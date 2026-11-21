@@ -26,7 +26,7 @@ export const rankSearchbaseMatches = (
     const phrase = terms.join(' ');
     const minimumMatches = Math.ceil(terms.length * 0.7);
     return records.flatMap((record) => {
-        if (record.searchHidden || !record.id || !record.search?.trim()) return [];
+        if (record.searchInternal || record.searchHidden || !record.id || !record.search?.trim()) return [];
 
         const name = termsFor(record.searchName);
         const metadata = termsFor([record.category, record.subCategory, ...record.tags].join(' '));

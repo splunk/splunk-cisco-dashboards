@@ -3896,6 +3896,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       destination: "personal" | "workspace",
     ) => {
       if (!record.id) return;
+      if (record.searchInternal) {
+        throw new Error("This internal search cannot be added to a workspace section.");
+      }
       const recordReference = searchbaseRecordReference(record);
       const shared = destination === "workspace";
       if (shared && !canManageWorkspaceConfig) {
@@ -6652,7 +6655,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const addableRecords = useMemo(
     () =>
       records
-        .filter((record) => record.search?.trim())
+        .filter((record) => !record.searchInternal && record.search?.trim())
         .sort((a, b) =>
           a.searchName.localeCompare(b.searchName, undefined, {
             sensitivity: "base",

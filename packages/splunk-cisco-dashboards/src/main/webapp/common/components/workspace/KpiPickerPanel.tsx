@@ -674,7 +674,7 @@ const entryMatchesBrowseVisibility = (
   includeDrilldownSearches: boolean,
   includeTableSearches: boolean,
 ): boolean => {
-  if (!includeHiddenSearches && entry.searchHidden) {
+  if (entry.searchInternal || (!includeHiddenSearches && entry.searchHidden)) {
     return false;
   }
   if (
@@ -1346,7 +1346,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   const drilldownBaseEntries = useMemo(
     () =>
       catalogue.filter((entry) => {
-        if (!entry.search?.trim()) return false;
+        if (entry.searchInternal || !entry.search?.trim()) return false;
         if (!selectedId) return true;
         return !entryMatchesKey(entry, selectedId);
       }),

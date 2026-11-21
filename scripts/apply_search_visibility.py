@@ -336,6 +336,12 @@ KEEP_HIDDEN_REST: tuple[str, ...] = (
 # Synthetic makeresults scaffolding with no data source behind it.
 KEEP_HIDDEN_PLACEHOLDER: tuple[str, ...] = (
     "dashboard_spaces_intelligence_v1_operations_annotation",
+    "overview_site_demo_healthy",
+    "overview_site_demo_warning",
+    "overview_site_demo_critical",
+    "overview_link_demo_healthy",
+    "overview_link_demo_warning",
+    "overview_link_demo_critical",
 )
 
 KEEP_HIDDEN: dict[str, tuple[str, ...]] = {

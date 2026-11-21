@@ -94,6 +94,8 @@ export interface SearchbaseRecord {
     dispatchContext: string;
     /** True when the stanza is marked `search_hidden = 1` in searchbase.conf. */
     searchHidden?: boolean;
+    /** True for runtime-only entries excluded from workspace discovery. */
+    searchInternal?: boolean;
     /** HTML description (carries inline tags from the conf). */
     description: string;
     /**
@@ -163,6 +165,7 @@ interface SearchbaseEntry {
         drilldown_button_title?: string;
         disabled?: string;
         search_hidden?: string;
+        search_internal?: string;
         default_viz?: string;
         viz_options?: string;
     };
@@ -459,6 +462,7 @@ const fetchSearchbase = async (
             // executing in the stanza-owning app namespace.
             ...appContexts,
             searchHidden: isTruthyConfValue(content.search_hidden),
+            searchInternal: isTruthyConfValue(content.search_internal),
             description: typeof content.description === 'string' ? content.description : '',
             explanation: typeof content.explanation === 'string' ? content.explanation : '',
             solution: typeof content.solution === 'string' ? content.solution : '',

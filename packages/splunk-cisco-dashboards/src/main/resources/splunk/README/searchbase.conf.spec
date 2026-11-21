@@ -11,6 +11,12 @@ bookmark = <boolean>
 search_hidden = <boolean>
 * Default: 0
 
+search_internal = <boolean>
+* Excludes a search from Ask AI and workspace pickers, including when hidden searches are shown.
+* Set search_hidden = 1 as well to hide it in the default Searchbase catalogue.
+* Existing dashboard references can still run the search.
+* Default: 0
+
 readonly = <boolean>
 * Default: 0
 

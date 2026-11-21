@@ -97,6 +97,31 @@ test("keeps qualified matches across apps and excludes hidden, empty, and weak m
   assert.deepEqual(rankSearchbaseMatches([allowed], "Show wireless access-point failures"), []);
 });
 
+test("does not discover internal matches and keeps operational searches that use makeresults", () => {
+  const internal = record("preview", "Topology Health", { searchInternal: true });
+  const operational = record("live", "Topology Health", {
+    search: 'index=network | append [ | makeresults | eval data_status="No matching telemetry" ]',
+  });
+  assert.deepEqual(rankSearchbaseMatches([internal, operational], "topology health"), [operational]);
+});
+
+test("the shipped demo stanzas and synthetic annotations remain enabled for existing references but hidden from discovery", () => {
+  const conf = fs.readFileSync(path.resolve(__dirname, "../src/main/resources/splunk/default/searchbase.conf"), "utf8");
+  const internalIds = ["dashboard_spaces_intelligence_v1_operations_annotation"];
+  for (const type of ["site", "link"]) {
+    for (const state of ["healthy", "warning", "critical"]) internalIds.push(`overview_${type}_demo_${state}`);
+  }
+  const stanzas = conf.split(/^\[/m);
+  for (const id of internalIds) {
+    const stanza = stanzas.find((part) => part.startsWith(`${id}]\n`));
+    assert.ok(stanza, id);
+    assert.match(stanza, /^search_hidden = 1$/m);
+    assert.match(stanza, /^search_internal = 1$/m);
+    assert.doesNotMatch(stanza, /^disabled = (1|true|yes)$/im);
+    assert.match(stanza, /^search = \| makeresults\b/m);
+  }
+});
+
 test("uses source hints in SPL to supplement a strong catalogue match", () => {
   const denied = record("denied", "Palo Alto Denied Zone and Rule Boundaries", {
     search: "`index_firewall` sourcetype=pan:traffic",

@@ -716,7 +716,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     const visibilityCatalogue = useMemo(
         () =>
             catalogue.filter((entry) => {
-                if (!includeHiddenSearches && entry.searchHidden) return false;
+                if (entry.searchInternal || (!includeHiddenSearches && entry.searchHidden)) return false;
                 const key = entry.searchName.trim().toLowerCase();
                 const id = entry.id.trim().toLowerCase();
                 if (
