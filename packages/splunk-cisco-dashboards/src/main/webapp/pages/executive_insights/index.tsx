@@ -24,6 +24,7 @@ import Chip from "@splunk/react-ui/Chip";
 import CollapsiblePanel from "@splunk/react-ui/CollapsiblePanel";
 import ControlGroup from "@splunk/react-ui/ControlGroup";
 import Drawer from "@splunk/react-ui/Drawer";
+import AskAi from "@/common/components/AskAi";
 import Dropdown from "@splunk/react-ui/Dropdown";
 import Heading from "@splunk/react-ui/Heading";
 import Layout from "@splunk/react-ui/Layout";
@@ -3986,7 +3987,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           ),
         )
       ) {
-        return;
+        return "already-present" as const;
       }
 
       const currentVisibleCount = Math.min(
@@ -4022,7 +4023,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       if (destination === "personal") {
         applyPersonalViewState();
         if (!existingMetric) addSectionTile(section, recordReference);
-        return;
+        return "added" as const;
       }
 
       const currentSharedAdditions =
@@ -5226,6 +5227,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             />
           </div>
           <TimeRangeControl range={timeRange} onChange={setTimeRange} />
+          <AskAi
+            context={effectiveTitle}
+            contextId={insightsWorkspace.id}
+            range={timeRange}
+            destinations={insightsWorkspace.sections.map(({ id, title }) => ({
+              id,
+              title,
+              add: async (record) => {
+                const outcome = await handleAddSearchToSection(id, record, "personal");
+                if (!outcome) throw new Error("Could not add the search.");
+                return outcome;
+              },
+            }))}
+          />
           <Button
             appearance="subtle"
             hideLabel
@@ -6245,13 +6260,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           currentConfiguredCount={addTilePickerState.currentConfiguredCount}
           canManageWorkspace={canManageWorkspaceConfig}
           returnFocus={addTileReturnFocusRef}
-          onAdd={(record, destination) =>
-            handleAddSearchToSection(
+          onAdd={async (record, destination) => {
+            await handleAddSearchToSection(
               addTilePickerState.section,
               record,
               destination,
-            )
-          }
+            );
+          }}
           onRemove={(record) =>
             handleRemoveAddedSearchFromSection(
               addTilePickerState.section,

@@ -13,6 +13,7 @@ import { _ } from "@splunk/ui-utils/i18n";
 import PropTypes from "prop-types";
 import { cloneDeep, isEqual } from "lodash-es";
 import Dashboard from "@splunk/dashboard";
+import AskAi from "../../common/components/AskAi";
 import { DrilldownEditors } from "@splunk/dashboard-editors";
 import { DashboardContextProvider } from "@splunk/dashboard-context";
 import {
@@ -1818,9 +1819,14 @@ const DashboardStudioEditor = ({
 
   const toolbarMenus = useMemo(
     () => ({
-      viewReadOnly: [],
+      viewReadOnly: [
+        <ItemGroup key="askAi" align="right" borders={false}>
+          <AskAi context={currentDashboard?.label || "Dashboard Manager"} contextId={dashID} />
+        </ItemGroup>,
+      ],
       view: [
         <ItemGroup key="sideToolbar" align="right" borders={false}>
+          <AskAi key="askAi" context={currentDashboard?.label || "Dashboard Manager"} contextId={dashID} />
           <ExportDashboardButton key="export-dashboard" />
           <ViewDisplayMenu key="display" />
           <Zoom key="zoom" mode="view" showSeparator={false} />
@@ -1855,6 +1861,7 @@ const DashboardStudioEditor = ({
           )}
         </ItemGroup>,
         <ItemGroup key="sideToolbar" align="right" borders={false}>
+          <AskAi key="askAi" context={currentDashboard?.label || "Dashboard Manager"} contextId={dashID} />
           <ModeSwitch key="modeSwitch" />
           <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
           {showClose && (
@@ -1896,6 +1903,7 @@ const DashboardStudioEditor = ({
           )}
         </ItemGroup>,
         <ItemGroup key="sideToolbar" align="right" borders={false}>
+          <AskAi key="askAi" context={currentDashboard?.label || "Dashboard Manager"} contextId={dashID} />
           <Button
             style={{ marginRight: 10 }}
             label="Convert"
@@ -1920,6 +1928,7 @@ const DashboardStudioEditor = ({
     }),
     [
       currentDashboard,
+      dashID,
       editedDefinition,
       handleBackToManagerClick,
       handleEnterSourceMode,

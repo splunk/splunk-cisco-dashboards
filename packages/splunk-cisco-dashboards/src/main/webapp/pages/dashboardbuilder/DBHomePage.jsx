@@ -7,6 +7,7 @@ import Text from "@splunk/react-ui/Text";
 import Card from "@splunk/react-ui/Card";
 import CardLayout from "@splunk/react-ui/CardLayout";
 import Button from "@splunk/react-ui/Button";
+import AskAi from "../../common/components/AskAi";
 import Pencil from "@splunk/react-icons/Pencil";
 import MagnifierPlus from "@splunk/react-icons/MagnifierPlus";
 import TrashCanCross from "@splunk/react-icons/TrashCanCross";
@@ -1263,6 +1264,7 @@ export default function DBHomePage() {
                   />
                 </div>
                 <div className="manager-header-actions">
+                  <AskAi context="Dashboard Manager" />
                   <Button
                     className="manager-header-primary-button"
                     label={"Create New"}

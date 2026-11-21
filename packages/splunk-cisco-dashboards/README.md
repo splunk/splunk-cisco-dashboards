@@ -10,6 +10,7 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- **Ask AI (Preview):** Describe what you want to monitor to find existing Searchbase searches. Review their SPL, open a search in Splunk Search, or add it to your personal workspace view. This preview uses the Searchbase catalogue to find matches. SPL generation is planned for a later version.
 - **New dashboards:** DC Networking Operations, Catalyst Operations (Preview), and Security Operations Overview (Preview).
 - **Better workspaces:** Cleaner Signal Rails, maps, charts, and layouts, with shared visualization defaults.
 - **More reliable metrics:** Corrected client-health totals, filters, and missing-data handling.
@@ -24,6 +25,11 @@ See the in-app **User Guide** for earlier releases, upgrade actions, and configu
 - Cisco Enterprise Networking Add-on for Splunk 3.2.44 or later. This version
   is required for the current and retained sourcetype coverage used by the
   packaged searches and accelerated data-model constraints.
+
+When choosing a data source, use CIM when it preserves the required semantics,
+use Cisco app or add-on models for vendor-specific fields, and retain raw searches
+when the available data models cannot represent the search accurately. Review
+data-model readiness in **Setup > Tune CIM models**.
 
 The Insights Workspace uses the shared components in
 `common/components/workspace/`, including KPI tiles, workspace dialogs,

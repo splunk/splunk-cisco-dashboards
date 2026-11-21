@@ -14,6 +14,7 @@ import Checkbox from '@splunk/react-ui/Checkbox';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Drawer from '@splunk/react-ui/Drawer';
+import AskAi from '@/common/components/AskAi';
 import Heading from '@splunk/react-ui/Heading';
 import Link from '@splunk/react-ui/Link';
 import Layout from '@splunk/react-ui/Layout';
@@ -5095,6 +5096,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                   (canvasDirty ? 'Unsaved changes' : '')}
                         </span>
                         <div className="flex flex-wrap items-center justify-end gap-2">
+                            <AskAi context={canvasNameDisplay} range={range} />
                             <Button
                                 appearance="secondary"
                                 disabled={savingCanvas || tiles.length === 0}
