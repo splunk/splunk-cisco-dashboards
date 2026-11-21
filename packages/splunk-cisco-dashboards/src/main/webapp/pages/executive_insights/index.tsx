@@ -5244,6 +5244,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           </div>
           <TimeRangeControl range={timeRange} onChange={setTimeRange} />
           <AskAi
+            showLabel
             context={effectiveTitle}
             contextId={insightsWorkspace.id}
             range={timeRange}

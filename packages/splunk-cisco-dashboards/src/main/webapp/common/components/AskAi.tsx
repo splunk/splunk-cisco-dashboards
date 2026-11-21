@@ -14,6 +14,7 @@ import SearchbaseDrilldownGuidance from '@/common/components/workspace/Searchbas
 import { SplSyntax } from '@/common/components/SplSyntax';
 import { WORKSPACE_ADD_HELP, type WorkspaceAddScope } from '@/common/components/workspace/workspaceAddHelp';
 import { getCurrentSplunkUsername, userScopedStorageKey } from '@/common/config/insightsWorkspaces';
+import { Sparkles } from '@/common/icons/SuiIcon';
 import { splunkSearchAppUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankSearchbaseMatches } from '@/common/services/askSearchbase';
 import { getSearchbaseCatalogue, plainTextFromHtml, type SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
@@ -94,6 +95,7 @@ interface AskAiProps {
     range?: SplunkSearchTimeRange & { label?: string };
     destinations?: readonly Destination[];
     canManageWorkspace?: boolean;
+    showLabel?: boolean;
 }
 
 interface Result {
@@ -101,7 +103,14 @@ interface Result {
     records: SearchbaseRecord[];
 }
 
-export default function AskAi({ context, contextId = context, range, destinations, canManageWorkspace = false }: AskAiProps) {
+export default function AskAi({
+    context,
+    contextId = context,
+    range,
+    destinations,
+    canManageWorkspace = false,
+    showLabel = false,
+}: AskAiProps) {
     const trigger = useRef<HTMLButtonElement | null>(null);
     const pending = useRef<object | null>(null);
     const activeContext = useRef(contextId);
@@ -189,7 +198,15 @@ export default function AskAi({ context, contextId = context, range, destination
     }
 
     return <>
-        <Button appearance="secondary" label="Ask AI" elementRef={trigger} onClick={openDrawer} />
+        <Button
+            appearance="secondary"
+            label="Ask AI"
+            hideLabel={!showLabel}
+            icon={<Sparkles aria-hidden="true" />}
+            aria-haspopup="dialog"
+            elementRef={trigger}
+            onClick={openDrawer}
+        />
         <Drawer open={open} onRequestClose={() => setOpen(false)} returnFocus={trigger} width="min(560px, 100vw)">
             <Drawer.Header title="Ask AI" subtitle={context} />
             <Drawer.Body>
