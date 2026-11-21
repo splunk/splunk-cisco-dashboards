@@ -1389,7 +1389,6 @@ interface MetricDetailTableColumn {
 interface MetricDetailTableTargetConfig {
   searchbaseId: string;
   label: string;
-  defaultSortField?: string;
   defaultViz?: string;
   vizOptions?: Record<string, unknown>;
   metadata: SearchbaseDrilldownMetadata;
@@ -1529,6 +1528,7 @@ const interpolateDetailSubtitle = (
 
 const buildMetricDetailTableConfig = (
   source: SearchbaseRecord | null,
+  tileLabel: string,
   searchbaseByName: Map<string, SearchbaseRecord> | null | undefined,
   searchbaseById: Map<string, SearchbaseRecord> | null | undefined,
   searchbaseDrilldowns: SearchbaseDrilldownMap,
@@ -1574,11 +1574,15 @@ const buildMetricDetailTableConfig = (
     });
   if (details.length === 0) return null;
   const primaryOptions = details[0].vizOptions;
+  const viewTitles = details.map((detail) => detail.searchName);
+  const prefix = viewTitles[0].match(/^.+?\s[–—-]\s/)?.[0];
+  const sharedPrefix = details.length > 1 && prefix &&
+    viewTitles.every((title) => title.startsWith(prefix) && title.length > prefix.length)
+    ? prefix : "";
   return {
     title:
-      readDetailStringOption(source.vizOptions, "modalTitle") ??
-      readDetailStringOption(primaryOptions, "modalTitle") ??
-      source.searchName,
+      (details.length === 1 ? readDetailStringOption(primaryOptions, "modalTitle") : undefined) ??
+      (tileLabel.trim() || source.searchName),
     buttonTitle:
       source.drilldownButtonTitle ??
       readDetailStringOption(primaryOptions, "buttonTitle") ??
@@ -1595,8 +1599,7 @@ const buildMetricDetailTableConfig = (
       );
       return {
         searchbaseId: detail.id,
-        label: readDetailStringOption(options, "drilldownLabel") ?? detail.searchName,
-        defaultSortField: readDetailStringOption(options, "defaultSortField"),
+        label: readDetailStringOption(options, "modalTitle") ?? detail.searchName.slice(sharedPrefix.length),
         defaultViz: detail.defaultViz,
         vizOptions: detail.vizOptions,
         metadata: {
@@ -1860,11 +1863,12 @@ const MetricCard: React.FC<MetricCardProps> = ({
     () =>
       buildMetricDetailTableConfig(
         sbRecord,
+        effective.label,
         searchbaseByName,
         searchbaseById,
         searchbaseDrilldowns,
       ),
-    [sbRecord, searchbaseById, searchbaseByName, searchbaseDrilldowns],
+    [sbRecord, effective.label, searchbaseById, searchbaseByName, searchbaseDrilldowns],
   );
   const openDetailTable =
     detailTableConfig && onOpenDetailTable
@@ -7848,12 +7852,6 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   const [sortState, setSortState] = useState<MetricDetailSortState | null>(
     null,
   );
-  const defaultSort = useMemo<MetricDetailSortState | null>(
-    () => activeConfig.defaultSortField
-      ? { field: activeConfig.defaultSortField, direction: "desc" }
-      : null,
-    [activeConfig.defaultSortField],
-  );
   const activeIsTable = isTableViz(activeConfig.defaultViz);
   const activeDefinition = useMemo(
     () =>
@@ -7902,7 +7900,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     setRows([]);
     setTableColumns(activeConfig.columns);
     setErrorMessage("");
-    setSortState(defaultSort);
+    setSortState(null);
 
     runSearch({
       spl: activeConfig.spl,
@@ -7955,7 +7953,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       cancelled = true;
       controller.abort();
     };
-  }, [activeConfig, activeIsTable, defaultSort, range.earliest, range.latest, refreshToken]);
+  }, [activeConfig, activeIsTable, range.earliest, range.latest, refreshToken]);
 
   const availableStatus = activeConfig.availableStatus ?? "Available";
   const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";

@@ -1048,6 +1048,35 @@ assert.match(
 assert.match(profile, /label=\{showGuidance \? "Back to results" : "Search guidance"\}/);
 assert.match(profile, /ref=\{resultsRef\}[\s\S]*?hidden=\{showGuidance\}/);
 assert.match(profile, /resultsRef\.current\?\.scrollTo\(resultsScroll\.current\)/);
+const detailOptionsSource = profile.slice(
+  profile.indexOf("const readDetailStringOption ="),
+  profile.indexOf("const parseDetailTableColumns ="),
+);
+const detailConfigSource = profile.slice(
+  profile.indexOf("const interpolateDetailSubtitle ="),
+  profile.indexOf("const resolveSearchbaseRecordForConfig ="),
+);
+const detailConfigJs = ts.transpileModule(
+  `${detailOptionsSource}\n${detailConfigSource}\nreturn buildMetricDetailTableConfig;`,
+  { compilerOptions: { target: ts.ScriptTarget.ES2020 } },
+).outputText;
+const buildDetail = new Function(
+  "searchbaseRecordReferenceFromParts", "searchbaseRecordNameReference", "parseDetailTableColumns", detailConfigJs,
+)((owner, name) => `${owner}:${name}`, (owner, name) => `${owner}:${name}`, () => []);
+const drilldownRecord = (id, searchName, vizOptions) => ({ id, ownerApp: "test", searchName, search: "| metadata type=hosts", vizOptions });
+const drilldownSource = { ...drilldownRecord("parent", "Legacy parent title"), drilldownSearchNames: ["first", "second"] };
+const relatedTargets = new Map([
+  ["first", drilldownRecord("first", "WAN - Tunnel activity")],
+  ["second", drilldownRecord("second", "WAN - Path health")],
+]);
+const wanDetail = buildDetail(drilldownSource, "WAN health", null, relatedTargets, {});
+assert.equal(wanDetail.title, "WAN health");
+assert.deepEqual(wanDetail.targets.map((target) => target.label), ["Tunnel activity", "Path health"]);
+assert.equal(wanDetail.targets[0].subtitle({ label: "Last 24 hours" }), "Last 24 hours");
+relatedTargets.set("second", drilldownRecord("second", "Endpoint - Policy status"));
+assert.deepEqual(buildDetail(drilldownSource, "Coverage", null, relatedTargets, {}).targets.map((target) => target.label), ["WAN - Tunnel activity", "Endpoint - Policy status"]);
+relatedTargets.set("first", drilldownRecord("first", "Inventory - Device status", { modalTitle: "Device roster" }));
+assert.equal(buildDetail({ ...drilldownSource, drilldownSearchNames: ["first"] }, "Device health", null, relatedTargets, {}).title, "Device roster");
 assert.match(
   profile,
   /<ScreenReaderContent aria-live="polite">[\s\S]*?Showing \{activeConfig\.metadata\.title\}/,
