@@ -1,6 +1,8 @@
 import React from 'react';
 import Badge from '@splunk/react-ui/Badge';
+import { variables } from '@splunk/themes';
 import DOMPurify from 'dompurify';
+import styled from 'styled-components';
 
 import { ChevronDown } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
@@ -16,9 +18,11 @@ export interface SearchbaseDrilldownMetadata {
     executionPlan: string;
 }
 
+type GuidanceAppearance = 'manager' | 'workspace' | 'inline';
+
 interface SearchbaseDrilldownGuidanceProps {
     metadata: SearchbaseDrilldownMetadata;
-    appearance?: 'manager' | 'workspace';
+    appearance?: GuidanceAppearance;
     defaultExpanded?: boolean;
     heading?: string;
     summary?: string;
@@ -27,8 +31,18 @@ interface SearchbaseDrilldownGuidanceProps {
 interface MetadataBlockProps {
     title: string;
     html: string;
-    appearance: 'manager' | 'workspace';
+    appearance: GuidanceAppearance;
 }
+
+const InlineMetadataBlock = styled.section`
+    margin-top: ${variables.spacingMedium};
+
+    h4 { margin: 0 0 ${variables.spacingXSmall}; }
+    ul, ol { padding-inline-start: ${variables.spacingLarge}; }
+    ul { list-style: disc; }
+    ol { list-style: decimal; }
+    a { color: ${variables.contentColorLink}; text-decoration: underline; }
+`;
 
 const openMetadataLinksInNewTabs = (html: string): string => {
     if (!html || typeof document === 'undefined') {return html;}
@@ -52,6 +66,16 @@ const sanitizeMetadataHtml = (value: string): string => {
 
 const MetadataBlock: React.FC<MetadataBlockProps> = ({ title, html, appearance }) => {
     if (!html) {return null;}
+
+    if (appearance === 'inline') {
+        return (
+            <InlineMetadataBlock>
+                <h4>{title}</h4>
+                {/* eslint-disable-next-line react/no-danger */}
+                <div dangerouslySetInnerHTML={{ __html: html }} />
+            </InlineMetadataBlock>
+        );
+    }
 
     if (appearance === 'manager') {
         return (
@@ -106,6 +130,19 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
     const sectionCount = Object.values(sanitized).filter(Boolean).length;
 
     if (sectionCount === 0) {return null;}
+
+    if (appearance === 'inline') {
+        const sections = [
+            ['Description', sanitized.description],
+            ['Explanation', sanitized.explanation],
+            ['Solution', sanitized.solution],
+            ['Related information', sanitized.relatedInfo],
+            ['Execution plan', sanitized.executionPlan],
+        ];
+        return <>{sections.map(([title, html]) => (
+            <MetadataBlock key={title} title={title} html={html} appearance={appearance} />
+        ))}</>;
+    }
 
     const columns = (
         <>

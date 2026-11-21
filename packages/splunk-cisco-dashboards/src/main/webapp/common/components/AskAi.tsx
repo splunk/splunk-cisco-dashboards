@@ -9,6 +9,7 @@ import Text from '@splunk/react-ui/Text';
 import { addLeadingSearchCommand } from '@splunk/splunk-utils/search';
 import { variables } from '@splunk/themes';
 import styled from 'styled-components';
+import SearchbaseDrilldownGuidance from '@/common/components/workspace/SearchbaseDrilldownGuidance';
 import { getCurrentSplunkUsername, userScopedStorageKey } from '@/common/config/insightsWorkspaces';
 import { splunkSearchAppUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankSearchbaseMatches } from '@/common/services/askSearchbase';
@@ -44,6 +45,16 @@ const ActionRow = styled.div`
     flex-wrap: wrap;
     align-items: center;
     gap: ${variables.spacingSmall};
+`;
+
+const CatalogueDetails = styled.dl`
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: ${variables.spacingXSmall} ${variables.spacingSmall};
+    margin: ${variables.spacingMedium} 0 0;
+
+    dt { font-weight: ${variables.fontWeightSemiBold}; }
+    dd { margin: 0; }
 `;
 
 const QUESTION_STORAGE_KEY = 'scd:ask-ai:question';
@@ -208,8 +219,20 @@ export default function AskAi({ context, contextId = context, range, destination
                             const needsInputs = /\$[\w.]+\$/.test(record.search);
                             return <SearchCard key={`${record.ownerApp}:${record.id}`}>
                                 <Heading level={3} variant="title4">{record.searchName}</Heading>
-                                <p>{[record.ownerApp, record.subCategory].filter(Boolean).join(' · ')}</p>
+                                <p>{[record.ownerApp, record.category, record.subCategory].filter(Boolean).join(' · ')}</p>
                                 {description && <p>{description}</p>}
+                                <details>
+                                    <summary>Search details</summary>
+                                    <SearchbaseDrilldownGuidance metadata={{ ...record, title: record.searchName }} appearance="inline" />
+                                    <CatalogueDetails>
+                                        {record.tags.length > 0 && <><dt>Tags</dt><dd>{record.tags.join(', ')}</dd></>}
+                                        {record.defaultViz && <><dt>Default visualization</dt><dd>{record.defaultViz}</dd></>}
+                                        <dt>Search ID</dt><dd><code>{record.id}</code></dd>
+                                        {record.dispatchContext && record.dispatchContext !== record.ownerApp && (
+                                            <><dt>Runs in Splunk app</dt><dd>{record.dispatchContext}</dd></>
+                                        )}
+                                    </CatalogueDetails>
+                                </details>
                                 <details>
                                     <summary>View SPL</summary>
                                     <pre tabIndex={0}><code>{record.search}</code></pre>
