@@ -17,7 +17,7 @@ import { getCurrentSplunkUsername, userScopedStorageKey } from '@/common/config/
 import { Sparkles } from '@/common/icons/SuiIcon';
 import { splunkSearchAppUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankSearchbaseMatches } from '@/common/services/askSearchbase';
-import { getSearchbaseCatalogue, plainTextFromHtml, type SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
+import { getSearchbaseCatalogue, type SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 
 const Content = styled.div`
     display: grid;
@@ -238,12 +238,10 @@ export default function AskAi({
                             </ControlGroup>
                         )}
                         {result.records.map((record) => {
-                            const description = plainTextFromHtml(record.description);
                             const needsInputs = /\$[\w.]+\$/.test(record.search);
                             return <SearchCard key={`${record.ownerApp}:${record.id}`}>
                                 <Heading level={3} variant="title4">{record.searchName}</Heading>
                                 <p>{[record.ownerApp, record.category, record.subCategory].filter(Boolean).join(' · ')}</p>
-                                {description && <p>{description}</p>}
                                 <details>
                                     <summary>Search details</summary>
                                     <SearchbaseDrilldownGuidance metadata={{ ...record, title: record.searchName }} appearance="inline" />
