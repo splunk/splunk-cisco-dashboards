@@ -1080,6 +1080,12 @@ const noDataCopy = (
         };
     }
     if (reason === 'dispatch_failed') {
+        if (failureHttpStatus === 401) {
+            return {
+                title: 'Splunk session rejected (HTTP 401)',
+                detail: 'Once signed in to Splunk, retry the tile. If the error persists, refresh Canvas and sign in if prompted.',
+            };
+        }
         const statusSuffix =
             typeof failureHttpStatus === 'number' ? ` (HTTP ${failureHttpStatus})` : '';
         return {

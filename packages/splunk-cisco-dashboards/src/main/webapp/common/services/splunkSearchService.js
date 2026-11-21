@@ -672,10 +672,13 @@ const readRetryAfterMs = (response) => {
   return Number.isFinite(ms) ? Math.min(MAX_RETRY_AFTER_MS, Math.max(0, ms)) : 0;
 };
 
+// The Splunk session and access can recover while the Canvas stays open.
 const shouldCacheSplFailure = (status) =>
   typeof status === "number" &&
   status >= 400 &&
   status < 500 &&
+  status !== 401 &&
+  status !== 403 &&
   !isRetryableHttpStatus(status);
 
 const splunkJobErrorText = (payload) => {

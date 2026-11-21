@@ -730,16 +730,31 @@ test("aborting during quota backoff prevents another request", async (t) => {
   });
 });
 
-test("authorization failures do not retry or become capacity failures", async (t) => {
-  let starts = 0;
-  await withCapacityTest(t, async () => {
-    starts += 1;
-    return { status: 403, json: async () => ({ messages: [{ type: "ERROR", text: "Access denied" }] }) };
-  }, async (service) => {
-    await assert.rejects(service.runSearch({ spl: "| makeresults" }), (err) => {
-      assert.equal(service.classifySearchDispatchError(err).reason, "dispatch_failed");
-      return true;
+for (const status of [401, 403]) {
+  test(`HTTP ${status} fails immediately and allows a later explicit rerun`, async (t) => {
+    let starts = 0;
+    await withCapacityTest(t, async () => {
+      starts += 1;
+      if (starts === 1) {
+        return {
+          status,
+          json: async () => ({ messages: [{ type: "ERROR", text: "Access denied" }] }),
+        };
+      }
+      return successfulResponse();
+    }, async (service) => {
+      const params = { spl: "| makeresults" };
+      await assert.rejects(service.runSearch(params), (err) => {
+        const failure = service.classifySearchDispatchError(err);
+        assert.equal(failure.reason, "dispatch_failed");
+        assert.equal(failure.httpStatus, status);
+        return true;
+      });
+      assert.equal(starts, 1);
+
+      const result = await service.runSearch(params);
+      assert.equal(starts, 2);
+      assert.deepEqual(result, { results: [{ count: "1" }] });
     });
-    assert.equal(starts, 1);
   });
-});
+}
