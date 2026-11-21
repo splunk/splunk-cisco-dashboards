@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import Button from '@splunk/react-ui/Button';
+import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Drawer from '@splunk/react-ui/Drawer';
 import Heading from '@splunk/react-ui/Heading';
@@ -41,9 +42,15 @@ const SearchCard = styled.article`
     pre {
         max-height: 14rem;
         overflow: auto;
-        margin-top: ${variables.spacingSmall};
         white-space: pre-wrap;
     }
+`;
+
+const SearchDetailsBody = styled.div`
+    min-width: 0;
+    padding: ${variables.spacingMedium};
+    background: ${variables.backgroundColorSection};
+    border-radius: ${variables.borderRadius};
 `;
 
 const ActionRow = styled.div`
@@ -68,6 +75,8 @@ const CatalogueDetails = styled.dl`
     grid-template-columns: max-content minmax(0, 1fr);
     gap: ${variables.spacingXSmall} ${variables.spacingSmall};
     margin: ${variables.spacingMedium} 0 0;
+    padding-top: ${variables.spacingMedium};
+    border-top: 1px solid ${variables.borderColorWeak};
 
     dt { font-weight: ${variables.fontWeightSemiBold}; }
     dd { margin: 0; }
@@ -313,19 +322,6 @@ export default function AskAi({
                                     }
                                 }}>{record.searchName}</Heading>
                                 {categoryLabel && <p>{categoryLabel}</p>}
-                                <details>
-                                    <summary>Search details</summary>
-                                    <SearchbaseDrilldownGuidance metadata={{ ...record, title: record.searchName }} appearance="inline" />
-                                    <CatalogueDetails>
-                                        {record.tags.length > 0 && <><dt>Tags</dt><dd>{record.tags.join(', ')}</dd></>}
-                                        {record.defaultViz && <><dt>Default visualization</dt><dd>{record.defaultViz}</dd></>}
-                                        <dt>Search ID</dt><dd><code>{record.id}</code></dd>
-                                    </CatalogueDetails>
-                                </details>
-                                <details>
-                                    <summary>View SPL</summary>
-                                    <pre tabIndex={0}><code><SplSyntax spl={record.search} /></code></pre>
-                                </details>
                                 {needsInputs && <p>This search needs inputs from its original view.</p>}
                                 <ActionRow>
                                     {!needsInputs && (
@@ -357,6 +353,19 @@ export default function AskAi({
                                         </Tooltip>}
                                     </>}
                                 </ActionRow>
+                                <CollapsiblePanel appearance="subtle" title="Search details" inset={false}>
+                                    <SearchDetailsBody>
+                                        <SearchbaseDrilldownGuidance metadata={{ ...record, title: record.searchName }} appearance="inline" />
+                                        <CatalogueDetails>
+                                            {record.tags.length > 0 && <><dt>Tags</dt><dd>{record.tags.join(', ')}</dd></>}
+                                            {record.defaultViz && <><dt>Default visualization</dt><dd>{record.defaultViz}</dd></>}
+                                            <dt>Search ID</dt><dd><code>{record.id}</code></dd>
+                                        </CatalogueDetails>
+                                    </SearchDetailsBody>
+                                </CollapsiblePanel>
+                                <CollapsiblePanel appearance="subtle" title="View SPL" inset={false}>
+                                    <pre tabIndex={0}><code><SplSyntax spl={record.search} /></code></pre>
+                                </CollapsiblePanel>
                             </SearchCard>;
                         })}
                         {result.visibleCount < result.records.length && (

@@ -1,5 +1,6 @@
 import React from 'react';
 import Badge from '@splunk/react-ui/Badge';
+import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import { variables } from '@splunk/themes';
 import DOMPurify from 'dompurify';
 import styled from 'styled-components';
@@ -34,14 +35,25 @@ interface MetadataBlockProps {
     appearance: GuidanceAppearance;
 }
 
-const InlineMetadataBlock = styled.section`
-    margin-top: ${variables.spacingMedium};
+const InlineGuidance = styled.div`
+    display: grid;
+    gap: ${variables.spacingMedium};
+`;
 
-    h4 { margin: 0 0 ${variables.spacingXSmall}; }
-    ul, ol { padding-inline-start: ${variables.spacingLarge}; }
+const InlineMetadataBody = styled.div`
+    line-height: ${variables.lineHeightNormal};
+
+    p + p, li + li { margin-block-start: ${variables.spacingSmall}; }
+    ul, ol { margin-block: ${variables.spacingSmall}; padding-inline-start: ${variables.spacingLarge}; }
     ul { list-style: disc; }
     ol { list-style: decimal; }
     a { color: ${variables.contentColorLink}; text-decoration: underline; }
+`;
+
+const InlineMetadataHeading = styled.h4`
+    color: ${variables.contentColorDefault};
+    font-weight: ${variables.fontWeightSemiBold};
+    margin: 0 0 ${variables.spacingXSmall};
 `;
 
 const openMetadataLinksInNewTabs = (html: string): string => {
@@ -69,11 +81,11 @@ const MetadataBlock: React.FC<MetadataBlockProps> = ({ title, html, appearance }
 
     if (appearance === 'inline') {
         return (
-            <InlineMetadataBlock>
-                <h4>{title}</h4>
+            <section>
+                <InlineMetadataHeading>{title}</InlineMetadataHeading>
                 {/* eslint-disable-next-line react/no-danger */}
-                <div dangerouslySetInnerHTML={{ __html: html }} />
-            </InlineMetadataBlock>
+                <InlineMetadataBody dangerouslySetInnerHTML={{ __html: html }} />
+            </section>
         );
     }
 
@@ -136,12 +148,24 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
             ['Description', sanitized.description],
             ['Explanation', sanitized.explanation],
             ['Solution', sanitized.solution],
+        ];
+        const supplementary = [
             ['Related information', sanitized.relatedInfo],
             ['Execution plan', sanitized.executionPlan],
         ];
-        return <>{sections.map(([title, html]) => (
-            <MetadataBlock key={title} title={title} html={html} appearance={appearance} />
-        ))}</>;
+        return (
+            <InlineGuidance>
+                {sections.map(([title, html]) => (
+                    <MetadataBlock key={title} title={title} html={html} appearance={appearance} />
+                ))}
+                {supplementary.filter(([, html]) => html).map(([title, html]) => (
+                    <CollapsiblePanel key={title} title={title} appearance="subtle" inset={false}>
+                        {/* eslint-disable-next-line react/no-danger */}
+                        <InlineMetadataBody dangerouslySetInnerHTML={{ __html: html }} />
+                    </CollapsiblePanel>
+                ))}
+            </InlineGuidance>
+        );
     }
 
     const columns = (
