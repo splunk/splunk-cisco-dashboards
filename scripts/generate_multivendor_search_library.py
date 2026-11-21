@@ -652,10 +652,39 @@ add('Microsoft','defender_remote_session_networking','Microsoft Defender - Netwo
  'Requires IsInitiatingProcessRemoteSession and optional remote-session IP fields. This is process-session context, not proof of malicious RDP, current login sessions or lateral movement.',
  [event(DeviceId='device-a',ActionType='ConnectionSuccess',RemoteIP='198.51.100.1',IsInitiatingProcessRemoteSession='true',InitiatingProcessRemoteSessionIP='192.0.2.1',InitiatingProcessFileName='curl'),event(DeviceId='device-a',ActionType='ConnectionSuccess',IsInitiatingProcessRemoteSession='false')],1,defaults=('Process','Kind'))
 
+def render_execution_plan(entry):
+    query = entry['query']
+    group = entry['group']
+    source = 'CIM-tagged records' if group == 'Vendor neutral' else f'{group} records'
+    steps = [('search', f'Select {source} through the configured index scope.')]
+    fields = list(entry['fields'])
+    if fields:
+        inputs = ', '.join(fields[:5])
+        if len(fields) > 5:
+            inputs = 'fields including ' + inputs
+        steps.append(('foreach and eval', f'Normalize {inputs} from the available source aliases.'))
+    if '\n| streamstats ' in query:
+        steps.append(('streamstats', 'Pair successive counter samples by device and interface, then calculate rates for usable intervals.'))
+    final_grouping = re.findall(r'^\| stats .+\sby\s+(.+)$', query, re.M)[-1]
+    grouping_fields = final_grouping.split()
+    grouping = ', '.join('time bucket' if field == '_time' else field for field in grouping_fields)
+    output = re.search(r'^\| table (.+) TotalGroups RowsTruncated$', query, re.M)[1].split()
+    measures = ', '.join(field for field in output if field not in grouping_fields)
+    steps.append(('stats and eval', f'Summarize by {grouping} and report {measures} for qualifying groups.'))
+    steps.append(('sort and table', 'Return up to 1,000 groups with the group count and truncation indicator.'))
+    return '<p>' + '<br>'.join(
+        f'<b>{number:02}</b> <code>{command}</code> {html.escape(detail, quote=False)}'
+        for number, (command, detail) in enumerate(steps, 1)
+    ) + '</p>'
+
 def render():
     assert len(ENTRIES)==80,len(ENTRIES)
     counts=collections.Counter(e['group'] for e in ENTRIES)
     assert counts.pop('Vendor neutral')==20 and len(counts)==10 and set(counts.values())=={6},counts
+
+    def paragraph(value):
+        return '<p>' + html.escape(value, quote=False) + '</p>'
+
     chunks=[]
     for e in ENTRIES:
         category='Network' if e['group']=='Vendor neutral' else 'Security'
@@ -663,10 +692,13 @@ def render():
         updated='2026-10-28' if e['id'] in ('mv_dns_unusual_query_types','mv_infoblox_txt_null_queries','mv_intrusion_alert_actions') else '2026-10-27'
         if e['id'] in ('mv_pan_globalprotect_failures','mv_zscaler_zia_transfer_sizes'):updated='2026-11-18'
         metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version',e['version']),('date_created','2026-10-27'),('date_updated',updated),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
-        metadata.extend((k,'<p>'+html.escape(v,quote=False)+'</p>') for k,v in [
-            ('description',e['description']),('explanation',COMMON+e['limits']),
-            ('solution','Use a finite time window and confirm source fields and configured index routing before interpreting results. These optional catalogue searches create no scheduled jobs or collectors. Output is limited to 1,000 groups; TotalGroups and RowsTruncated disclose omitted groups.'),
-            ('related_info','Source contract: '+e['source']+'. Input aliases: '+json.dumps(e['fields'],sort_keys=True)+'. Source reference: '+e['ref']+'. Synthetic SPL tests are separate from deployed-vendor qualification.')])
+        metadata.extend([
+            ('description', paragraph(e['description'])),
+            ('explanation', paragraph(COMMON + e['limits'])),
+            ('execution_plan', render_execution_plan(e)),
+            ('solution', paragraph('Use a finite time window and confirm source fields and configured index routing before interpreting results. These optional catalogue searches create no scheduled jobs or collectors. Output is limited to 1,000 groups; TotalGroups and RowsTruncated disclose omitted groups.')),
+            ('related_info', paragraph('Source contract: '+e['source']+'. Input aliases: '+json.dumps(e['fields'],sort_keys=True)+'. Source reference: '+e['ref']+'. Synthetic SPL tests are separate from deployed-vendor qualification.')),
+        ])
         chunks.append('['+e['id']+']\n'+'\n'.join(k+' = '+v for k,v in metadata)+'\nsearch = '+e['query'].replace('\n','\\\n'))
     return '\n\n'.join(chunks)+'\n'
 
