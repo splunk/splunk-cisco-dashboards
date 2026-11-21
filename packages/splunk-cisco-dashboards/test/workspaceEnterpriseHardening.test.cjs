@@ -1045,8 +1045,15 @@ assert.match(
   /<TabBar[\s\S]*?aria-label="Drilldown views"[\s\S]*?<TabBar\.Tab[\s\S]*?ariaControls=\{resultsRegionId\}[\s\S]*?label=\{target\.label\}/,
   "Multi-target drilldowns must name each view and connect the tabs to the results",
 );
-assert.match(profile, /label=\{showGuidance \? "Back to results" : "Search guidance"\}/);
-assert.match(profile, /ref=\{resultsRef\}[\s\S]*?hidden=\{showGuidance\}/);
+const drilldownContent = profile.slice(
+  profile.indexOf("const MetricDrilldownContent:"),
+  profile.indexOf("interface SectionTitlesEditorModalProps"),
+);
+assert.match(profile, /<Drawer[\s\S]*?open=\{activeDetailTable !== null\}[\s\S]*?<MetricDrilldownContent/);
+assert.match(drilldownContent, /activeTabId=\{showGuidance \? "guidance" : "results"\}/);
+assert.match(drilldownContent, /id=\{resultsPanelId\}[\s\S]*?hidden=\{showGuidance\}/);
+assert.match(drilldownContent, /<Drawer.Footer[\s\S]*?label="Open in Searchbase"[\s\S]*?to=\{searchbaseUrl\}[\s\S]*?label="Open in Search"[\s\S]*?to=\{searchUrl\}/);
+assert.match(profile, /record\.tags\.filter\([\s\S]*?tag !== record\.catalogueApp && tag !== record\.ownerApp/);
 assert.match(profile, /resultsRef\.current\?\.scrollTo\(resultsScroll\.current\)/);
 const detailOptionsSource = profile.slice(
   profile.indexOf("const readDetailStringOption ="),
@@ -1298,8 +1305,8 @@ assert.doesNotMatch(
 );
 assert.match(
   profile,
-  /contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"/,
-  "Insights drill-down dialogs must use the atmospheric workspace surface",
+  /<Drawer[\s\S]*?material="opaque"[\s\S]*?open=\{activeDetailTable !== null\}/,
+  "Insights drilldowns must use the solid Splunk UI drawer surface",
 );
 assert.match(
   dashboardBuilderDrilldown,

@@ -3889,6 +3889,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const addTileReturnFocusRef = useRef<HTMLElement | null>(null);
   const [activeDetailTable, setActiveDetailTable] =
     useState<MetricDetailTableConfig | null>(null);
+  const drilldownReturnFocusRef = useRef<HTMLElement | null>(null);
+  const openMetricDrilldown = useCallback((config: MetricDetailTableConfig) => {
+    const trigger = document.activeElement;
+    drilldownReturnFocusRef.current = trigger instanceof HTMLElement ? trigger : null;
+    setActiveDetailTable(config);
+  }, []);
 
   const closeAddTilePicker = useCallback(() => setAddTileSection(null), []);
 
@@ -5907,7 +5913,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                   !isSectionFocused &&
                                   (compactDensity || renderCompactHeight)
                                 }
-                                onOpenDetailTable={setActiveDetailTable}
+                                onOpenDetailTable={openMetricDrilldown}
                                 onConfigure={(returnFocus) =>
                                   openPicker(
                                     cfg.id,
@@ -6314,14 +6320,33 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         onClose={() => setSignalTickerEditorOpen(false)}
       />
 
-      {activeDetailTable && (
-        <MetricDetailTableModal
-          config={activeDetailTable}
-          onClose={() => setActiveDetailTable(null)}
-          range={timeRange}
-          refreshToken={refreshToken}
-        />
-      )}
+      <Drawer
+        aria-label={activeDetailTable?.title || "Drilldown details"}
+        closeOnClickAway
+        divider="both"
+        initialFocus="first"
+        material="opaque"
+        onRequestClose={() => setActiveDetailTable(null)}
+        open={activeDetailTable !== null}
+        position="page"
+        returnFocus={() => {
+          const trigger = drilldownReturnFocusRef.current;
+          const destination =
+            trigger?.isConnected && trigger !== document.body
+              ? trigger
+              : workspaceToggleRef.current;
+          destination?.focus({ preventScroll: true });
+        }}
+        width="min(100vw, 720px)"
+      >
+        {activeDetailTable && (
+          <MetricDrilldownContent
+            config={activeDetailTable}
+            range={timeRange}
+            refreshToken={refreshToken}
+          />
+        )}
+      </Drawer>
 
       <BrandingEditorModal
         isOpen={isBrandingEditorOpen}
@@ -7301,7 +7326,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     plainTextFromHtml(record.description);
                   const tags = Array.from(
                     new Set(
-                      [record.catalogueApp, ...record.tags].filter(Boolean),
+                      record.tags.filter(
+                        (tag) =>
+                          tag && tag !== record.catalogueApp && tag !== record.ownerApp,
+                      ),
                     ),
                   ).slice(0, 3);
                   const isAdding =
@@ -7658,12 +7686,11 @@ const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({
 );
 
 // =============================================================================
-// Metric detail-table modal
+// Metric drilldown
 // =============================================================================
 
-interface MetricDetailTableModalProps {
+interface MetricDrilldownContentProps {
   config: MetricDetailTableConfig;
-  onClose: () => void;
   range: TimeRange;
   refreshToken: number;
 }
@@ -7822,16 +7849,15 @@ const compareDetailCellValues = (
   return direction === "asc" ? base : -base;
 };
 
-const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
+const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
   config,
-  onClose,
   range,
   refreshToken,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeConfig = config.targets[activeIndex] ?? config.targets[0];
   const [showGuidance, setShowGuidance] = useState(false);
-  const modalId = useId();
+  const drilldownId = useId();
   const resultsRef = useRef<HTMLDivElement>(null);
   const resultsScroll = useRef({ top: 0, left: 0 });
   const targetKey = config.targets
@@ -7951,7 +7977,6 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
 
   const availableStatus = activeConfig.availableStatus ?? "Available";
   const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";
-  const titleId = `${modalId}-title`;
   const statusField = activeConfig.statusField;
   const displayColumns =
     tableColumns.length > 0 ? tableColumns : activeConfig.columns;
@@ -7995,9 +8020,12 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     activeConfig.dispatchContext,
   );
   const searchbaseUrl = splunkSearchbaseEditUrl(activeConfig.searchbaseId);
-  const resultTitleId = `${modalId}-results-title`;
-  const resultsRegionId = `${modalId}-results`;
-  const guidanceId = `${modalId}-guidance`;
+  const resultTitleId = `${drilldownId}-results-title`;
+  const resultsRegionId = `${drilldownId}-results`;
+  const resultsPanelId = `${drilldownId}-results-panel`;
+  const resultsTabId = `${drilldownId}-results-tab`;
+  const guidanceId = `${drilldownId}-guidance`;
+  const guidanceTabId = `${drilldownId}-guidance-tab`;
   const tabId = (index: number) => `${resultTitleId}-tab-${index}`;
   const hasGuidance = [
     activeConfig.metadata.description,
@@ -8006,14 +8034,14 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     activeConfig.metadata.relatedInfo,
     activeConfig.metadata.executionPlan,
   ].some((value) => value?.trim());
-  const toggleGuidance = () => {
-    if (!showGuidance && resultsRef.current) {
+  const selectGuidanceView = (show: boolean) => {
+    if (show && resultsRef.current) {
       resultsScroll.current = {
         top: resultsRef.current.scrollTop,
         left: resultsRef.current.scrollLeft,
       };
     }
-    setShowGuidance((shown) => !shown);
+    setShowGuidance(show);
   };
   const showTarget = (nextIndex: number) => {
     const boundedIndex = Math.max(
@@ -8035,276 +8063,302 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   };
 
   return (
-    <WorkspaceModalShell
-      variant="detail"
-      title={config.title}
-      subtitle={activeConfig.subtitle(range)}
-      titleId={titleId}
-      onClose={onClose}
-      openInSearchHref={searchUrl}
-      openInSearchbaseHref={searchbaseUrl}
-      wide={!activeIsTable || displayColumns.length >= 5}
-      contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"
-      headerActions={
-        hasGuidance ? (
-          <Button
-            appearance="secondary"
-            label={showGuidance ? "Back to results" : "Search guidance"}
-            aria-controls={guidanceId}
-            aria-expanded={showGuidance}
-            onClick={toggleGuidance}
-          />
-        ) : undefined
-      }
-      headerMeta={
-        activeIsTable && statusField ? (
-          <>
-            <span className="inline-flex items-center gap-1 rounded-full sui-bg-notification-positive px-2 py-1 text-xs font-semibold sui-color-active">
-              <CheckCircle2 className="h-3 w-3" />
-              {availableCount} available
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full sui-bg-notification-negative px-2 py-1 text-xs font-semibold sui-color-active">
-              <AlertCircle className="h-3 w-3" />
-              {unavailableCount} unavailable
-            </span>
-          </>
-        ) : undefined
-      }
-    >
-      {config.targets.length > 1 && (
-        <div hidden={showGuidance} className="scd-workspace-modal-subheader shrink-0 overflow-x-auto border-b sui-border-weak px-4">
-          <TabBar
-            aria-label="Drilldown views"
-            activeTabId={activeConfig.searchbaseId}
-            autoActivate={false}
-            maxTabWidth={280}
-            onChange={(_event, { selectedTabId }) => {
-              const nextIndex = config.targets.findIndex(
-                (target) => target.searchbaseId === selectedTabId,
-              );
-              if (nextIndex >= 0) showTarget(nextIndex);
-            }}
-          >
-            {config.targets.map((target, index) => (
-              <TabBar.Tab
-                key={target.searchbaseId}
-                tabId={target.searchbaseId}
-                id={tabId(index)}
-                ariaControls={resultsRegionId}
-                label={target.label}
-                tooltip={target.label}
-              />
-            ))}
-          </TabBar>
-          <ScreenReaderContent aria-live="polite">
-            Showing {activeConfig.metadata.title}
-          </ScreenReaderContent>
-        </div>
-      )}
-      <div
-        id={resultsRegionId}
-        ref={resultsRef}
-        hidden={showGuidance}
-        role={config.targets.length > 1 ? "tabpanel" : "region"}
-        aria-labelledby={config.targets.length > 1 ? tabId(activeIndex) : resultTitleId}
-        tabIndex={0}
-        className="min-h-0 flex-1 overflow-auto overscroll-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
-        data-detail-results-region="content-aware"
-      >
-        <h3 id={resultTitleId} className="sr-only">{activeConfig.metadata.title}</h3>
-        {activeIsTable ? (
-          <table
-            aria-labelledby={resultTitleId}
-            className={cn("w-full sui-bg-transparent text-sm", displayColumns.length > 5 ? "min-w-[860px]" : "min-w-[600px]")}
-          >
-            <thead className="scd-workspace-modal-subheader sticky top-0 z-10 border-b sui-border-weak backdrop-blur-xl">
-              <tr className="text-left text-xs font-bold sui-color-default">
-                {displayColumns.map((column, index) => {
-                  const isSorted = sortState?.field === column.field;
-                  const SortIcon = isSorted
-                    ? sortState.direction === "asc"
-                      ? ArrowUp
-                      : ArrowDown
-                    : ArrowUpDown;
-                  return (
-                    <th
-                      key={column.field}
-                      scope="col"
-                      aria-sort={
-                        isSorted
-                          ? sortState.direction === "asc"
-                            ? "ascending"
-                            : "descending"
-                          : "none"
-                      }
-                      className={cn(
-                        index === 0 ? "px-5" : "px-4",
-                        "py-3",
-                        column.align === "right" && "text-right",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleSortColumn(column.field)}
-                        title={`Sort by ${column.label}`}
-                        className={cn(
-                          "group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors  sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring",
-                          column.align === "right"
-                            ? "justify-end"
-                            : "justify-start",
-                          isSorted && "sui-color-info",
-                        )}
-                      >
-                        <span>{column.label}</span>
-                        <SortIcon
-                          className={cn(
-                            "h-3 w-3 flex-shrink-0",
-                            isSorted
-                              ? "opacity-100"
-                              : "opacity-35 group-hover:opacity-80",
-                          )}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y sui-divide-weak">
-              {loading ? (
-                <MetricDetailTableStateRow
-                  columnCount={columnCount}
-                  kind="loading"
-                  title="Loading details"
-                  message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
-                />
-              ) : errorMessage ? (
-                <MetricDetailTableStateRow
-                  columnCount={columnCount}
-                  kind="error"
-                  title="Details unavailable"
-                  message={`${errorMessage} Open the query in Search to inspect the failure.`}
-                />
-              ) : rows.length === 0 ? (
-                <MetricDetailTableStateRow
-                  columnCount={columnCount}
-                  kind="empty"
-                  title="No results in this time range"
-                  message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
-                />
-              ) : (
-                sortedRows.map((row, rowIndex) => {
-                  const rowStatus = statusField ? row[statusField] : "";
-                  const rowIsAvailable = rowStatus === availableStatus;
-                  const rowKey =
-                    (activeConfig.rowKeyField &&
-                      row[activeConfig.rowKeyField]) ||
-                    displayColumns
-                      .map((column) => row[column.field])
-                      .join("|") ||
-                    "detail-row";
-                  return (
-                    <tr
-                      key={`${rowKey}-${rowIndex}`}
-                      className="sui-bg-section"
-                    >
-                      {displayColumns.map((column, index) => {
-                        const value = row[column.field];
-                        const isStatusColumn = column.kind === "status";
-                        const statusIsAvailable = value === availableStatus;
-                        const statusIsUnavailable = value === unavailableStatus;
-                        return (
-                          <td
-                            key={column.field}
-                            className={cn(
-                              index === 0
-                                ? "px-5 font-medium sui-color-default"
-                                : "px-4 sui-color-default",
-                              "py-3",
-                              column.align === "right" &&
-                                "text-right tabular-nums",
-                              column.truncate && "max-w-xs truncate",
-                              column.kind === "metric" &&
-                                statusField &&
-                                (rowIsAvailable
-                                  ? "font-medium  sui-color-positive"
-                                  : "font-medium  sui-color-negative"),
-                            )}
-                          >
-                            {isStatusColumn ? (
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
-                                  statusIsAvailable
-                                    ? "sui-bg-notification-positive sui-color-active"
-                                    : statusIsUnavailable
-                                      ? "sui-bg-notification-negative sui-color-active"
-                                      : "sui-bg-popup sui-color-active",
-                                )}
-                              >
-                                {statusIsAvailable ? (
-                                  <CheckCircle2 className="w-3 h-3" />
-                                ) : (
-                                  <AlertCircle className="w-3 h-3" />
-                                )}
-                                {value}
-                              </span>
-                            ) : (
-                              value
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        ) : (
-          activeDefinition && (
-            <div
-              className="min-h-[420px] w-full sui-bg-page"
-              aria-labelledby={resultTitleId}
-              role="region"
-              data-detail-visualization={
-                activeConfig.defaultViz ?? "splunk.table"
+    <>
+      <Drawer.Header title={config.title} subtitle={activeConfig.subtitle(range)} />
+      <Drawer.Body className="!flex min-h-0 flex-col !overflow-hidden !p-0">
+        {hasGuidance && (
+          <div className="shrink-0 border-b sui-border-weak px-4">
+            <TabBar
+              aria-label="Drilldown content"
+              activeTabId={showGuidance ? "guidance" : "results"}
+              autoActivate={false}
+              onChange={(_event, { selectedTabId }) =>
+                selectGuidanceView(selectedTabId === "guidance")
               }
             >
-              <DashboardContextProvider
-                key={`${activeConfig.searchbaseId}:${range.earliest}:${range.latest}:${refreshToken}`}
-                preset={EnterpriseViewOnlyPreset}
-                initialDefinition={
-                  activeDefinition as unknown as React.ComponentProps<
-                    typeof DashboardContextProvider
-                  >["initialDefinition"]
-                }
-                initialMode="view"
-              >
-                <DashboardCore width="100%" height="420px" />
-              </DashboardContextProvider>
-            </div>
-          )
+              <TabBar.Tab
+                id={resultsTabId}
+                tabId="results"
+                label="Results"
+                ariaControls={resultsPanelId}
+              />
+              <TabBar.Tab
+                id={guidanceTabId}
+                tabId="guidance"
+                label="Search guidance"
+                ariaControls={guidanceId}
+              />
+            </TabBar>
+          </div>
         )}
-      </div>
-      {hasGuidance && (
         <div
-          id={guidanceId}
-          hidden={!showGuidance}
-          role="region"
-          aria-labelledby={`${guidanceId}-title`}
-          tabIndex={0}
-          className="min-h-0 flex-1 overflow-auto overscroll-contain px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
+          id={resultsPanelId}
+          role={hasGuidance ? "tabpanel" : undefined}
+          aria-labelledby={hasGuidance ? resultsTabId : undefined}
+          hidden={showGuidance}
+          className={cn("min-h-0 flex-1 flex-col", showGuidance ? "hidden" : "flex")}
         >
-          <Heading level={3} variant="title3" id={`${guidanceId}-title`} className="mb-4">Search guidance</Heading>
-          {showGuidance && <SearchbaseDrilldownGuidance
-            metadata={activeConfig.metadata}
-            appearance="inline"
-          />}
+          {activeIsTable && statusField && !loading && !errorMessage && rows.length > 0 && (
+            <div className="flex shrink-0 flex-wrap gap-2 px-4 py-3">
+              <Badge label={`${availableCount} available`} type="notificationPositive" />
+              <Badge label={`${unavailableCount} unavailable`} type="notificationNegative" />
+            </div>
+          )}
+          {config.targets.length > 1 && (
+            <div className="shrink-0 overflow-x-auto border-b sui-border-weak px-4">
+              <TabBar
+                aria-label="Drilldown views"
+                activeTabId={activeConfig.searchbaseId}
+                autoActivate={false}
+                maxTabWidth={280}
+                onChange={(_event, { selectedTabId }) => {
+                  const nextIndex = config.targets.findIndex(
+                    (target) => target.searchbaseId === selectedTabId,
+                  );
+                  if (nextIndex >= 0) showTarget(nextIndex);
+                }}
+              >
+                {config.targets.map((target, index) => (
+                  <TabBar.Tab
+                    key={target.searchbaseId}
+                    tabId={target.searchbaseId}
+                    id={tabId(index)}
+                    ariaControls={resultsRegionId}
+                    label={target.label}
+                    tooltip={target.label}
+                  />
+                ))}
+              </TabBar>
+              <ScreenReaderContent aria-live="polite">
+                Showing {activeConfig.metadata.title}
+              </ScreenReaderContent>
+            </div>
+          )}
+          <div
+            id={resultsRegionId}
+            ref={resultsRef}
+            role={config.targets.length > 1 ? "tabpanel" : "region"}
+            aria-labelledby={config.targets.length > 1 ? tabId(activeIndex) : resultTitleId}
+            tabIndex={0}
+            className="min-h-0 flex-1 overflow-auto overscroll-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
+            data-detail-results-region="content-aware"
+          >
+            <h3 id={resultTitleId} className="sr-only">{activeConfig.metadata.title}</h3>
+            {activeIsTable ? (
+              <table
+                aria-labelledby={resultTitleId}
+                className={cn(
+                  "w-full sui-bg-transparent text-sm",
+                  displayColumns.length > 5 ? "min-w-[720px]" : "min-w-[420px]",
+                )}
+              >
+                <thead className="sticky top-0 z-10 border-b sui-border-weak sui-bg-section">
+                  <tr className="text-left text-xs font-bold sui-color-default">
+                    {displayColumns.map((column, index) => {
+                      const isSorted = sortState?.field === column.field;
+                      const SortIcon = isSorted
+                        ? sortState.direction === "asc"
+                          ? ArrowUp
+                          : ArrowDown
+                        : ArrowUpDown;
+                      return (
+                        <th
+                          key={column.field}
+                          scope="col"
+                          aria-sort={
+                            isSorted
+                              ? sortState.direction === "asc"
+                                ? "ascending"
+                                : "descending"
+                              : "none"
+                          }
+                          className={cn(
+                            index === 0 ? "pl-4 pr-2" : "px-2",
+                            "py-3",
+                            column.align === "right" && "text-right",
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleSortColumn(column.field)}
+                            title={`Sort by ${column.label}`}
+                            className={cn(
+                              "group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors  sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring",
+                              column.align === "right"
+                                ? "justify-end"
+                                : "justify-start",
+                              isSorted && "sui-color-info",
+                            )}
+                          >
+                            <span>{column.label}</span>
+                            <SortIcon
+                              className={cn(
+                                "h-3 w-3 flex-shrink-0",
+                                isSorted
+                                  ? "opacity-100"
+                                  : "opacity-35 group-hover:opacity-80",
+                              )}
+                              aria-hidden="true"
+                            />
+                          </button>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y sui-divide-weak">
+                  {loading ? (
+                    <MetricDetailTableStateRow
+                      columnCount={columnCount}
+                      kind="loading"
+                      title="Loading details"
+                      message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
+                    />
+                  ) : errorMessage ? (
+                    <MetricDetailTableStateRow
+                      columnCount={columnCount}
+                      kind="error"
+                      title="Details unavailable"
+                      message={`${errorMessage} Open the query in Search to inspect the failure.`}
+                    />
+                  ) : rows.length === 0 ? (
+                    <MetricDetailTableStateRow
+                      columnCount={columnCount}
+                      kind="empty"
+                      title="No results in this time range"
+                      message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
+                    />
+                  ) : (
+                    sortedRows.map((row, rowIndex) => {
+                      const rowStatus = statusField ? row[statusField] : "";
+                      const rowIsAvailable = rowStatus === availableStatus;
+                      const rowKey =
+                        (activeConfig.rowKeyField &&
+                          row[activeConfig.rowKeyField]) ||
+                        displayColumns
+                          .map((column) => row[column.field])
+                          .join("|") ||
+                        "detail-row";
+                      return (
+                        <tr
+                          key={`${rowKey}-${rowIndex}`}
+                          className="sui-bg-section"
+                        >
+                          {displayColumns.map((column, index) => {
+                            const value = row[column.field];
+                            const isStatusColumn = column.kind === "status";
+                            const statusIsAvailable = value === availableStatus;
+                            const statusIsUnavailable = value === unavailableStatus;
+                            return (
+                              <td
+                                key={column.field}
+                                className={cn(
+                                  index === 0
+                                    ? "pl-4 pr-2 font-medium sui-color-default"
+                                    : "px-2 sui-color-default",
+                                  "py-3",
+                                  column.align === "right" &&
+                                    "text-right tabular-nums",
+                                  column.truncate && "max-w-xs truncate",
+                                  column.kind === "metric" &&
+                                    statusField &&
+                                    (rowIsAvailable
+                                      ? "font-medium  sui-color-positive"
+                                      : "font-medium  sui-color-negative"),
+                                )}
+                              >
+                                {isStatusColumn ? (
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
+                                      statusIsAvailable
+                                        ? "sui-bg-notification-positive sui-color-active"
+                                        : statusIsUnavailable
+                                          ? "sui-bg-notification-negative sui-color-active"
+                                          : "sui-bg-popup sui-color-active",
+                                    )}
+                                  >
+                                    {statusIsAvailable ? (
+                                      <CheckCircle2 className="w-3 h-3" />
+                                    ) : (
+                                      <AlertCircle className="w-3 h-3" />
+                                    )}
+                                    {value}
+                                  </span>
+                                ) : (
+                                  value
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            ) : (
+              activeDefinition && (
+                <div
+                  className="min-h-[420px] w-full sui-bg-page"
+                  aria-labelledby={resultTitleId}
+                  role="region"
+                  data-detail-visualization={
+                    activeConfig.defaultViz ?? "splunk.table"
+                  }
+                >
+                  <DashboardContextProvider
+                    key={`${activeConfig.searchbaseId}:${range.earliest}:${range.latest}:${refreshToken}`}
+                    preset={EnterpriseViewOnlyPreset}
+                    initialDefinition={
+                      activeDefinition as unknown as React.ComponentProps<
+                        typeof DashboardContextProvider
+                      >["initialDefinition"]
+                    }
+                    initialMode="view"
+                  >
+                    <DashboardCore width="100%" height="420px" />
+                  </DashboardContextProvider>
+                </div>
+              )
+            )}
+          </div>
         </div>
-      )}
-    </WorkspaceModalShell>
+        {hasGuidance && (
+          <div
+            id={guidanceId}
+            hidden={!showGuidance}
+            role="tabpanel"
+            aria-labelledby={guidanceTabId}
+            tabIndex={0}
+            className="min-h-0 flex-1 overflow-auto overscroll-contain px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
+          >
+            {showGuidance && (
+              <SearchbaseDrilldownGuidance
+                metadata={activeConfig.metadata}
+                appearance="inline"
+              />
+            )}
+          </div>
+        )}
+      </Drawer.Body>
+      <Drawer.Footer layout="none">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            appearance="secondary"
+            label="Open in Searchbase"
+            openInNewContext
+            to={searchbaseUrl}
+          />
+          <Button
+            appearance="primary"
+            label="Open in Search"
+            openInNewContext
+            to={searchUrl}
+          />
+        </div>
+      </Drawer.Footer>
+    </>
   );
 };
 
