@@ -65,7 +65,20 @@ export async function getDisplaySearchesList(searchID) {
 }
 
 export async function isSearchBaseInstalled() {
-    return true;
+    try {
+        const response = await fetch('/en-US/splunkd/__raw/services/apps/local/searchbase?output_mode=json', {
+            ...getDefaultFetchInit(),
+            method: 'GET',
+        });
+        if (response.status === 404) return false;
+        if (!response.ok) return null;
+        const data = await response.json();
+        const app = data.entry?.find((entry) => entry.name === 'searchbase');
+        if (!app || /^(1|true|yes)$/i.test(String(app.content?.disabled))) return null;
+        return true;
+    } catch {
+        return null;
+    }
 }
 
 export async function isUsecaseExplorerInstalled() {

@@ -3,6 +3,7 @@ import Button from '@splunk/react-ui/Button';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Drawer from '@splunk/react-ui/Drawer';
 import Heading from '@splunk/react-ui/Heading';
+import Link from '@splunk/react-ui/Link';
 import Message from '@splunk/react-ui/Message';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
@@ -15,7 +16,8 @@ import { SplSyntax } from '@/common/components/SplSyntax';
 import { WORKSPACE_ADD_HELP, type WorkspaceAddScope } from '@/common/components/workspace/workspaceAddHelp';
 import { getCurrentSplunkUsername, userScopedStorageKey } from '@/common/config/insightsWorkspaces';
 import { Sparkles } from '@/common/icons/SuiIcon';
-import { splunkSearchAppUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
+import { isSearchBaseInstalled } from '@/common/lib/searchbase';
+import { splunkSearchAppUrl, splunkSearchbaseEditUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankSearchbaseMatches } from '@/common/services/askSearchbase';
 import { getSearchbaseCatalogue, type SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 
@@ -62,6 +64,7 @@ const CatalogueDetails = styled.dl`
 `;
 
 const QUESTION_STORAGE_KEY = 'scd:ask-ai:question';
+const SEARCHBASE_LISTING_URL = 'https://splunkbase.splunk.com/app/7188';
 
 function readQuestion(): string {
     if (!getCurrentSplunkUsername()) return '';
@@ -101,6 +104,7 @@ interface AskAiProps {
 interface Result {
     question: string;
     records: SearchbaseRecord[];
+    ambiguousIds: Set<string>;
 }
 
 export default function AskAi({
@@ -115,6 +119,7 @@ export default function AskAi({
     const pending = useRef<object | null>(null);
     const activeContext = useRef(contextId);
     const [open, setOpen] = useState(false);
+    const [searchbaseInstalled, setSearchbaseInstalled] = useState<boolean | null>();
     const [question, setQuestion] = useState(readQuestion);
     const resumedQuestion = useRef(question);
     const [result, setResult] = useState<Result | null>(null);
@@ -124,6 +129,14 @@ export default function AskAi({
     const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
 
     useEffect(() => () => { pending.current = null; }, []);
+    useEffect(() => {
+        if (!open) return;
+        let active = true;
+        void isSearchBaseInstalled().then((installed) => {
+            if (active) setSearchbaseInstalled(installed);
+        });
+        return () => { active = false; };
+    }, [open]);
     useEffect(() => {
         activeContext.current = contextId;
         setDestinationId('');
@@ -140,9 +153,14 @@ export default function AskAi({
         setFeedback(null);
         rememberQuestion(submitted);
         try {
-            const catalogue = await getSearchbaseCatalogue({ allApps: true });
+            const catalogue = await getSearchbaseCatalogue({ allApps: true, includeHidden: true });
             if (pending.current === request) {
-                setResult({ question: submitted, records: rankSearchbaseMatches(catalogue, submitted) });
+                const records = rankSearchbaseMatches(catalogue, submitted);
+                // Searchbase's editor route accepts a stanza ID without its owning app.
+                const ambiguousIds = new Set(records.filter(({ id, ownerApp }) =>
+                    catalogue.some((entry) => entry.id === id && entry.ownerApp !== ownerApp),
+                ).map(({ id }) => id));
+                setResult({ question: submitted, records, ambiguousIds });
             }
         } catch {
             if (pending.current === request) {
@@ -221,6 +239,15 @@ export default function AskAi({
                             />
                         </ControlGroup>
                     </form>
+                    {(searchbaseInstalled === false || searchbaseInstalled === null) && (
+                        <ActionRow>
+                            <Tooltip content="View the Searchbase app listing for installation instructions." wrapContent>
+                                <Link appearance="standalone" openInNewContext to={SEARCHBASE_LISTING_URL}>
+                                    {searchbaseInstalled === false ? 'Get Searchbase' : 'Searchbase on Splunkbase'}
+                                </Link>
+                            </Tooltip>
+                        </ActionRow>
+                    )}
                     {feedback && <Message type={feedback.error ? 'error' : 'success'} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</Message>}
                     {loading && <p role="status">Looking for Searchbase matches…</p>}
                     {result && <>
@@ -239,6 +266,8 @@ export default function AskAi({
                         )}
                         {result.records.map((record) => {
                             const needsInputs = /\$[\w.]+\$/.test(record.search);
+                            const ambiguous = result.ambiguousIds.has(record.id);
+                            const searchbaseLabel = ambiguous ? 'Browse Searchbase' : 'Open in Searchbase';
                             return <SearchCard key={`${record.ownerApp}:${record.id}`}>
                                 <Heading level={3} variant="title4">{record.searchName}</Heading>
                                 <p>{[record.ownerApp, record.category, record.subCategory].filter(Boolean).join(' · ')}</p>
@@ -260,8 +289,24 @@ export default function AskAi({
                                 </details>
                                 {needsInputs && <p>This search needs inputs from its original view.</p>}
                                 <ActionRow>
-                                    {!needsInputs && <Button appearance="secondary" label="Open in Search" openInNewContext
-                                        to={splunkSearchAppUrl(addLeadingSearchCommand(record.search), range, record.dispatchContext)} />}
+                                    {!needsInputs && (
+                                        <Link appearance="standalone" openInNewContext
+                                            aria-label={`Open in Search: ${record.searchName} (opens in new window)`}
+                                            to={splunkSearchAppUrl(addLeadingSearchCommand(record.search), range, record.dispatchContext)}>
+                                            Open in Search
+                                        </Link>
+                                    )}
+                                    {searchbaseInstalled === true && (
+                                        <Tooltip content={ambiguous
+                                            ? 'This search ID exists in more than one app. Find it by name and app in Searchbase.'
+                                            : 'View this saved search and its details in the Searchbase app.'} wrapContent>
+                                            <Link appearance="standalone" openInNewContext
+                                                aria-label={`${searchbaseLabel}: ${record.searchName} (opens in new window)`}
+                                                to={splunkSearchbaseEditUrl(ambiguous ? undefined : record.id)}>
+                                                {searchbaseLabel}
+                                            </Link>
+                                        </Tooltip>
+                                    )}
                                     {!needsInputs && destination && <>
                                         <Tooltip content={WORKSPACE_ADD_HELP.personal}>
                                             <Button appearance="secondary" label="Add for me" disabled={adding}

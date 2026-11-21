@@ -16,6 +16,30 @@ const exportsFromSource = {};
 new Function("exports", outputText)(exportsFromSource);
 const { rankSearchbaseMatches } = exportsFromSource;
 
+test("Searchbase discovery distinguishes a missing app from an unavailable registry", async () => {
+  const source = fs.readFileSync(path.resolve(__dirname, "../src/main/webapp/common/lib/searchbase.js"), "utf8");
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  });
+  const app = { name: "searchbase" };
+  const scenarios = [
+    [200, [app], true],
+    [404, [], false],
+    [403, [], null],
+    [200, [], null],
+    [200, [{ ...app, content: { disabled: true } }], null],
+  ];
+  for (const [status, entry, expected] of scenarios) {
+    const library = {};
+    const fetch = async (url) => {
+      assert.match(url, /\/services\/apps\/local\/searchbase\?/);
+      return { ok: status === 200, status, json: async () => ({ entry }) };
+    };
+    new Function("exports", "require", "fetch", outputText)(library, () => ({ getDefaultFetchInit: () => ({}) }), fetch);
+    assert.equal(await library.isSearchBaseInstalled(), expected, `registry status ${status}, ${entry.length} entries`);
+  }
+});
+
 function record(id, searchName, overrides = {}) {
   return {
     id,
