@@ -210,7 +210,6 @@ import {
   BRANDING_ACCEPTED_LOGO_MIME_TYPES,
   type BrandingOverride,
 } from "@/common/hooks/useBrandingOverride";
-import { resolveAppVersions } from "@/common/lib/appVersion";
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
 import { SortableMetricCard } from "@/common/components/workspace/SortableMetricCard";
 import { WorkspaceManager } from "@/common/components/workspace/WorkspaceManager";
@@ -267,14 +266,6 @@ const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 // out-of-the-box value for fresh deployments.
 const DEFAULT_HEADER_SUBTITLE = "Splunk Secure Networking Essentials";
 const DEFAULT_HEADER_TITLE_FALLBACK = "Your Organization Name";
-const splunkLocalePrefix = (): string => {
-  if (typeof window === "undefined") return "/en-US";
-  const match = window.location.pathname.match(
-    /^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/,
-  );
-  return `/${match ? match[1] : "en-US"}`;
-};
-
 const MIN_DASHBOARD_HEIGHT_PX = 520;
 const COMPACT_HEIGHT_THRESHOLD_PX = 720;
 const SECTION_HEIGHT_BASE_PX = 180;
@@ -2713,8 +2704,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       ? ""
       : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) || "",
   );
-  const [appVersionLabel, setAppVersionLabel] =
-    useState<string>(APP_VERSION_LABEL);
   const appCatalogUrl = secureNetworkingEssentialsCatalogUrl();
   const { resetAll: resetBrandingOverride } = useBrandingOverride(
     insightsWorkspace.id,
@@ -3844,53 +3833,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     }, autoRefreshSeconds * 1000);
     return () => window.clearInterval(id);
   }, [autoRefreshSeconds, refreshNow]);
-
-  // ------------------------------ Installed app identity fetch ------------------------------
-  // The package step stamps the release build into the installed app.conf
-  // after webpack has compiled the bundle. Prefer that live value so the
-  // operator sees the version/build Splunk is actually running. Retain the
-  // compile-time label as a resilient fallback when the endpoint is unavailable.
-  // The shared executive_insights_bootstrap.js owns the update badge so both
-  // workspace shells get the same update check and direct app-installer link.
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    let cancelled = false;
-
-    fetch(
-      `${splunkLocalePrefix()}/splunkd/__raw/services/apps/local/${encodeURIComponent(APP_NAME)}?output_mode=json`,
-      {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      },
-    )
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<{
-          entry?: Array<{ content?: Record<string, unknown> }>;
-        }>;
-      })
-      .then((json) => {
-        if (cancelled) return;
-        const content = json.entry?.[0]?.content ?? {};
-        const { version } = resolveAppVersions({
-          installedVersion: content.version,
-        });
-        const build =
-          typeof content.build === "string" || typeof content.build === "number"
-            ? String(content.build).trim()
-            : "";
-        if (version) {
-          setAppVersionLabel(`v${version}${build ? ` · Build ${build}` : ""}`);
-        }
-      })
-      .catch(() => {
-        // Keep the compile-time label when app metadata is unavailable.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // ------------------------------ Metric / KPI overrides (picker) ------------------------------
   //
@@ -5320,10 +5262,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           <Button
             appearance="subtle"
             className="scd-header-app-version"
-            label={appVersionLabel}
+            label={APP_VERSION_LABEL}
             openInNewContext
-            title={`App details and upgrades — ${appVersionLabel} (opens in new window)`}
-            aria-label={`App details and upgrades, ${appVersionLabel} (opens in new window)`}
+            title={`App details and upgrades — ${APP_VERSION_LABEL} (opens in new window)`}
+            aria-label={`App details and upgrades, ${APP_VERSION_LABEL} (opens in new window)`}
             to={appCatalogUrl}
           />
           <span

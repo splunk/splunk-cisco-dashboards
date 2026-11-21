@@ -387,9 +387,12 @@ assert.ok(
 );
 assert.match(
   profile.slice(versionLink, headerEnd),
-  /label=\{appVersionLabel\}[\s\S]*?openInNewContext[\s\S]*?to=\{appCatalogUrl\}/,
+  /label=\{APP_VERSION_LABEL\}[\s\S]*?openInNewContext[\s\S]*?to=\{appCatalogUrl\}/,
 );
-assert.doesNotMatch(profile, /description=\{appVersionLabel\}/);
+assert.doesNotMatch(profile, /description=\{APP_VERSION_LABEL\}/);
+// A filesystem deployment can serve the new bundle while splunkd still
+// reports the prior app.conf. Server metadata must not override the badge.
+assert.doesNotMatch(profile, /\/services\/apps\/local\//);
 const updateBootstrap = require(
   "../src/main/resources/splunk/appserver/static/executive_insights_bootstrap.js",
 );

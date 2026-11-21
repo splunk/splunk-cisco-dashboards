@@ -16,7 +16,7 @@ networking pillars and workplace scenarios.
 - **More reliable metrics:** Corrected client-health totals, filters, and missing-data handling.
 - **Improved investigations:** More accurate DNS, VPN, firewall, SGT, syslog, and transfer-data results and drill-downs.
 - **Easier configuration:** Smoother dashboard creation and improved Infoblox index discovery.
-- **Better usability:** Readable User Guide formatting, clearer chart labels, and improved keyboard and theme support.
+- **Better usability:** Readable User Guide formatting, clearer chart labels, and improved keyboard and theme support. The Workspace header shows the build loaded in the browser so you can verify an update after refreshing.
 
 See the in-app **User Guide** for earlier releases, upgrade actions, and configuration instructions.
 
