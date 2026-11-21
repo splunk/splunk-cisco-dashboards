@@ -20,6 +20,7 @@ interface WorkspaceModalShellProps {
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     headerMeta?: React.ReactNode;
+    headerActions?: React.ReactNode;
     wide?: boolean;
     renderInDocumentBody?: boolean;
     contentClassName?: string;
@@ -105,6 +106,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     onOpenDetailTable,
     detailTableTitle,
     headerMeta,
+    headerActions,
     wide = false,
     renderInDocumentBody = false,
     contentClassName,
@@ -315,11 +317,11 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Open ${title} in Search`}
-                aria-label={`Open ${title} in Search`}
+                aria-label={headerActions ? `Open in Search: ${title} (opens in new window)` : `Open ${title} in Search`}
                 className={ACTION_CLASS}
             >
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                Search
+                {headerActions ? 'Open in Search' : 'Search'}
             </a>
         );
     } else if (onOpenInSearch) {
@@ -343,10 +345,10 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             title={`Open ${title} in Searchbase`}
-            aria-label={`Open ${title} in Searchbase`}
+            aria-label={headerActions ? `Open in Searchbase: ${title} (opens in new window)` : `Open ${title} in Searchbase`}
             className={ACTION_CLASS}
         >
-            Searchbase
+            {headerActions ? 'Open in Searchbase' : 'Searchbase'}
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
     ) : null;
@@ -397,8 +399,11 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'
                 )}
             >
-                <div className="scd-workspace-modal-header flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b sui-border-weak py-2.5 pl-5 pr-4 backdrop-blur-xl">
-                    <div className="min-w-0">
+                <div className={cn(
+                    'scd-workspace-modal-header flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b sui-border-weak py-2.5 pl-5 pr-4 backdrop-blur-xl',
+                    headerActions && 'flex-wrap gap-2'
+                )}>
+                    <div className={cn('min-w-0', headerActions && 'flex-1 basis-48 max-[719px]:basis-full')}>
                         <h2
                             id={titleId}
                             className="truncate  font-bold leading-[19px] sui-color-default"
@@ -414,10 +419,11 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                             </p>
                         )}
                     </div>
-                    <div className="flex flex-shrink-0 items-center gap-2">
+                    <div className={cn('flex flex-shrink-0 items-center gap-2', headerActions && 'max-w-full flex-wrap')}>
                         {headerMeta && <div className="hidden items-center gap-2 lg:flex">{headerMeta}</div>}
                         {searchAction}
                         {searchbaseAction}
+                        {headerActions}
                         {onOpenDetailTable && (
                             <button
                                 type="button"

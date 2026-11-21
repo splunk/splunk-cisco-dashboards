@@ -88,7 +88,7 @@ test("promotes release history while keeping contents and document order aligned
 test("renders every recorded release with stable links and only the newest expanded", () => {
   const html = parseGuide(markdown).html;
   const panels = [...html.matchAll(/<details class="scd-guide-release-panel" id="([^"]+)" data-release-label="([^"]+)"( open)?>/g)];
-  const versions = ['1.0.90', '1.0.80', '1.0.70', '1.0.60', '1.0.55', '1.0.54', '1.0.53', '1.0.52', '1.0.51', '1.0.50', '1.0.49', '1.0.46', '1.0.45', '1.0.44', '1.0.35'];
+  const versions = ['1.1.0', '1.0.90', '1.0.80', '1.0.70', '1.0.60', '1.0.55', '1.0.54', '1.0.53', '1.0.52', '1.0.51', '1.0.50', '1.0.49', '1.0.46', '1.0.45', '1.0.44', '1.0.35'];
   assert.deepEqual(panels.map((m) => m[2]), versions.map((v) => `Version ${v}`));
   assert.equal(panels.filter((m) => m[3]).length, 1);
   assert.ok(panels[0][3]);
@@ -101,7 +101,7 @@ test("renders every recorded release with stable links and only the newest expan
   assert.equal((html.match(/data-release-action="expand"/g) || []).length, 1);
   const releaseTitles = new Map([...markdown.matchAll(/^::: release (.*?) \| .*?Version (\d+\.\d+\.\d+)$/gm)].map((m) => [m[2], m[1]]));
   assert.equal(releaseTitles.get('1.0.35'), 'Initial Alpha release');
-  for (const version of versions.slice(3, -1)) {
+  for (const version of versions.slice(versions.indexOf('1.0.60'), -1)) {
     assert.equal(releaseTitles.get(version), 'Beta release', `${version} was beta`);
   }
   assert.equal(releaseTitles.get('1.0.70'), 'Release Notes');

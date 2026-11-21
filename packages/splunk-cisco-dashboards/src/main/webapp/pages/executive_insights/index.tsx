@@ -4,6 +4,7 @@ import { dcScopeDashboardUrl } from "@/common/lib/dcNetworkingScope";
 import React, {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -34,13 +35,13 @@ import Menu from "@splunk/react-ui/Menu";
 import Message from "@splunk/react-ui/Message";
 import Modal from "@splunk/react-ui/Modal";
 import Multiselect from "@splunk/react-ui/Multiselect";
-import Paginator from "@splunk/react-ui/Paginator";
 import RadioBar from "@splunk/react-ui/RadioBar";
 import SearchInput from "@splunk/react-ui/Search";
 import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import Select from "@splunk/react-ui/Select";
 import SpotLight from "@splunk/react-ui/SpotLight";
 import StaticContent from "@splunk/react-ui/StaticContent";
+import TabBar from "@splunk/react-ui/TabBar";
 import WaitSpinner from "@splunk/react-ui/WaitSpinner";
 import { variables } from "@splunk/themes";
 import useSplunkTheme from "@splunk/themes/useSplunkTheme";
@@ -1387,6 +1388,8 @@ interface MetricDetailTableColumn {
 
 interface MetricDetailTableTargetConfig {
   searchbaseId: string;
+  label: string;
+  defaultSortField?: string;
   defaultViz?: string;
   vizOptions?: Record<string, unknown>;
   metadata: SearchbaseDrilldownMetadata;
@@ -1573,8 +1576,9 @@ const buildMetricDetailTableConfig = (
   const primaryOptions = details[0].vizOptions;
   return {
     title:
+      readDetailStringOption(source.vizOptions, "modalTitle") ??
       readDetailStringOption(primaryOptions, "modalTitle") ??
-      `Drill down: ${source.searchName}`,
+      source.searchName,
     buttonTitle:
       source.drilldownButtonTitle ??
       readDetailStringOption(primaryOptions, "buttonTitle") ??
@@ -1584,13 +1588,15 @@ const buildMetricDetailTableConfig = (
       const columns = parseDetailTableColumns(options?.columns);
       const subtitleTemplate =
         readDetailStringOption(options, "modalSubtitle") ??
-        "Supporting Searchbase results and guidance for {rangeLabel}.";
+        "{RangeLabel}";
       const tag = `detail_table_${detail.id || detail.searchName}`.replace(
         /[^A-Za-z0-9_]+/g,
         "_",
       );
       return {
         searchbaseId: detail.id,
+        label: readDetailStringOption(options, "drilldownLabel") ?? detail.searchName,
+        defaultSortField: readDetailStringOption(options, "defaultSortField"),
         defaultViz: detail.defaultViz,
         vizOptions: detail.vizOptions,
         metadata: {
@@ -7826,6 +7832,10 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeConfig = config.targets[activeIndex] ?? config.targets[0];
+  const [showGuidance, setShowGuidance] = useState(false);
+  const modalId = useId();
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const resultsScroll = useRef({ top: 0, left: 0 });
   const targetKey = config.targets
     .map((target) => target.searchbaseId)
     .join("\u0000");
@@ -7837,6 +7847,12 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [sortState, setSortState] = useState<MetricDetailSortState | null>(
     null,
+  );
+  const defaultSort = useMemo<MetricDetailSortState | null>(
+    () => activeConfig.defaultSortField
+      ? { field: activeConfig.defaultSortField, direction: "desc" }
+      : null,
+    [activeConfig.defaultSortField],
   );
   const activeIsTable = isTableViz(activeConfig.defaultViz);
   const activeDefinition = useMemo(
@@ -7858,11 +7874,17 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
 
   useEffect(() => {
     setActiveIndex(0);
+    setShowGuidance(false);
+    resultsScroll.current = { top: 0, left: 0 };
   }, [targetKey]);
 
   useEffect(() => {
     if (activeIndex >= config.targets.length) setActiveIndex(0);
   }, [activeIndex, config.targets.length]);
+
+  useLayoutEffect(() => {
+    if (!showGuidance) resultsRef.current?.scrollTo(resultsScroll.current);
+  }, [showGuidance, activeIndex]);
 
   useEffect(() => {
     if (!activeIsTable) {
@@ -7880,7 +7902,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     setRows([]);
     setTableColumns(activeConfig.columns);
     setErrorMessage("");
-    setSortState(null);
+    setSortState(defaultSort);
 
     runSearch({
       spl: activeConfig.spl,
@@ -7933,11 +7955,11 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       cancelled = true;
       controller.abort();
     };
-  }, [activeConfig, activeIsTable, range.earliest, range.latest, refreshToken]);
+  }, [activeConfig, activeIsTable, defaultSort, range.earliest, range.latest, refreshToken]);
 
   const availableStatus = activeConfig.availableStatus ?? "Available";
   const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";
-  const titleId = `${activeConfig.tag}-title`;
+  const titleId = `${modalId}-title`;
   const statusField = activeConfig.statusField;
   const displayColumns =
     tableColumns.length > 0 ? tableColumns : activeConfig.columns;
@@ -7981,11 +8003,26 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     activeConfig.dispatchContext,
   );
   const searchbaseUrl = splunkSearchbaseEditUrl(activeConfig.searchbaseId);
-  const activeClassification = [
-    activeConfig.metadata.category,
-    activeConfig.metadata.subCategory,
-  ].filter(Boolean);
-  const resultTitleId = `${activeConfig.tag}-results-title`;
+  const resultTitleId = `${modalId}-results-title`;
+  const resultsRegionId = `${modalId}-results`;
+  const guidanceId = `${modalId}-guidance`;
+  const tabId = (index: number) => `${resultTitleId}-tab-${index}`;
+  const hasGuidance = [
+    activeConfig.metadata.description,
+    activeConfig.metadata.explanation,
+    activeConfig.metadata.solution,
+    activeConfig.metadata.relatedInfo,
+    activeConfig.metadata.executionPlan,
+  ].some((value) => value?.trim());
+  const toggleGuidance = () => {
+    if (!showGuidance && resultsRef.current) {
+      resultsScroll.current = {
+        top: resultsRef.current.scrollTop,
+        left: resultsRef.current.scrollLeft,
+      };
+    }
+    setShowGuidance((shown) => !shown);
+  };
   const showTarget = (nextIndex: number) => {
     const boundedIndex = Math.max(
       0,
@@ -8000,6 +8037,8 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     setErrorMessage("");
     setSortState(null);
     setLoading(true);
+    resultsScroll.current = { top: 0, left: 0 };
+    setShowGuidance(false);
     setActiveIndex(boundedIndex);
   };
 
@@ -8012,8 +8051,19 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       onClose={onClose}
       openInSearchHref={searchUrl}
       openInSearchbaseHref={searchbaseUrl}
-      wide={!activeIsTable || displayColumns.length > 5}
+      wide={!activeIsTable || displayColumns.length >= 5}
       contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"
+      headerActions={
+        hasGuidance ? (
+          <Button
+            appearance="secondary"
+            label={showGuidance ? "Back to results" : "Search guidance"}
+            aria-controls={guidanceId}
+            aria-expanded={showGuidance}
+            onClick={toggleGuidance}
+          />
+        ) : undefined
+      }
       headerMeta={
         activeIsTable && statusField ? (
           <>
@@ -8029,51 +8079,51 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         ) : undefined
       }
     >
-      <div
-        className="scd-workspace-modal-subheader flex shrink-0 items-center border-b sui-border-weak px-4 py-2.5"
-        data-detail-search-summary="true"
-      >
-        <div className="min-w-0 flex-1">
-          <div
-            id={resultTitleId}
-            className="truncate text-sm font-bold sui-color-default"
+      {config.targets.length > 1 && (
+        <div hidden={showGuidance} className="scd-workspace-modal-subheader shrink-0 overflow-x-auto border-b sui-border-weak px-4">
+          <TabBar
+            aria-label="Drilldown views"
+            activeTabId={activeConfig.searchbaseId}
+            autoActivate={false}
+            maxTabWidth={280}
+            onChange={(_event, { selectedTabId }) => {
+              const nextIndex = config.targets.findIndex(
+                (target) => target.searchbaseId === selectedTabId,
+              );
+              if (nextIndex >= 0) showTarget(nextIndex);
+            }}
           >
-            {activeConfig.metadata.title}
-          </div>
-          {activeClassification.length > 0 && (
-            <div className="mt-0.5  font-bold  tracking-[0.12em] sui-color-default">
-              {activeClassification.join(" • ")}
-            </div>
-          )}
+            {config.targets.map((target, index) => (
+              <TabBar.Tab
+                key={target.searchbaseId}
+                tabId={target.searchbaseId}
+                id={tabId(index)}
+                ariaControls={resultsRegionId}
+                label={target.label}
+                tooltip={target.label}
+              />
+            ))}
+          </TabBar>
+          <ScreenReaderContent aria-live="polite">
+            Showing {activeConfig.metadata.title}
+          </ScreenReaderContent>
         </div>
-        {config.targets.length > 1 && (
-          <div className="ml-4 flex-shrink-0">
-            <Paginator.Compact
-              aria-label="Drill-down search navigation"
-              current={activeIndex + 1}
-              onChange={(_event, { page }) => {
-                if (page !== undefined) showTarget(page - 1);
-              }}
-              renderLabel={({ current, totalPages }) =>
-                `${current ?? 1} / ${totalPages ?? config.targets.length}`
-              }
-              totalPages={config.targets.length}
-            />
-            <ScreenReaderContent aria-live="polite">
-              Showing {activeConfig.metadata.title}, search {activeIndex + 1} of{" "}
-              {config.targets.length}
-            </ScreenReaderContent>
-          </div>
-        )}
-      </div>
+      )}
       <div
-        className="min-h-[154px] max-h-[min(46vh,520px)] shrink overflow-auto overscroll-contain"
+        id={resultsRegionId}
+        ref={resultsRef}
+        hidden={showGuidance}
+        role={config.targets.length > 1 ? "tabpanel" : "region"}
+        aria-labelledby={config.targets.length > 1 ? tabId(activeIndex) : resultTitleId}
+        tabIndex={0}
+        className="min-h-0 flex-1 overflow-auto overscroll-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
         data-detail-results-region="content-aware"
       >
+        <h3 id={resultTitleId} className="sr-only">{activeConfig.metadata.title}</h3>
         {activeIsTable ? (
           <table
             aria-labelledby={resultTitleId}
-            className="w-full min-w-[860px] sui-bg-transparent text-sm"
+            className={cn("w-full sui-bg-transparent text-sm", displayColumns.length > 5 ? "min-w-[860px]" : "min-w-[600px]")}
           >
             <thead className="scd-workspace-modal-subheader sticky top-0 z-10 border-b sui-border-weak backdrop-blur-xl">
               <tr className="text-left text-xs font-bold sui-color-default">
@@ -8246,10 +8296,22 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
           )
         )}
       </div>
-      <SearchbaseDrilldownGuidance
-        metadata={activeConfig.metadata}
-        appearance="workspace"
-      />
+      {hasGuidance && (
+        <div
+          id={guidanceId}
+          hidden={!showGuidance}
+          role="region"
+          aria-labelledby={`${guidanceId}-title`}
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-auto overscroll-contain px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
+        >
+          <Heading level={3} variant="title3" id={`${guidanceId}-title`} className="mb-4">Search guidance</Heading>
+          {showGuidance && <SearchbaseDrilldownGuidance
+            metadata={activeConfig.metadata}
+            appearance="inline"
+          />}
+        </div>
+      )}
     </WorkspaceModalShell>
   );
 };

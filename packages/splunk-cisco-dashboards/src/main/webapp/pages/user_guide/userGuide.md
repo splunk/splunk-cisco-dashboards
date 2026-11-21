@@ -1,7 +1,7 @@
 ---
 exportTitle: Splunk Secure Networking Essentials User Guide
 contentOwner: splunk-cisco-dashboards
-version: 1.0.90
+version: 1.1.0
 lastUpdated: November 2026
 ---
 <!-- Single source of truth for the in-product User Guide and release history. -->
@@ -34,6 +34,13 @@ Use the app to:
 ## What’s New / Release Notes {#release-notes}
 
 Browse the current release and recorded historical versions below. The newest release opens by default. Choose a version link or expand a release to read its changes; use **Expand all** to review the full history. Version **1.0.35** was an **alpha** release; the recorded versions **1.0.44 through 1.0.60** were **beta** releases.
+
+::: release Release Notes | November 2026 - Version 1.1.0
+
+- **Ask AI (Preview):** Find and review matching Searchbase searches from a monitoring question. Review the top matches, show more results, or add a search to a workspace section.
+- **Workspace drilldowns:** Switch between named views, review full-height results, and open search guidance when needed. The ISE network-device view starts with the highest failed authentication counts.
+
+:::
 
 ::: release Release Notes | November 2026 - Version 1.0.90
 

@@ -1042,9 +1042,12 @@ assert.match(profile, /aria-live="polite" role="status"/);
 assert.match(profile, /previousAction\?\.isConnected/);
 assert.match(
   profile,
-  /<Paginator\.Compact[\s\S]*?aria-label="Drill-down search navigation"[\s\S]*?current=\{activeIndex \+ 1\}[\s\S]*?totalPages=\{config\.targets\.length\}/,
-  "Multi-target drill-downs must use the native paginated search navigation",
+  /<TabBar[\s\S]*?aria-label="Drilldown views"[\s\S]*?<TabBar\.Tab[\s\S]*?ariaControls=\{resultsRegionId\}[\s\S]*?label=\{target\.label\}/,
+  "Multi-target drilldowns must name each view and connect the tabs to the results",
 );
+assert.match(profile, /label=\{showGuidance \? "Back to results" : "Search guidance"\}/);
+assert.match(profile, /ref=\{resultsRef\}[\s\S]*?hidden=\{showGuidance\}/);
+assert.match(profile, /resultsRef\.current\?\.scrollTo\(resultsScroll\.current\)/);
 assert.match(
   profile,
   /<ScreenReaderContent aria-live="polite">[\s\S]*?Showing \{activeConfig\.metadata\.title\}/,
