@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import Button from '@splunk/react-ui/Button';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Drawer from '@splunk/react-ui/Drawer';
@@ -51,6 +51,16 @@ const ActionRow = styled.div`
     flex-wrap: wrap;
     align-items: center;
     gap: ${variables.spacingSmall};
+`;
+
+const AskAiSparkles = styled(Sparkles)<{ $gradientId: string }>`
+    path, use {
+        fill: ${({ $gradientId }) => `url("#${$gradientId}")`};
+    }
+
+    @media (forced-colors: active), (prefers-contrast: more) {
+        path, use { fill: currentColor; }
+    }
 `;
 
 const CatalogueDetails = styled.dl`
@@ -115,6 +125,7 @@ export default function AskAi({
     canManageWorkspace = false,
     showLabel = false,
 }: AskAiProps) {
+    const iconGradientId = useId();
     const trigger = useRef<HTMLButtonElement | null>(null);
     const pending = useRef<object | null>(null);
     const activeContext = useRef(contextId);
@@ -220,7 +231,17 @@ export default function AskAi({
             appearance="secondary"
             label="Ask AI"
             hideLabel={!showLabel}
-            icon={<Sparkles aria-hidden="true" />}
+            icon={(
+                <AskAiSparkles aria-hidden="true" variant="filled" size={24} $gradientId={iconGradientId}>
+                    <defs>
+                        {/* Match the gradient in Splunk Search's AI Assistant launcher. */}
+                        <linearGradient id={iconGradientId} x1="0" y1="0" x2="27.7119" y2="5.58624" gradientUnits="userSpaceOnUse">
+                            <stop stopColor="#FFAB0F" />
+                            <stop offset="0.993998" stopColor="#FF0F7B" />
+                        </linearGradient>
+                    </defs>
+                </AskAiSparkles>
+            )}
             aria-haspopup="dialog"
             elementRef={trigger}
             onClick={openDrawer}
