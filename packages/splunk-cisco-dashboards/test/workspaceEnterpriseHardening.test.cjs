@@ -1049,12 +1049,12 @@ const drilldownContent = profile.slice(
   profile.indexOf("const MetricDrilldownContent:"),
   profile.indexOf("interface SectionTitlesEditorModalProps"),
 );
-assert.match(profile, /<Drawer[\s\S]*?open=\{activeDetailTable !== null\}[\s\S]*?<MetricDrilldownContent/);
+assert.match(profile, /<Drawer\s+divider="both"[\s\S]*?open=\{activeDetailTable !== null\}\s+position="inline"[\s\S]*?<MetricDrilldownContent/);
 assert.match(drilldownContent, /<Drawer.Body\s+className="scd-insights-layer-content"/);
 assert.match(drilldownContent, /<Drawer.Footer\s+className="scd-insights-layer-content"/);
 assert.match(drilldownContent, /activeTabId=\{showGuidance \? "guidance" : "results"\}/);
 assert.match(drilldownContent, /id=\{resultsPanelId\}[\s\S]*?hidden=\{showGuidance\}/);
-assert.match(drilldownContent, /<Drawer.Footer[\s\S]*?label="Open in Searchbase"[\s\S]*?to=\{searchbaseUrl\}[\s\S]*?label="Open in Search"[\s\S]*?to=\{searchUrl\}/);
+assert.match(drilldownContent, /<Drawer.Footer[\s\S]*?label="Open in Search"[\s\S]*?to=\{searchUrl\}[\s\S]*?label="Open in Searchbase"[\s\S]*?to=\{searchbaseUrl\}/);
 assert.match(profile, /record\.tags\.filter\([\s\S]*?tag !== record\.catalogueApp && tag !== record\.ownerApp/);
 assert.match(profile, /resultsRef\.current\?\.scrollTo\(resultsScroll\.current\)/);
 const detailOptionsSource = profile.slice(

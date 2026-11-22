@@ -5569,616 +5569,661 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 tailwind.css because it sits between Tailwind's stock lg
                 and xl stops. */}
       <main
-        className={cn(
-          "flex-1 min-h-[400px] w-full overflow-y-auto overflow-x-hidden",
-          compactDensity ? "py-1.5" : "py-2",
-        )}
+        className="scd-overview-drilldown-stage w-full flex-1 overflow-hidden"
+        data-workspace-drilldown-open={activeDetailTable !== null}
       >
         <div
-          ref={splitContainerRef}
-          data-map-position={activeMapPosition}
           className={cn(
-            // Map placement is now operator-configurable. Three
-            // modes are wired to the segmented control in the
-            // map card header (default `below`):
-            //   • right  — original split-pane behaviour, side-
-            //              by-side at xl+, stacked below on
-            //              smaller widths. Drag splitter to
-            //              rebalance.
-            //   • below  — tiles on top, map below. No
-            //              breakpoint switch — same layout at
-            //              every width.
-            //   • above  — same as below but with the column
-            //              order reversed so the map sits on
-            //              top. Uses `flex-col-reverse` rather
-            //              than rearranging the JSX so the
-            //              splitter logic stays attached to
-            //              its sibling.
-            // Fill the viewport when content is short, but allow the split
-            // row to grow to the map and KPI cards' natural height.
-            "scd-overview-split flex gap-2 min-h-full relative",
-            mapVisible
-              ? mapPosition === "right"
-                ? "flex-col xl:flex-row"
-                : mapPosition === "above"
-                  ? "flex-col-reverse"
-                  : "flex-col"
-              : "flex-col",
+            "scd-overview-drilldown-workspace min-h-0 min-w-0 overflow-y-auto overflow-x-hidden",
+            compactDensity ? "py-1.5" : "py-2",
           )}
-          style={splitStyle}
         >
-          {/* Left column — configurable metric sections.
-                        In right mode at xl+ widths the column width is
-                        driven by the --scd-left-pct CSS variable, which
-                        the splitter updates on drag. In below/above modes
-                        the column is full-width and its *height* is
-                        driven by `leftPct` via an inline flex-basis (we
-                        can't reuse the CSS var because Tailwind's
-                        responsive variants don't conditionally swap
-                        width vs height cleanly). The map column then
-                        takes the remainder via `flex-1`, which gives
-                        the same drag-to-resize feel vertically as the
-                        existing right-mode splitter delivers
-                        horizontally. */}
-          <OverviewMetricsColumn
-            // overflow-y-auto: when the viewport is too short
-            // to fit visible sections at their min-h-[180px]
-            // floor (plus ticker + header +
-            // gap), the metric column scrolls vertically
-            // instead of squishing the chart canvases below
-            // readability. The map column keeps its own
-            // height so the topology stays anchor-visible.
-            // Below xl in `right` mode, the layout has
-            // already collapsed to a stacked column anyway,
-            // so this overflow rule applies in every mode.
-            // overflow-x-hidden prevents a horizontal
-            // scrollbar from showing up due to the cards'
-            // shadow bleed at narrow widths.
-            className={cn(
-              "scd-overview-metrics flex flex-col gap-3 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden",
-              mapVisible && mapPosition === "right"
-                ? "xl:w-[var(--scd-left-pct)] xl:flex-shrink-0"
-                : "",
-            )}
+          <div
+            ref={splitContainerRef}
             data-map-position={activeMapPosition}
-            style={verticalMetricsStyle}
+            className={cn(
+              // Map placement is now operator-configurable. Three
+              // modes are wired to the segmented control in the
+              // map card header (default `below`):
+              //   • right  — original split-pane behaviour, side-
+              //              by-side at xl+, stacked below on
+              //              smaller widths. Drag splitter to
+              //              rebalance.
+              //   • below  — tiles on top, map below. No
+              //              breakpoint switch — same layout at
+              //              every width.
+              //   • above  — same as below but with the column
+              //              order reversed so the map sits on
+              //              top. Uses `flex-col-reverse` rather
+              //              than rearranging the JSX so the
+              //              splitter logic stays attached to
+              //              its sibling.
+              // Fill the viewport when content is short, but allow the split
+              // row to grow to the map and KPI cards' natural height.
+              "scd-overview-split flex gap-2 min-h-full relative",
+              mapVisible
+                ? mapPosition === "right"
+                  ? "flex-col xl:flex-row"
+                  : mapPosition === "above"
+                    ? "flex-col-reverse"
+                    : "flex-col"
+                : "flex-col",
+            )}
+            style={splitStyle}
           >
-            {visibleSections.map((section, sectionIndex) => {
-              const meta = effectiveSectionMeta[section];
-              const allSectionMetrics = renderMetricConfig.filter(
-                (m) => m.section === section,
-              );
-              const locallyAddedSearchbaseIds = new Set(
-                getSectionTileAdditions(section),
-              );
-              // The pill's max is whichever is smaller —
-              // the global cap (sectionTileBounds.maxCount)
-              // or what the searchbase-backed catalogue actually offers for
-              // this section. This keeps the UI honest if
-              // someone trims a section to fewer tiles in
-              // searchbase.conf without touching this code.
-              const sectionMaxAvailable = Math.min(
-                sectionTileBounds.maxCount,
-                allSectionMetrics.length,
-              );
-              const visibleCount = Math.min(
-                sectionTileCounts[section],
-                sectionMaxAvailable,
-              );
-              const isShowingAllTiles =
-                Boolean(showAllTileSections[section]) &&
-                sectionMaxAvailable > visibleCount;
-              const renderedTileCount = isShowingAllTiles
-                ? sectionMaxAvailable
-                : visibleCount;
-              const wrapTiles = renderedTileCount >= SECTION_WRAP_TILE_COUNT;
-              const estimatedTileRows = wrapTiles
-                ? Math.ceil(renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS)
-                : 1;
-              const isSectionFocused = focusedSection === section;
-              const isSectionCollapsed = isSectionFocused
-                ? false
-                : Boolean(collapsedSections[section] || focusedSection);
-              const heightLevel =
-                sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
-              const isCompactHeight =
-                heightLevel === sectionHeightBounds.minLevel;
-              const renderCompactHeight = isCompactHeight && !isSectionFocused;
-              const baseMinHeight = renderCompactHeight
-                ? SECTION_HEIGHT_H1_BASE_PX
-                : compactDensity
-                  ? SECTION_HEIGHT_COMPACT_BASE_PX
-                  : SECTION_HEIGHT_BASE_PX;
-              const wrappedRowStep = renderCompactHeight
-                ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
-                : SECTION_WRAPPED_TILE_ROW_STEP_PX;
-              const tilePageCount = meaningfulTilePageCount(
-                sectionMaxAvailable,
-                visibleCount,
-                Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
-              );
-              const sectionMinHeight =
-                baseMinHeight +
-                (heightLevel - sectionHeightBounds.minLevel) *
-                  SECTION_HEIGHT_STEP_PX +
-                (estimatedTileRows - 1) * wrappedRowStep +
-                (isShowingAllTiles || tilePageCount > 1 ? tilePagerHeight : 0);
+            {/* Left column — configurable metric sections.
+                          In right mode at xl+ widths the column width is
+                          driven by the --scd-left-pct CSS variable, which
+                          the splitter updates on drag. In below/above modes
+                          the column is full-width and its *height* is
+                          driven by `leftPct` via an inline flex-basis (we
+                          can't reuse the CSS var because Tailwind's
+                          responsive variants don't conditionally swap
+                          width vs height cleanly). The map column then
+                          takes the remainder via `flex-1`, which gives
+                          the same drag-to-resize feel vertically as the
+                          existing right-mode splitter delivers
+                          horizontally. */}
+            <OverviewMetricsColumn
+              // overflow-y-auto: when the viewport is too short
+              // to fit visible sections at their min-h-[180px]
+              // floor (plus ticker + header +
+              // gap), the metric column scrolls vertically
+              // instead of squishing the chart canvases below
+              // readability. The map column keeps its own
+              // height so the topology stays anchor-visible.
+              // Below xl in `right` mode, the layout has
+              // already collapsed to a stacked column anyway,
+              // so this overflow rule applies in every mode.
+              // overflow-x-hidden prevents a horizontal
+              // scrollbar from showing up due to the cards'
+              // shadow bleed at narrow widths.
+              className={cn(
+                "scd-overview-metrics flex flex-col gap-3 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden",
+                mapVisible && mapPosition === "right"
+                  ? "xl:w-[var(--scd-left-pct)] xl:flex-shrink-0"
+                  : "",
+              )}
+              data-map-position={activeMapPosition}
+              style={verticalMetricsStyle}
+            >
+              {visibleSections.map((section, sectionIndex) => {
+                const meta = effectiveSectionMeta[section];
+                const allSectionMetrics = renderMetricConfig.filter(
+                  (m) => m.section === section,
+                );
+                const locallyAddedSearchbaseIds = new Set(
+                  getSectionTileAdditions(section),
+                );
+                // The pill's max is whichever is smaller —
+                // the global cap (sectionTileBounds.maxCount)
+                // or what the searchbase-backed catalogue actually offers for
+                // this section. This keeps the UI honest if
+                // someone trims a section to fewer tiles in
+                // searchbase.conf without touching this code.
+                const sectionMaxAvailable = Math.min(
+                  sectionTileBounds.maxCount,
+                  allSectionMetrics.length,
+                );
+                const visibleCount = Math.min(
+                  sectionTileCounts[section],
+                  sectionMaxAvailable,
+                );
+                const isShowingAllTiles =
+                  Boolean(showAllTileSections[section]) &&
+                  sectionMaxAvailable > visibleCount;
+                const renderedTileCount = isShowingAllTiles
+                  ? sectionMaxAvailable
+                  : visibleCount;
+                const wrapTiles = renderedTileCount >= SECTION_WRAP_TILE_COUNT;
+                const estimatedTileRows = wrapTiles
+                  ? Math.ceil(renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS)
+                  : 1;
+                const isSectionFocused = focusedSection === section;
+                const isSectionCollapsed = isSectionFocused
+                  ? false
+                  : Boolean(collapsedSections[section] || focusedSection);
+                const heightLevel =
+                  sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
+                const isCompactHeight =
+                  heightLevel === sectionHeightBounds.minLevel;
+                const renderCompactHeight = isCompactHeight && !isSectionFocused;
+                const baseMinHeight = renderCompactHeight
+                  ? SECTION_HEIGHT_H1_BASE_PX
+                  : compactDensity
+                    ? SECTION_HEIGHT_COMPACT_BASE_PX
+                    : SECTION_HEIGHT_BASE_PX;
+                const wrappedRowStep = renderCompactHeight
+                  ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
+                  : SECTION_WRAPPED_TILE_ROW_STEP_PX;
+                const tilePageCount = meaningfulTilePageCount(
+                  sectionMaxAvailable,
+                  visibleCount,
+                  Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
+                );
+                const sectionMinHeight =
+                  baseMinHeight +
+                  (heightLevel - sectionHeightBounds.minLevel) *
+                    SECTION_HEIGHT_STEP_PX +
+                  (estimatedTileRows - 1) * wrappedRowStep +
+                  (isShowingAllTiles || tilePageCount > 1 ? tilePagerHeight : 0);
 
-              // Apply the user's drag-reorder
-              // preference (if any) to the canonical
-              // tile list, then select the current page
-              // or the temporary show-all set. The id-keyed `byId` lookup lets
-              // the render iterate ordered ids while
-              // still resolving each id back to its
-              // full MetricConfig — no per-iteration
-              // .find() scan.
-              const canonicalIds = getFactoryTileOrder(
-                section,
-                allSectionMetrics,
-              );
-              const orderedIds = getSectionTileOrder(section, canonicalIds);
-              const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
-              const tilePage = Math.min(
-                sectionTilePages[section] ?? 0,
-                tilePageCount - 1,
-              );
-              const tilePageStart = isShowingAllTiles
-                ? 0
-                : tilePage * visibleCount;
-              const visibleIds = isShowingAllTiles
-                ? catalogueIds
-                : catalogueIds.slice(
-                    tilePageStart,
-                    tilePageStart + visibleCount,
-                  );
-              const tilePageEnd = tilePageStart + visibleIds.length;
-              const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
-              let sectionFlexGrow = heightLevel;
-              if (isSectionCollapsed) sectionFlexGrow = 0;
-              if (isSectionFocused) {
-                sectionFlexGrow = sectionHeightBounds.maxLevel;
-              }
+                // Apply the user's drag-reorder
+                // preference (if any) to the canonical
+                // tile list, then select the current page
+                // or the temporary show-all set. The id-keyed `byId` lookup lets
+                // the render iterate ordered ids while
+                // still resolving each id back to its
+                // full MetricConfig — no per-iteration
+                // .find() scan.
+                const canonicalIds = getFactoryTileOrder(
+                  section,
+                  allSectionMetrics,
+                );
+                const orderedIds = getSectionTileOrder(section, canonicalIds);
+                const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
+                const tilePage = Math.min(
+                  sectionTilePages[section] ?? 0,
+                  tilePageCount - 1,
+                );
+                const tilePageStart = isShowingAllTiles
+                  ? 0
+                  : tilePage * visibleCount;
+                const visibleIds = isShowingAllTiles
+                  ? catalogueIds
+                  : catalogueIds.slice(
+                      tilePageStart,
+                      tilePageStart + visibleCount,
+                    );
+                const tilePageEnd = tilePageStart + visibleIds.length;
+                const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
+                let sectionFlexGrow = heightLevel;
+                if (isSectionCollapsed) sectionFlexGrow = 0;
+                if (isSectionFocused) {
+                  sectionFlexGrow = sectionHeightBounds.maxLevel;
+                }
 
-              // Drag handler scoped to this section: dnd-kit
-              // emits the dragged id and the id it was
-              // dropped over. We translate that into a
-              // reordered array of *all* tile ids (visible
-              // + hidden) so that ordering preferences
-              // survive a count change. Dropping outside the
-              // sortable context is a no-op (`over === null`).
-              const handleDragEnd = (event: DragEndEvent) => {
-                const { active, over } = event;
-                if (!over || active.id === over.id) return;
-                const fromIdx = orderedIds.indexOf(String(active.id));
-                const toIdx = orderedIds.indexOf(String(over.id));
-                if (fromIdx < 0 || toIdx < 0) return;
-                const next = arrayMove(orderedIds, fromIdx, toIdx);
-                setSectionTileOrder(section, next);
-              };
+                // Drag handler scoped to this section: dnd-kit
+                // emits the dragged id and the id it was
+                // dropped over. We translate that into a
+                // reordered array of *all* tile ids (visible
+                // + hidden) so that ordering preferences
+                // survive a count change. Dropping outside the
+                // sortable context is a no-op (`over === null`).
+                const handleDragEnd = (event: DragEndEvent) => {
+                  const { active, over } = event;
+                  if (!over || active.id === over.id) return;
+                  const fromIdx = orderedIds.indexOf(String(active.id));
+                  const toIdx = orderedIds.indexOf(String(over.id));
+                  if (fromIdx < 0 || toIdx < 0) return;
+                  const next = arrayMove(orderedIds, fromIdx, toIdx);
+                  setSectionTileOrder(section, next);
+                };
 
-              return (
-                <DashboardSection
-                  key={section}
-                  title={meta.title}
-                  linkText={meta.linkText}
-                  href={isDcNetworking ? dcScopeDashboardUrl({}, timeRange.earliest, timeRange.latest) : meta.href}
-                  // Height level influences both
-                  // proportional growth on roomy
-                  // screens and the hard min-height
-                  // floor that triggers metric-column
-                  // scrolling on short screens.
-                  style={{
-                    flexGrow: sectionFlexGrow,
-                    flexShrink: 0,
-                    minHeight: isSectionCollapsed ? 42 : sectionMinHeight,
-                  }}
-                  height={{
-                    value: heightLevel,
-                    min: sectionHeightBounds.minLevel,
-                    max: sectionHeightBounds.maxLevel,
-                    onChange: (next) => setSectionHeight(section, next),
-                    label: `${meta.title} height`,
-                  }}
-                  wrapTiles={wrapTiles}
-                  compactHeight={renderCompactHeight}
-                  collapsed={isSectionCollapsed}
-                  focused={isSectionFocused}
-                  onToggleCollapsed={() => toggleSectionCollapsed(section)}
-                  onToggleFocus={() => toggleSectionFocus(section)}
-                  tilePager={
-                    sectionMaxAvailable > visibleCount
-                      ? {
-                          page: tilePage,
-                          pageCount: tilePageCount,
-                          start: tilePageStart,
-                          end: tilePageEnd,
-                          total: sectionMaxAvailable,
-                          showingAll: isShowingAllTiles,
-                          onPageChange: (next) =>
-                            setSectionTilePage(section, next),
-                          onToggleShowAll: () =>
-                            toggleSectionShowAllTiles(section),
-                        }
-                      : undefined
-                  }
-                  tileCount={
-                    sectionMaxAvailable > 0
-                      ? {
-                          value: visibleCount,
-                          min: Math.min(
-                            sectionTileBounds.minCount,
-                            sectionMaxAvailable,
-                          ),
-                          max: sectionMaxAvailable,
-                          onChange: (next) =>
-                            changeSectionTileCount(section, next),
-                          label: `${meta.title} tiles`,
-                        }
-                      : undefined
-                  }
-                  addTileAction={{
-                    label: `Add search to ${meta.title}`,
-                    title: `Add search to ${meta.title}`,
-                    onClick: (returnFocus) => {
-                      addTileReturnFocusRef.current = returnFocus;
-                      setLastAddTileSection(section);
-                      setAddTileSection(section);
-                    },
-                  }}
-                  onEditTitle={
-                    canManageSharedTopology
-                      ? () => setSectionTitlesEditorOpen(true)
-                      : undefined
-                  }
-                >
-                  {!isSectionCollapsed && (
-                    <DndContext
-                      sensors={dndSensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={visibleIds}
-                        strategy={
-                          wrapTiles
-                            ? rectSortingStrategy
-                            : horizontalListSortingStrategy
-                        }
+                return (
+                  <DashboardSection
+                    key={section}
+                    title={meta.title}
+                    linkText={meta.linkText}
+                    href={isDcNetworking ? dcScopeDashboardUrl({}, timeRange.earliest, timeRange.latest) : meta.href}
+                    // Height level influences both
+                    // proportional growth on roomy
+                    // screens and the hard min-height
+                    // floor that triggers metric-column
+                    // scrolling on short screens.
+                    style={{
+                      flexGrow: sectionFlexGrow,
+                      flexShrink: 0,
+                      minHeight: isSectionCollapsed ? 42 : sectionMinHeight,
+                    }}
+                    height={{
+                      value: heightLevel,
+                      min: sectionHeightBounds.minLevel,
+                      max: sectionHeightBounds.maxLevel,
+                      onChange: (next) => setSectionHeight(section, next),
+                      label: `${meta.title} height`,
+                    }}
+                    wrapTiles={wrapTiles}
+                    compactHeight={renderCompactHeight}
+                    collapsed={isSectionCollapsed}
+                    focused={isSectionFocused}
+                    onToggleCollapsed={() => toggleSectionCollapsed(section)}
+                    onToggleFocus={() => toggleSectionFocus(section)}
+                    tilePager={
+                      sectionMaxAvailable > visibleCount
+                        ? {
+                            page: tilePage,
+                            pageCount: tilePageCount,
+                            start: tilePageStart,
+                            end: tilePageEnd,
+                            total: sectionMaxAvailable,
+                            showingAll: isShowingAllTiles,
+                            onPageChange: (next) =>
+                              setSectionTilePage(section, next),
+                            onToggleShowAll: () =>
+                              toggleSectionShowAllTiles(section),
+                          }
+                        : undefined
+                    }
+                    tileCount={
+                      sectionMaxAvailable > 0
+                        ? {
+                            value: visibleCount,
+                            min: Math.min(
+                              sectionTileBounds.minCount,
+                              sectionMaxAvailable,
+                            ),
+                            max: sectionMaxAvailable,
+                            onChange: (next) =>
+                              changeSectionTileCount(section, next),
+                            label: `${meta.title} tiles`,
+                          }
+                        : undefined
+                    }
+                    addTileAction={{
+                      label: `Add search to ${meta.title}`,
+                      title: `Add search to ${meta.title}`,
+                      onClick: (returnFocus) => {
+                        addTileReturnFocusRef.current = returnFocus;
+                        setLastAddTileSection(section);
+                        setAddTileSection(section);
+                      },
+                    }}
+                    onEditTitle={
+                      canManageSharedTopology
+                        ? () => setSectionTitlesEditorOpen(true)
+                        : undefined
+                    }
+                  >
+                    {!isSectionCollapsed && (
+                      <DndContext
+                        sensors={dndSensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
                       >
-                        {visibleIds.length === 0 && (
-                          <div className="flex flex-1 items-center justify-center rounded-md border border-dashed   px-4 text-center text-xs font-semibold  sui-border-default sui-bg-popup sui-color-muted">
-                            No tiles configured.
-                          </div>
-                        )}
-                        {visibleIds.map((id, idx) => {
-                          const cfg = byId.get(id);
-                          if (!cfg) return null;
-                          const isLocalAddition = cfg.searchbaseId
-                            ? locallyAddedSearchbaseIds.has(cfg.searchbaseId) &&
-                              cfg.id ===
-                                overviewAdditionTileId(
-                                  section,
-                                  cfg.searchbaseId,
-                                )
-                            : false;
-                          return (
-                            <SortableMetricCard
-                              key={cfg.id}
-                              id={cfg.id}
-                              ariaLabel={cfg.label}
-                              tileAction={{
-                                kind: isLocalAddition ? "remove" : "hide",
-                                label: isLocalAddition
-                                  ? `Remove ${cfg.label}`
-                                  : `Hide ${cfg.label}`,
-                                onClick: () =>
-                                  isLocalAddition && cfg.searchbaseId
-                                    ? removeAddedSearchbaseIdFromSection(
-                                        section,
-                                        cfg.searchbaseId,
+                        <SortableContext
+                          items={visibleIds}
+                          strategy={
+                            wrapTiles
+                              ? rectSortingStrategy
+                              : horizontalListSortingStrategy
+                          }
+                        >
+                          {visibleIds.length === 0 && (
+                            <div className="flex flex-1 items-center justify-center rounded-md border border-dashed   px-4 text-center text-xs font-semibold  sui-border-default sui-bg-popup sui-color-muted">
+                              No tiles configured.
+                            </div>
+                          )}
+                          {visibleIds.map((id, idx) => {
+                            const cfg = byId.get(id);
+                            if (!cfg) return null;
+                            const isLocalAddition = cfg.searchbaseId
+                              ? locallyAddedSearchbaseIds.has(cfg.searchbaseId) &&
+                                cfg.id ===
+                                  overviewAdditionTileId(
+                                    section,
+                                    cfg.searchbaseId,
+                                  )
+                              : false;
+                            return (
+                              <SortableMetricCard
+                                key={cfg.id}
+                                id={cfg.id}
+                                ariaLabel={cfg.label}
+                                tileAction={{
+                                  kind: isLocalAddition ? "remove" : "hide",
+                                  label: isLocalAddition
+                                    ? `Remove ${cfg.label}`
+                                    : `Hide ${cfg.label}`,
+                                  onClick: () =>
+                                    isLocalAddition && cfg.searchbaseId
+                                      ? removeAddedSearchbaseIdFromSection(
+                                          section,
+                                          cfg.searchbaseId,
+                                        )
+                                      : handleHideTileFromSection(cfg),
+                                }}
+                                className={
+                                  wrapTiles
+                                    ? cn(
+                                        "min-w-[240px] md:min-w-[250px]",
+                                        renderCompactHeight
+                                          ? "min-h-[124px]"
+                                          : "min-h-[148px]",
                                       )
-                                    : handleHideTileFromSection(cfg),
-                              }}
-                              className={
-                                wrapTiles
-                                  ? cn(
-                                      "min-w-[240px] md:min-w-[250px]",
-                                      renderCompactHeight
-                                        ? "min-h-[124px]"
-                                        : "min-h-[148px]",
+                                    : undefined
+                                }
+                              >
+                                <MetricCard
+                                  cfg={cfg}
+                                  dispatchPriority={10 + sectionIndex * 10}
+                                  range={timeRange}
+                                  refreshToken={refreshToken}
+                                  onStatus={reportStatus}
+                                  // Anchor the tooltip to the right
+                                  // edge for the last metric so the
+                                  // popover stays inside the section
+                                  // card instead of overflowing.
+                                  infoAnchor={
+                                    idx === visibleIds.length - 1
+                                      ? "right"
+                                      : "auto"
+                                  }
+                                  override={resolveWorkspaceVisualization(overrides[cfg.id], workspaceLayout[section]?.vizOverrides?.[cfg.id])}
+                                  searchbaseByName={runtimeSearchbaseByName}
+                                  searchbaseById={runtimeSearchbaseById}
+                                  searchbaseDrilldowns={searchbaseDrilldowns}
+                                  compactDensity={
+                                    !isSectionFocused &&
+                                    (compactDensity || renderCompactHeight)
+                                  }
+                                  onOpenDetailTable={openMetricDrilldown}
+                                  onConfigure={(returnFocus) =>
+                                    openPicker(
+                                      cfg.id,
+                                      cfg.label,
+                                      {
+                                        savedSearch: cfg.savedSearch,
+                                        valueField: cfg.valueField,
+                                        defaultThresholds: cfg.thresholds,
+                                        unit: cfg.unit,
+                                        section: cfg.section,
+                                      },
+                                      returnFocus,
                                     )
-                                  : undefined
-                              }
-                            >
-                              <MetricCard
-                                cfg={cfg}
-                                dispatchPriority={10 + sectionIndex * 10}
-                                range={timeRange}
-                                refreshToken={refreshToken}
-                                onStatus={reportStatus}
-                                // Anchor the tooltip to the right
-                                // edge for the last metric so the
-                                // popover stays inside the section
-                                // card instead of overflowing.
-                                infoAnchor={
-                                  idx === visibleIds.length - 1
-                                    ? "right"
-                                    : "auto"
-                                }
-                                override={resolveWorkspaceVisualization(overrides[cfg.id], workspaceLayout[section]?.vizOverrides?.[cfg.id])}
-                                searchbaseByName={runtimeSearchbaseByName}
-                                searchbaseById={runtimeSearchbaseById}
-                                searchbaseDrilldowns={searchbaseDrilldowns}
-                                compactDensity={
-                                  !isSectionFocused &&
-                                  (compactDensity || renderCompactHeight)
-                                }
-                                onOpenDetailTable={openMetricDrilldown}
-                                onConfigure={(returnFocus) =>
+                                  }
+                                />
+                              </SortableMetricCard>
+                            );
+                          })}
+                        </SortableContext>
+                      </DndContext>
+                    )}
+                  </DashboardSection>
+                );
+              })}
+            </OverviewMetricsColumn>
+
+            {/* The SUI-tokenized rule remains the interactive split control. */}
+            {mapVisible && (
+              <SplitSeparator
+                role="separator"
+                tabIndex={0}
+                aria-orientation={isVerticalSplit ? "horizontal" : "vertical"}
+                aria-label="Resize tiles vs map"
+                aria-valuenow={Math.round(leftPct)}
+                aria-valuemin={SPLIT_MIN}
+                aria-valuemax={SPLIT_MAX}
+                title="Drag to resize · arrows ±1% · double-click to reset"
+                onMouseDown={beginDrag}
+                onKeyDown={onSplitterKeyDown}
+                onDoubleClick={resetSplit}
+                className={cn(
+                  "scd-overview-splitter focus:outline-none",
+                  // Right mode hides the splitter on sub-xl
+                  // widths because the layout collapses to a
+                  // single column there. Vertical modes
+                  // never collapse, so the splitter is
+                  // always visible in those.
+                  mapPosition === "right" && "hidden xl:block",
+                )}
+                $horizontal={isVerticalSplit}
+                data-map-position={mapPosition}
+              />
+            )}
+
+            {/* Map column.
+                          right mode: width is the complement of leftPct
+                          on xl+, full width below xl. below/above modes:
+                          full width, height is the complement of leftPct
+                          because the tiles column carries an explicit
+                          flex-basis of leftPct% and the map fills the
+                          remainder via flex-1. Both columns set min-w-0
+                          so a long word in a metric label or a wide map
+                          tile can't blow the column wider than its
+                          share. */}
+            {mapVisible && (
+              <div
+                className={cn(
+                  "scd-overview-map flex flex-col min-h-0 min-w-0 w-full",
+                  mapPosition === "right" ? "xl:flex-1" : "flex-1",
+                )}
+                data-map-position={mapPosition}
+                data-map-height={mapHeightMode}
+                style={verticalMapStyle}
+              >
+                <div
+                  className={cn(
+                    "scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col",
+                    mapHeightMode === "match-workspace" && "flex-1 min-h-0",
+                  )}
+                >
+                  <TopologyPanelHeader>
+                    <div>
+                      <Heading
+                        level={2}
+                        variant="title3"
+                        data-sui-heading-variant="title3"
+                      >
+                        {topologyHeaderName}
+                      </Heading>
+                      <p className="text-xs  sui-color-muted font-medium mt-0.5">
+                        {topologyHeaderSubtitle}
+                      </p>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <RegionalViewToggle
+                        value={regionalView}
+                        onChange={updateRegionalView}
+                      />
+                    </div>
+                  </TopologyPanelHeader>
+
+                  {regionalView === "map" ? (
+                    <MapViewport>
+                      {/* Build 1190 — render the live map
+                                         during export instead of swapping
+                                         to TopologySiteTable. The Build
+                                         1186 substitute approach was
+                                         overcorrecting on the original
+                                         export complaint: the operator
+                                         wanted the *map with sites and
+                                         connectivity lines* in the export,
+                                         just without the broken-mid-frame
+                                         SMIL animation artifacts. The
+                                         SMIL pause in `useExportPage`
+                                         (still active) freezes the
+                                         stroke-dashoffset flow lines at a
+                                         clean keyframe; html2canvas
+                                         rasterises the underlying Leaflet
+                                         tiles + the static SVG paths
+                                         cleanly. The CSS animation freeze
+                                         in `tailwind.css` covers any
+                                         remaining keyframe-driven motion.
+                                         The previous `data-export-hide` /
+                                         `data-export-placeholder`
+                                         attributes have been removed; the
+                                         generic CSS rules that consume
+                                         them are kept in `tailwind.css`
+                                         so other components can opt in
+                                         to the same swap pattern in the
+                                         future. */}
+                      <CustomerTopologyMap
+                        key={`${insightsWorkspace.id}-${topologyResetKey}`}
+                        topology={workspaceTopology}
+                        commandOnly={isDcNetworking}
+                        canManageTopology={canManageSharedTopology}
+                        earliestTime={timeRange.earliest}
+                        latestTime={timeRange.latest}
+                        refreshToken={refreshToken}
+                        onOpenInSearch={(spl, appContext) => {
+                          const url = splunkSearchAppUrl(
+                            spl,
+                            timeRange,
+                            appContext,
+                          );
+                          if (typeof window !== "undefined") {
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }
+                        }}
+                      />
+                    </MapViewport>
+                  ) : (
+                    <div className="flex-1 min-h-0">
+                      <TopologySiteTable topology={workspaceTopology} />
+                    </div>
+                  )}
+
+                  {mapPrimaryBaseCfg || mapSecondaryBaseCfg ? (
+                    <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
+                      {mapPrimaryBaseCfg ? (
+                        <KpiCard
+                          label={effectiveMapPrimaryCfg.label}
+                          value={mapPrimary.value}
+                          searchbaseId={
+                            resolveSearchbaseRecordForConfig(
+                              effectiveMapPrimaryCfg,
+                              runtimeSearchbaseById,
+                              runtimeSearchbaseByName,
+                            )?.id
+                          }
+                          status={mapFooterStatus(
+                            mapPrimary.value,
+                            effectiveMapPrimaryCfg.thresholds,
+                          )}
+                          onOpenInSearch={
+                            effectiveMapPrimaryCfg.spl
+                              ? () =>
+                                  window.open(
+                                    splunkSearchAppUrl(
+                                      effectiveMapPrimaryCfg.spl as string,
+                                      timeRange,
+                                      effectiveMapPrimaryCfg.dispatchContext,
+                                    ),
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                  )
+                              : undefined
+                          }
+                          onConfigure={
+                            canManageFactoryConfig
+                              ? (returnFocus) =>
                                   openPicker(
-                                    cfg.id,
-                                    cfg.label,
+                                    mapPrimaryBaseCfg.id,
+                                    effectiveMapPrimaryCfg.label,
                                     {
-                                      savedSearch: cfg.savedSearch,
-                                      valueField: cfg.valueField,
-                                      defaultThresholds: cfg.thresholds,
-                                      unit: cfg.unit,
-                                      section: cfg.section,
+                                      savedSearch: mapPrimaryBaseCfg.savedSearch,
+                                      valueField:
+                                        effectiveMapPrimaryCfg.valueField,
+                                      defaultThresholds:
+                                        effectiveMapPrimaryCfg.thresholds,
+                                      unit: effectiveMapPrimaryCfg.unit,
+                                      allowPersonalDisplayControls: false,
                                     },
                                     returnFocus,
                                   )
-                                }
-                              />
-                            </SortableMetricCard>
-                          );
-                        })}
-                      </SortableContext>
-                    </DndContext>
-                  )}
-                </DashboardSection>
-              );
-            })}
-          </OverviewMetricsColumn>
-
-          {/* The SUI-tokenized rule remains the interactive split control. */}
-          {mapVisible && (
-            <SplitSeparator
-              role="separator"
-              tabIndex={0}
-              aria-orientation={isVerticalSplit ? "horizontal" : "vertical"}
-              aria-label="Resize tiles vs map"
-              aria-valuenow={Math.round(leftPct)}
-              aria-valuemin={SPLIT_MIN}
-              aria-valuemax={SPLIT_MAX}
-              title="Drag to resize · arrows ±1% · double-click to reset"
-              onMouseDown={beginDrag}
-              onKeyDown={onSplitterKeyDown}
-              onDoubleClick={resetSplit}
-              className={cn(
-                "scd-overview-splitter focus:outline-none",
-                // Right mode hides the splitter on sub-xl
-                // widths because the layout collapses to a
-                // single column there. Vertical modes
-                // never collapse, so the splitter is
-                // always visible in those.
-                mapPosition === "right" && "hidden xl:block",
-              )}
-              $horizontal={isVerticalSplit}
-              data-map-position={mapPosition}
-            />
-          )}
-
-          {/* Map column.
-                        right mode: width is the complement of leftPct
-                        on xl+, full width below xl. below/above modes:
-                        full width, height is the complement of leftPct
-                        because the tiles column carries an explicit
-                        flex-basis of leftPct% and the map fills the
-                        remainder via flex-1. Both columns set min-w-0
-                        so a long word in a metric label or a wide map
-                        tile can't blow the column wider than its
-                        share. */}
-          {mapVisible && (
-            <div
-              className={cn(
-                "scd-overview-map flex flex-col min-h-0 min-w-0 w-full",
-                mapPosition === "right" ? "xl:flex-1" : "flex-1",
-              )}
-              data-map-position={mapPosition}
-              data-map-height={mapHeightMode}
-              style={verticalMapStyle}
-            >
-              <div
-                className={cn(
-                  "scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col",
-                  mapHeightMode === "match-workspace" && "flex-1 min-h-0",
-                )}
-              >
-                <TopologyPanelHeader>
-                  <div>
-                    <Heading
-                      level={2}
-                      variant="title3"
-                      data-sui-heading-variant="title3"
-                    >
-                      {topologyHeaderName}
-                    </Heading>
-                    <p className="text-xs  sui-color-muted font-medium mt-0.5">
-                      {topologyHeaderSubtitle}
-                    </p>
-                  </div>
-                  <div className="flex flex-shrink-0 items-center gap-2">
-                    <RegionalViewToggle
-                      value={regionalView}
-                      onChange={updateRegionalView}
-                    />
-                  </div>
-                </TopologyPanelHeader>
-
-                {regionalView === "map" ? (
-                  <MapViewport>
-                    {/* Build 1190 — render the live map
-                                       during export instead of swapping
-                                       to TopologySiteTable. The Build
-                                       1186 substitute approach was
-                                       overcorrecting on the original
-                                       export complaint: the operator
-                                       wanted the *map with sites and
-                                       connectivity lines* in the export,
-                                       just without the broken-mid-frame
-                                       SMIL animation artifacts. The
-                                       SMIL pause in `useExportPage`
-                                       (still active) freezes the
-                                       stroke-dashoffset flow lines at a
-                                       clean keyframe; html2canvas
-                                       rasterises the underlying Leaflet
-                                       tiles + the static SVG paths
-                                       cleanly. The CSS animation freeze
-                                       in `tailwind.css` covers any
-                                       remaining keyframe-driven motion.
-                                       The previous `data-export-hide` /
-                                       `data-export-placeholder`
-                                       attributes have been removed; the
-                                       generic CSS rules that consume
-                                       them are kept in `tailwind.css`
-                                       so other components can opt in
-                                       to the same swap pattern in the
-                                       future. */}
-                    <CustomerTopologyMap
-                      key={`${insightsWorkspace.id}-${topologyResetKey}`}
-                      topology={workspaceTopology}
-                      commandOnly={isDcNetworking}
-                      canManageTopology={canManageSharedTopology}
-                      earliestTime={timeRange.earliest}
-                      latestTime={timeRange.latest}
-                      refreshToken={refreshToken}
-                      onOpenInSearch={(spl, appContext) => {
-                        const url = splunkSearchAppUrl(
-                          spl,
-                          timeRange,
-                          appContext,
-                        );
-                        if (typeof window !== "undefined") {
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }
-                      }}
-                    />
-                  </MapViewport>
-                ) : (
-                  <div className="flex-1 min-h-0">
-                    <TopologySiteTable topology={workspaceTopology} />
-                  </div>
-                )}
-
-                {mapPrimaryBaseCfg || mapSecondaryBaseCfg ? (
-                  <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
-                    {mapPrimaryBaseCfg ? (
-                      <KpiCard
-                        label={effectiveMapPrimaryCfg.label}
-                        value={mapPrimary.value}
-                        searchbaseId={
-                          resolveSearchbaseRecordForConfig(
-                            effectiveMapPrimaryCfg,
-                            runtimeSearchbaseById,
-                            runtimeSearchbaseByName,
-                          )?.id
-                        }
-                        status={mapFooterStatus(
-                          mapPrimary.value,
-                          effectiveMapPrimaryCfg.thresholds,
-                        )}
-                        onOpenInSearch={
-                          effectiveMapPrimaryCfg.spl
-                            ? () =>
-                                window.open(
-                                  splunkSearchAppUrl(
-                                    effectiveMapPrimaryCfg.spl as string,
-                                    timeRange,
-                                    effectiveMapPrimaryCfg.dispatchContext,
-                                  ),
-                                  "_blank",
-                                  "noopener,noreferrer",
-                                )
-                            : undefined
-                        }
-                        onConfigure={
-                          canManageFactoryConfig
-                            ? (returnFocus) =>
-                                openPicker(
-                                  mapPrimaryBaseCfg.id,
-                                  effectiveMapPrimaryCfg.label,
-                                  {
-                                    savedSearch: mapPrimaryBaseCfg.savedSearch,
-                                    valueField:
-                                      effectiveMapPrimaryCfg.valueField,
-                                    defaultThresholds:
-                                      effectiveMapPrimaryCfg.thresholds,
-                                    unit: effectiveMapPrimaryCfg.unit,
-                                    allowPersonalDisplayControls: false,
-                                  },
-                                  returnFocus,
-                                )
-                            : undefined
-                        }
-                      />
-                    ) : null}
-                    {mapSecondaryBaseCfg ? (
-                      <KpiCard
-                        label={effectiveMapSecondaryCfg.label}
-                        value={mapSecondary.value}
-                        searchbaseId={
-                          resolveSearchbaseRecordForConfig(
-                            effectiveMapSecondaryCfg,
-                            runtimeSearchbaseById,
-                            runtimeSearchbaseByName,
-                          )?.id
-                        }
-                        status={mapFooterStatus(
-                          mapSecondary.value,
-                          effectiveMapSecondaryCfg.thresholds,
-                        )}
-                        onOpenInSearch={
-                          effectiveMapSecondaryCfg.spl
-                            ? () =>
-                                window.open(
-                                  splunkSearchAppUrl(
-                                    effectiveMapSecondaryCfg.spl as string,
-                                    timeRange,
-                                    effectiveMapSecondaryCfg.dispatchContext,
-                                  ),
-                                  "_blank",
-                                  "noopener,noreferrer",
-                                )
-                            : undefined
-                        }
-                        onConfigure={
-                          canManageFactoryConfig
-                            ? (returnFocus) =>
-                                openPicker(
-                                  mapSecondaryBaseCfg.id,
-                                  effectiveMapSecondaryCfg.label,
-                                  {
-                                    savedSearch:
-                                      mapSecondaryBaseCfg.savedSearch,
-                                    valueField:
-                                      effectiveMapSecondaryCfg.valueField,
-                                    defaultThresholds:
-                                      effectiveMapSecondaryCfg.thresholds,
-                                    unit: effectiveMapSecondaryCfg.unit,
-                                    allowPersonalDisplayControls: false,
-                                  },
-                                  returnFocus,
-                                )
-                            : undefined
-                        }
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
+                              : undefined
+                          }
+                        />
+                      ) : null}
+                      {mapSecondaryBaseCfg ? (
+                        <KpiCard
+                          label={effectiveMapSecondaryCfg.label}
+                          value={mapSecondary.value}
+                          searchbaseId={
+                            resolveSearchbaseRecordForConfig(
+                              effectiveMapSecondaryCfg,
+                              runtimeSearchbaseById,
+                              runtimeSearchbaseByName,
+                            )?.id
+                          }
+                          status={mapFooterStatus(
+                            mapSecondary.value,
+                            effectiveMapSecondaryCfg.thresholds,
+                          )}
+                          onOpenInSearch={
+                            effectiveMapSecondaryCfg.spl
+                              ? () =>
+                                  window.open(
+                                    splunkSearchAppUrl(
+                                      effectiveMapSecondaryCfg.spl as string,
+                                      timeRange,
+                                      effectiveMapSecondaryCfg.dispatchContext,
+                                    ),
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                  )
+                              : undefined
+                          }
+                          onConfigure={
+                            canManageFactoryConfig
+                              ? (returnFocus) =>
+                                  openPicker(
+                                    mapSecondaryBaseCfg.id,
+                                    effectiveMapSecondaryCfg.label,
+                                    {
+                                      savedSearch:
+                                        mapSecondaryBaseCfg.savedSearch,
+                                      valueField:
+                                        effectiveMapSecondaryCfg.valueField,
+                                      defaultThresholds:
+                                        effectiveMapSecondaryCfg.thresholds,
+                                      unit: effectiveMapSecondaryCfg.unit,
+                                      allowPersonalDisplayControls: false,
+                                    },
+                                    returnFocus,
+                                  )
+                              : undefined
+                          }
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+        <aside
+          aria-label={activeDetailTable?.title || "Drilldown details"}
+          className={cn(
+            "min-h-0 min-w-0 overflow-hidden border-l sui-border-weak",
+            activeDetailTable ? "grid grid-cols-1 grid-rows-1" : "hidden",
+          )}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !event.defaultPrevented) {
+              event.stopPropagation();
+              setActiveDetailTable(null);
+            }
+          }}
+        >
+          <Drawer
+            divider="both"
+            initialFocus="first"
+            material="opaque"
+            onRequestClose={() => setActiveDetailTable(null)}
+            open={activeDetailTable !== null}
+            position="inline"
+            returnFocus={() => {
+              const trigger = drilldownReturnFocusRef.current;
+              const destination =
+                trigger?.isConnected && trigger !== document.body
+                  ? trigger
+                  : workspaceToggleRef.current;
+              destination?.focus({ preventScroll: true });
+            }}
+            style={{ height: "100%" }}
+            width="100%"
+          >
+            {activeDetailTable && (
+              <MetricDrilldownContent
+                config={activeDetailTable}
+                range={timeRange}
+                refreshToken={refreshToken}
+              />
+            )}
+          </Drawer>
+        </aside>
       </main>
 
       <HelpOverlay
@@ -6319,34 +6364,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         sharedCatalog={canManageWorkspaceConfig}
         onClose={() => setSignalTickerEditorOpen(false)}
       />
-
-      <Drawer
-        aria-label={activeDetailTable?.title || "Drilldown details"}
-        closeOnClickAway
-        divider="both"
-        initialFocus="first"
-        material="opaque"
-        onRequestClose={() => setActiveDetailTable(null)}
-        open={activeDetailTable !== null}
-        position="page"
-        returnFocus={() => {
-          const trigger = drilldownReturnFocusRef.current;
-          const destination =
-            trigger?.isConnected && trigger !== document.body
-              ? trigger
-              : workspaceToggleRef.current;
-          destination?.focus({ preventScroll: true });
-        }}
-        width="min(100vw, 720px)"
-      >
-        {activeDetailTable && (
-          <MetricDrilldownContent
-            config={activeDetailTable}
-            range={timeRange}
-            refreshToken={refreshToken}
-          />
-        )}
-      </Drawer>
 
       <BrandingEditorModal
         isOpen={isBrandingEditorOpen}
@@ -8177,7 +8194,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
                           }
                           className={cn(
                             index === 0 ? "pl-4 pr-2" : "px-2",
-                            "py-3",
+                            "py-2",
                             column.align === "right" && "text-right",
                           )}
                         >
@@ -8245,8 +8262,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
                       return (
                         <tr
                           key={`${rowKey}-${rowIndex}`}
-                          className="sui-bg-section"
-                        >
+                            >
                           {displayColumns.map((column, index) => {
                             const value = row[column.field];
                             const isStatusColumn = column.kind === "status";
@@ -8259,7 +8275,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
                                   index === 0
                                     ? "pl-4 pr-2 font-medium sui-color-default"
                                     : "px-2 sui-color-default",
-                                  "py-3",
+                                  "py-2",
                                   column.align === "right" &&
                                     "text-right tabular-nums",
                                   column.truncate && "max-w-xs truncate",
@@ -8346,18 +8362,18 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
         )}
       </Drawer.Body>
       <Drawer.Footer className="scd-insights-layer-content" layout="none">
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            appearance="secondary"
-            label="Open in Searchbase"
-            openInNewContext
-            to={searchbaseUrl}
-          />
+        <div className="flex flex-wrap gap-2">
           <Button
             appearance="primary"
             label="Open in Search"
             openInNewContext
             to={searchUrl}
+          />
+          <Button
+            appearance="secondary"
+            label="Open in Searchbase"
+            openInNewContext
+            to={searchbaseUrl}
           />
         </div>
       </Drawer.Footer>
