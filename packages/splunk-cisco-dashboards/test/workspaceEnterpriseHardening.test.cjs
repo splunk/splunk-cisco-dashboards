@@ -1050,6 +1050,8 @@ const drilldownContent = profile.slice(
   profile.indexOf("interface SectionTitlesEditorModalProps"),
 );
 assert.match(profile, /<Drawer[\s\S]*?open=\{activeDetailTable !== null\}[\s\S]*?<MetricDrilldownContent/);
+assert.match(drilldownContent, /<Drawer.Body\s+className="scd-insights-layer-content"/);
+assert.match(drilldownContent, /<Drawer.Footer\s+className="scd-insights-layer-content"/);
 assert.match(drilldownContent, /activeTabId=\{showGuidance \? "guidance" : "results"\}/);
 assert.match(drilldownContent, /id=\{resultsPanelId\}[\s\S]*?hidden=\{showGuidance\}/);
 assert.match(drilldownContent, /<Drawer.Footer[\s\S]*?label="Open in Searchbase"[\s\S]*?to=\{searchbaseUrl\}[\s\S]*?label="Open in Search"[\s\S]*?to=\{searchUrl\}/);

@@ -8065,7 +8065,10 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
   return (
     <>
       <Drawer.Header title={config.title} subtitle={activeConfig.subtitle(range)} />
-      <Drawer.Body className="!flex min-h-0 flex-col !overflow-hidden !p-0">
+      <Drawer.Body
+        className="scd-insights-layer-content"
+        style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", padding: 0 }}
+      >
         {hasGuidance && (
           <div className="shrink-0 border-b sui-border-weak px-4">
             <TabBar
@@ -8342,7 +8345,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
           </div>
         )}
       </Drawer.Body>
-      <Drawer.Footer layout="none">
+      <Drawer.Footer className="scd-insights-layer-content" layout="none">
         <div className="flex flex-wrap justify-end gap-2">
           <Button
             appearance="secondary"
