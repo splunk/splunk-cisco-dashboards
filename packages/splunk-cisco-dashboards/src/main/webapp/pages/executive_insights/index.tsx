@@ -6214,11 +6214,18 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             }}
           >
             <div className="flex min-h-0 min-w-0 flex-col overflow-hidden sui-bg-popup">
-              <div className="shrink-0 px-4 pt-3">
+              <div className="flex shrink-0 items-center justify-between gap-2 px-4 pt-3">
                 <Button
                   appearance="secondary"
                   elementRef={drilldownBackRef}
                   label="Back to workspace"
+                  onClick={() => setActiveDetailTable(null)}
+                />
+                <Button
+                  appearance="subtle"
+                  hideLabel
+                  icon={<X aria-hidden="true" />}
+                  label="Close drilldown"
                   onClick={() => setActiveDetailTable(null)}
                 />
               </div>

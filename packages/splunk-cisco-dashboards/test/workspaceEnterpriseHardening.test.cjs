@@ -1051,6 +1051,7 @@ const drilldownContent = profile.slice(
 );
 assert.match(profile, /\{activeDetailTable && \(\s*<section\s+aria-label=\{activeDetailTable.title\}[\s\S]*?<MetricDrilldownContent/);
 assert.match(profile, /label="Back to workspace"\s+onClick=\{\(\) => setActiveDetailTable\(null\)\}/);
+assert.match(profile, /hideLabel\s+icon=\{<X aria-hidden="true" \/>\}\s+label="Close drilldown"\s+onClick=\{\(\) => setActiveDetailTable\(null\)\}/);
 assert.match(globalStyles, /\.scd-overview-drilldown-stage\[data-workspace-drilldown-open="true"\]\s*> \.scd-overview-drilldown-workspace\s*\{\s*display: none;/);
 assert.match(drilldownContent, /<div[^>]*min-h-0 flex-1 flex-col overflow-hidden" data-drilldown-body>/);
 assert.match(drilldownContent, /activeTabId=\{showGuidance \? "guidance" : "results"\}/);
