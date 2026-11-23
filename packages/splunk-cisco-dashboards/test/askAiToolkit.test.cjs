@@ -71,17 +71,46 @@ test("drafting uses the configured Toolkit app and bounded, citable Searchbase e
   const example = { id: "device", ownerApp: "other-app", searchName: "Device health",
     description: "<b>Device health</b>", search: "index=devices | stats count by device", rawEvents: ["private event"] };
   const signal = new AbortController().signal;
-  const answer = await askModel("Break it down by device", [example], "approved", {
-    explanation: "Prior answer",
-  }, signal);
+  const answer = await askModel("Break it down by device", [example], "approved", [
+    { question: "What do I have for Catalyst Center?", answer: { explanation: "What should I look at?" } },
+    { question: "Device health", answer: { explanation: "Prior answer" } },
+  ], signal);
   assert.deepEqual(answer.source, { id: "device", ownerApp: "other-app" });
   assert.equal(answer.search.title, "Health by device");
   assert.equal(request[1].app, "Splunk_ML_Toolkit");
   assert.equal(request[3].signal, signal);
   const prompt = decodeURIComponent(request[0].search.match(/urldecode\("([^"]+)"\)/)[1]);
   assert.match(prompt, /Prior answer/);
+  assert.match(prompt, /What should I look at\?/);
   assert.match(prompt, /stats count by device/);
   assert.doesNotMatch(prompt, /private event/);
+});
+
+test("long conversations keep the latest clarification and draft within the prompt limit", async () => {
+  let prompt;
+  const { askModel } = load({ oneShot: async ({ search }) => {
+    prompt = decodeURIComponent(search.match(/urldecode\("([^"]+)"\)/)[1]);
+    return { results: [{ ai_result_1: '{"explanation":"Updated the SPL."}' }] };
+  } });
+  const escaped = '"'.repeat(1000);
+  const examples = Array.from({ length: 5 }, () => ({
+    searchName: escaped, description: escaped, search: escaped,
+  }));
+  const conversation = [
+    { question: "Old topic", answer: { explanation: "Old answer" } },
+    { question: escaped, answer: { explanation: escaped } },
+    { question: escaped, answer: {
+      explanation: escaped, search: { title: "Device counts", spl: "index=devices | stats count" },
+    } },
+    { question: "Which time bucket?", answer: { explanation: "By day." } },
+  ];
+  await askModel("Break it down by site", examples, "approved", conversation, new AbortController().signal);
+  const sent = JSON.parse(prompt.slice(prompt.lastIndexOf('\n') + 1));
+  assert.ok(prompt.length <= 14000);
+  assert.ok(sent.examples.length > 0 && sent.examples.length < examples.length);
+  assert.equal(sent.conversation.length, 3);
+  assert.deepEqual(sent.conversation[2], { question: "Which time bucket?", answer: "By day." });
+  assert.equal(sent.lastDraft, "index=devices | stats count");
 });
 
 test("draft links and save reject write commands and unverified nested SPL", () => {
@@ -139,7 +168,7 @@ test("Ask AI settings default off, use administrator write access, and reload wi
 test("a plain-language clarification stays visible without draft or citation actions", async () => {
   const text = "I don’t have a Meraki-specific example. Which field contains the device status?";
   const { askModel } = load({ oneShot: async () => ({ results: [{ ai_result_1: text }] }) });
-  assert.deepEqual(await askModel("Meraki offline devices", [], "approved", undefined, new AbortController().signal),
+  assert.deepEqual(await askModel("Meraki offline devices", [], "approved", [], new AbortController().signal),
     { explanation: text });
 });
 
@@ -149,7 +178,7 @@ test("Toolkit error result rows and partial structured drafts are not displayed 
     ['{"explanation":"Check your records","draft":', /incomplete structured output/],
   ]) {
     const { askModel } = load({ oneShot: async () => ({ results: [{ ai_result_1: text }] }) });
-    await assert.rejects(askModel("Meraki offline devices", [], "approved", undefined, new AbortController().signal), expected);
+    await assert.rejects(askModel("Meraki offline devices", [], "approved", [], new AbortController().signal), expected);
   }
 });
 

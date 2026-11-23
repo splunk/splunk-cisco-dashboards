@@ -6,6 +6,7 @@ import Drawer from '@splunk/react-ui/Drawer';
 import Heading from '@splunk/react-ui/Heading';
 import Link from '@splunk/react-ui/Link';
 import Message from '@splunk/react-ui/Message';
+import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
 import Tooltip from '@splunk/react-ui/Tooltip';
@@ -21,7 +22,7 @@ import { isSearchBaseInstalled } from '@/common/lib/searchbase';
 import { splunkSearchAppUrl, splunkSearchbaseEditUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import {
     askModel, canValidateDraft, getAskAiSettings, saveDraftToSearchbase, validateDraft,
-    type AskAiSettings, type AssistantAnswer,
+    type AskAiSettings, type AssistantTurn,
 } from '@/common/services/askAiToolkit';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankAssistantSearchMatches, rankSearchbaseMatches } from '@/common/services/askSearchbase';
 import { getSearchbaseCatalogue, type SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
@@ -90,6 +91,30 @@ const AnswerText = styled.p`
     white-space: pre-wrap;
 `;
 
+const ChatComposer = styled.div`
+    width: 100%;
+    display: grid;
+    gap: ${variables.spacingSmall};
+`;
+
+const ComposerActions = styled(ActionRow)`
+    justify-content: flex-end;
+`;
+
+const ChatQuestion = styled.div`
+    padding: ${variables.spacingMedium};
+    border-radius: ${variables.borderRadius};
+    background: ${variables.backgroundColorSection};
+    overflow-wrap: anywhere;
+
+    p { margin: ${variables.spacingXSmall} 0 0; }
+`;
+
+const Transcript = styled.section`
+    display: grid;
+    gap: ${variables.spacingMedium};
+`;
+
 const SearchStatus = styled.div`
     &:empty {
         position: absolute;
@@ -100,6 +125,7 @@ const QUESTION_STORAGE_KEY = 'scd:ask-ai:question';
 const SEARCHBASE_LISTING_URL = 'https://splunkbase.splunk.com/app/7188';
 const RESULT_BATCH_SIZE = 5;
 const FIND_SEARCHES_DELAY_MS = 350;
+const CHAT_TURN_LIMIT = 12;
 
 function readQuestion(): string {
     if (!getCurrentSplunkUsername()) return '';
@@ -161,16 +187,27 @@ export default function AskAi({
     const activeContext = useRef(contextId);
     const [open, setOpen] = useState(false);
     const [searchbaseInstalled, setSearchbaseInstalled] = useState<boolean | null>();
-    const [question, setQuestion] = useState(readQuestion);
-    const resumedQuestion = useRef(question);
+    const [question, setQuestion] = useState('');
+    const [rememberedQuestion] = useState(readQuestion);
+    const resumedQuestion = useRef(rememberedQuestion);
+    const chatInput = useRef<HTMLInputElement>(null);
+    const drawerContent = useRef<HTMLDivElement>(null);
+    const latestChatQuestion = useRef<HTMLDivElement>(null);
+    const chatProgress = useRef<HTMLDivElement>(null);
+    const latestReplyHeading = useRef<HTMLHeadingElement>(null);
+    const conversationSequence = useRef(0);
     const [result, setResult] = useState<Result | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [phase, setPhase] = useState<'catalogue' | 'model' | null>(null);
+    const loading = phase !== null;
     const [destinationId, setDestinationId] = useState('');
     const [adding, setAdding] = useState(false);
     const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
 
     const [settings, setSettings] = useState<AskAiSettings>();
-    const [answer, setAnswer] = useState<AssistantAnswer>();
+    const [conversation, setConversation] = useState<(AssistantTurn & { id: number })[]>([]);
+    const currentTurn = conversation[conversation.length - 1];
+    const answer = currentTurn?.answer;
+    const [showCatalogMatches, setShowCatalogMatches] = useState(false);
     const [draftId, setDraftId] = useState('');
     const [verifiedSpl, setVerifiedSpl] = useState('');
     const [draftBusy, setDraftBusy] = useState(false);
@@ -188,6 +225,21 @@ export default function AskAi({
     }, []);
 
     useEffect(() => cancelFinderTimer, [canAskAi, cancelFinderTimer]);
+
+    useEffect(() => {
+        if (open && canAskAi && currentTurn?.id !== undefined) {
+            latestChatQuestion.current?.scrollIntoView({ block: 'nearest' });
+        }
+    }, [open, canAskAi, currentTurn?.id]);
+
+    useEffect(() => {
+        if (!open || !canAskAi) return;
+        const viewport = drawerContent.current?.parentElement?.getBoundingClientRect();
+        const questionBounds = latestChatQuestion.current?.getBoundingClientRect();
+        if (!viewport || !questionBounds || questionBounds.bottom < viewport.top || questionBounds.top > viewport.bottom) return;
+        const target = answer ? latestReplyHeading.current : phase ? chatProgress.current : null;
+        target?.scrollIntoView({ block: 'nearest' });
+    }, [open, canAskAi, phase, answer]);
 
     useEffect(() => {
         let active = true;
@@ -220,32 +272,41 @@ export default function AskAi({
         const request = {};
         pending.current = request;
         nextResultToFocus.current = null;
-        setLoading(true);
+        const modelMode = useModel && canAskAi && settings;
+        const turnId = modelMode ? ++conversationSequence.current : undefined;
+        setPhase('catalogue');
         setResult(null);
-        setAnswer(undefined);
+        setShowCatalogMatches(false);
         setVerifiedSpl('');
         setDraftId('');
         setFeedback(null);
-        rememberQuestion(submitted);
+        if (turnId !== undefined) {
+            setConversation((turns) => [...turns, { id: turnId, question: submitted }].slice(-CHAT_TURN_LIMIT));
+            setQuestion('');
+            chatInput.current?.focus({ preventScroll: true });
+        } else {
+            rememberQuestion(submitted);
+        }
         try {
             const catalogue = await getSearchbaseCatalogue({ allApps: true, includeHidden: true });
             if (pending.current === request) {
                 let records = rankSearchbaseMatches(catalogue, submitted);
-                if (useModel && canAskAi && settings) {
+                if (modelMode && turnId !== undefined) {
                     const controller = new AbortController();
                     modelRequest.current = controller;
                     try {
                         const assistantMatches = rankAssistantSearchMatches(catalogue, submitted);
                         if (records.length === 0) records = assistantMatches.matches;
-                        const examples = records.slice(0, 5);
+                        const examples = records.slice(0, conversation.length ? 3 : 5);
                         // Reserve context for the previous answer when refining a search.
-                        const related = [...(result?.records.slice(0, 2) ?? []), ...assistantMatches.examples];
+                        const related = [...(result?.records.slice(0, 2) ?? []), ...records, ...assistantMatches.examples];
                         for (const record of related) {
                             if (examples.length === 5) break;
                             if (!examples.includes(record)) examples.push(record);
                         }
+                        setPhase('model');
                         const response = await askModel(
-                            submitted, examples, settings.connection, answer,
+                            submitted, examples, modelMode.connection, conversation,
                             AbortSignal.any([controller.signal, AbortSignal.timeout(60000)]),
                         );
                         if (pending.current !== request) return;
@@ -254,9 +315,12 @@ export default function AskAi({
                         if (recommendation) {
                             records = [recommendation, ...records.filter((record) => record !== recommendation)];
                         }
-                        setAnswer(response);
+                        setConversation((turns) => turns.map((turn) => turn.id === turnId
+                            ? { ...turn, answer: response }
+                            : turn));
                     } catch {
                         if (pending.current === request) {
+                            setQuestion((typed) => typed || submitted);
                             setFeedback({
                                 text: records.length
                                     ? 'Ask AI could not complete this request. Try again or review the Searchbase matches below.'
@@ -279,13 +343,14 @@ export default function AskAi({
             }
         } catch {
             if (pending.current === request) {
+                if (turnId !== undefined) setQuestion((typed) => typed || submitted);
                 setFeedback({ text: 'Searchbase could not be loaded. Try again.', error: true });
             }
         } finally {
             if (pending.current === request) {
                 modelRequest.current = null;
                 pending.current = null;
-                setLoading(false);
+                setPhase(null);
             }
         }
     }
@@ -364,16 +429,18 @@ export default function AskAi({
     function clear() {
         cancelFinderTimer();
         pending.current = null;
-        setLoading(false);
+        setPhase(null);
         resumedQuestion.current = '';
         nextResultToFocus.current = null;
         setQuestion('');
-        setAnswer(undefined);
+        setConversation([]);
+        setShowCatalogMatches(false);
         setDraftId('');
         setVerifiedSpl('');
         setResult(null);
         setFeedback(null);
-        rememberQuestion('');
+        if (!canAskAi) rememberQuestion('');
+        chatInput.current?.focus({ preventScroll: true });
     }
 
     function updateQuestion(value: string) {
@@ -389,7 +456,7 @@ export default function AskAi({
         // The catalogue request can be shared with other views. Ignore its old
         // result instead of aborting a fetch another view may still need.
         pending.current = null;
-        setLoading(false);
+        setPhase(null);
         setResult(null);
         setFeedback(null);
         finderTimer.current = window.setTimeout(() => {
@@ -405,9 +472,12 @@ export default function AskAi({
 
     function openDrawer() {
         setOpen(true);
-        if (resumedQuestion.current || (!canAskAi && result?.question !== question.trim())) {
-            resumedQuestion.current = '';
-            void findMatches(question);
+        if (canAskAi) return;
+        const finderQuestion = question || resumedQuestion.current;
+        resumedQuestion.current = '';
+        if (finderQuestion.trim() && result?.question !== finderQuestion.trim()) {
+            setQuestion(finderQuestion);
+            void findMatches(finderQuestion);
         }
     }
 
@@ -419,10 +489,182 @@ export default function AskAi({
         compositionEnter.current = false;
         if (!canAskAi) {
             pending.current = null;
-            setLoading(false);
+            setPhase(null);
         }
         setOpen(false);
     }
+
+    const questionForm = (
+        <form
+            onSubmit={(event) => {
+                event.preventDefault();
+                if (!compositionEnter.current) void findMatches(question, canAskAi);
+            }}
+            onKeyDown={(event) => {
+                // WebKit can end composition before the keydown that confirms it.
+                compositionEnter.current = event.key === 'Enter' &&
+                    (composing.current || event.nativeEvent.isComposing || event.keyCode === 229);
+            }}
+            onKeyUp={() => { compositionEnter.current = false; }}
+            onCompositionStart={() => {
+                composing.current = true;
+                cancelFinderTimer();
+            }}
+            onCompositionEnd={(event) => {
+                composing.current = false;
+                if (event.target instanceof HTMLInputElement) updateQuestion(event.target.value);
+            }}
+        >
+            <ControlGroup label={canAskAi && conversation.length ? 'Your follow-up' : 'What are you looking for?'} help={canAskAi
+                ? (conversation.length ? undefined : 'For example, which sites have the most WAN packet loss?')
+                : 'Results update as you type. Try “WAN packet loss”.'}>
+                <Text
+                    inputRef={canAskAi ? chatInput : undefined}
+                    maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
+                    value={question}
+                    disabled={adding || draftBusy ? 'dimmed' : false}
+                    onChange={(_event, { value }) => updateQuestion(value)}
+                />
+            </ControlGroup>
+        </form>
+    );
+
+    const catalogResults = result && <>
+        {!canAskAi && <Heading level={2} variant="title3">Searchbase matches</Heading>}
+        <p>
+            {result.records.length
+                ? (canAskAi
+                    ? `Showing ${result.visibleCount} of ${result.records.length} matches.`
+                    : `Showing ${result.visibleCount} of ${result.records.length} ${result.records.length === 1 ? 'match' : 'matches'} for “${result.question}”.`)
+                : `No close matches for “${result.question}”. Try a product name, metric, or data source.`}
+        </p>
+        {result.records.length > 0 && <p>Searches open with the time range <strong>{range?.label ?? 'Last 24 hours'}</strong>.</p>}
+        {Boolean(result.records.length && destinations?.length) && (
+            <ControlGroup label="Add to a workspace section">
+                <Select value={destinationId} disabled={adding} onChange={(_event, { value }) => setDestinationId(String(value))}>
+                    <Select.Option value="" label="Choose a section" />
+                    {destinations?.map(({ id, title }) => <Select.Option key={id} value={id} label={title} />)}
+                </Select>
+            </ControlGroup>
+        )}
+        {result.records.slice(0, result.visibleCount).map((record, index) => {
+            const categoryLabel = [record.category, record.subCategory].filter(Boolean).join(' · ');
+            const needsInputs = /\$[\w.]+\$/.test(record.search);
+            const ambiguous = result.ambiguousIds.has(record.id);
+            const searchbaseLabel = ambiguous ? 'Browse Searchbase' : 'Open in Searchbase';
+            return <SearchCard key={`${record.ownerApp}:${record.id}`}>
+                <Heading level={3} variant="title4" tabIndex={-1} elementRef={(heading) => {
+                    if (heading && nextResultToFocus.current === index) {
+                        nextResultToFocus.current = null;
+                        heading.focus();
+                    }
+                }}>{record.searchName}</Heading>
+                {categoryLabel && <p>{categoryLabel}</p>}
+                {needsInputs && <p>This search needs inputs from its original view.</p>}
+                <ActionRow>
+                    {!needsInputs && (
+                        <Link appearance="standalone" openInNewContext
+                            aria-label={`Open in Search: ${record.searchName} (opens in new window)`}
+                            to={splunkSearchAppUrl(addLeadingSearchCommand(record.search), range, record.dispatchContext)}>
+                            Open in Search
+                        </Link>
+                    )}
+                    {searchbaseInstalled === true && (
+                        <Tooltip content={ambiguous
+                            ? 'This search ID exists in more than one app. Find it by name and app in Searchbase.'
+                            : 'View this saved search and its details in the Searchbase app.'} wrapContent>
+                            <Link appearance="standalone" openInNewContext
+                                aria-label={`${searchbaseLabel}: ${record.searchName} (opens in new window)`}
+                                to={splunkSearchbaseEditUrl(ambiguous ? undefined : record.id)}>
+                                {searchbaseLabel}
+                            </Link>
+                        </Tooltip>
+                    )}
+                    {!needsInputs && destination && (
+                        <ActionRow>
+                            <Tooltip content={WORKSPACE_ADD_HELP.personal}>
+                                <Button appearance="secondary" label="Add for me" disabled={adding}
+                                    aria-label={`Add for me: ${record.searchName} to ${destination.title}`}
+                                    onClick={() => { void add(record, 'personal'); }} />
+                            </Tooltip>
+                            {canManageWorkspace && (
+                                <Tooltip content={WORKSPACE_ADD_HELP.workspace}>
+                                    <Button appearance="secondary" label="Add for everyone" disabled={adding}
+                                        aria-label={`Add for everyone: ${record.searchName} to ${destination.title}`}
+                                        onClick={() => { void add(record, 'workspace'); }} />
+                                </Tooltip>
+                            )}
+                        </ActionRow>
+                    )}
+                </ActionRow>
+                <CollapsiblePanel appearance="subtle" title="Search details" inset={false}>
+                    <SearchDetailsBody>
+                        <SearchbaseDrilldownGuidance metadata={{ ...record, title: record.searchName }} appearance="inline" />
+                        <CatalogueDetails>
+                            {record.tags.length > 0 && <><dt>Tags</dt><dd>{record.tags.join(', ')}</dd></>}
+                            {record.defaultViz && <><dt>Default visualization</dt><dd>{record.defaultViz}</dd></>}
+                            <dt>Search ID</dt><dd><code>{record.id}</code></dd>
+                        </CatalogueDetails>
+                    </SearchDetailsBody>
+                </CollapsiblePanel>
+                <CollapsiblePanel appearance="subtle" title="View SPL" inset={false}>
+                    <pre tabIndex={0}><code><SplSyntax spl={record.search} /></code></pre>
+                </CollapsiblePanel>
+            </SearchCard>;
+        })}
+        {result.visibleCount < result.records.length && (
+            <ActionRow>
+                <Button appearance="secondary" label="Show more results" onClick={showMoreResults} />
+            </ActionRow>
+        )}
+    </>;
+
+    const currentReply = answer && <SearchCard aria-label="AI response">
+        <Heading level={2} variant="title4" tabIndex={-1} elementRef={latestReplyHeading}>Latest reply</Heading>
+        <AnswerText>{answer.explanation}</AnswerText>
+        {answer.search && <>
+            <Heading level={3} variant="title4">{answer.search.title}</Heading>
+            <p>{savedDraft ? 'Saved search' : 'Review this draft SPL before using it.'}</p>
+            <pre tabIndex={0} aria-label={savedDraft ? 'Saved search SPL' : 'Draft SPL'}>
+                <code><SplSyntax spl={savedDraft?.search ?? answer.search.spl} /></code>
+            </pre>
+            <ActionRow ref={draftActions}>
+                {savedDraft ? (
+                    <Link appearance="standalone" openInNewContext elementRef={focusSavedSearch}
+                        to={splunkSearchAppUrl(addLeadingSearchCommand(savedDraft.search), range, savedDraft.dispatchContext)}>
+                        Open in Search
+                    </Link>
+                ) : <>
+                    {canValidateDraft(answer.search.spl) && (
+                        <Button label={verifiedSpl === answer.search.spl ? 'Validate SPL again' : 'Validate SPL'}
+                            disabled={draftBusy} onClick={() => { void reviewDraft(false); }} />
+                    )}
+                    {verifiedSpl === answer.search.spl && (
+                        <Link appearance="standalone" openInNewContext
+                            to={splunkSearchAppUrl(addLeadingSearchCommand(answer.search.spl), range)}>
+                            Open draft in Search
+                        </Link>
+                    )}
+                    {verifiedSpl === answer.search.spl && settings?.writable && (
+                        <Button label="Save to Searchbase" disabled={draftBusy}
+                            onClick={() => { void reviewDraft(true); }} />
+                    )}
+                </>}
+            </ActionRow>
+            {!savedDraft && !canValidateDraft(answer.search.spl) && (
+                <p>Copy this SPL to Search to review commands, macros, or inputs before running it.</p>
+            )}
+        </>}
+    </SearchCard>;
+
+    const progressText = phase === 'model'
+        ? 'Waiting for the model’s answer…'
+        : phase === 'catalogue'
+            ? (canAskAi ? 'Finding relevant Searchbase examples…' : 'Looking for Searchbase matches…')
+            : '';
+    const feedbackMessage = feedback && (
+        <Message type={feedback.error ? 'error' : 'success'} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</Message>
+    );
 
     return <>
         <Button
@@ -447,41 +689,11 @@ export default function AskAi({
         <Drawer open={open} onRequestClose={closeDrawer} returnFocus={trigger} width="min(560px, 100vw)">
             <Drawer.Header title={launcherLabel} subtitle={context} />
             <Drawer.Body>
-                <Content>
+                <Content ref={drawerContent}>
                     <p>{canAskAi
-                        ? 'Ask for a search, an SPL explanation, or a draft. Your question and selected Searchbase examples go to the configured model.'
+                        ? 'Ask for a search, an SPL explanation, or a draft. Recent turns and selected Searchbase examples go to the configured model.'
                         : 'Find existing searches in Searchbase by topic, product, or monitoring goal.'}</p>
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            if (!compositionEnter.current) void findMatches(question, canAskAi);
-                        }}
-                        onKeyDown={(event) => {
-                            // WebKit can end composition before the keydown that confirms it.
-                            compositionEnter.current = event.key === 'Enter' &&
-                                (composing.current || event.nativeEvent.isComposing || event.keyCode === 229);
-                        }}
-                        onKeyUp={() => { compositionEnter.current = false; }}
-                        onCompositionStart={() => {
-                            composing.current = true;
-                            cancelFinderTimer();
-                        }}
-                        onCompositionEnd={(event) => {
-                            composing.current = false;
-                            if (event.target instanceof HTMLInputElement) updateQuestion(event.target.value);
-                        }}
-                    >
-                        <ControlGroup label="What are you looking for?" help={canAskAi
-                            ? 'For example, which sites have the most WAN packet loss?'
-                            : 'Results update as you type. Try “WAN packet loss”.'}>
-                            <Text
-                                maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
-                                value={question}
-                                disabled={adding || draftBusy ? 'dimmed' : false}
-                                onChange={(_event, { value }) => updateQuestion(value)}
-                            />
-                        </ControlGroup>
-                    </form>
+                    {!canAskAi && questionForm}
                     {(searchbaseInstalled === false || searchbaseInstalled === null) && (
                         <ActionRow>
                             <Tooltip content="View the Searchbase app listing for installation instructions." wrapContent>
@@ -491,140 +703,63 @@ export default function AskAi({
                             </Tooltip>
                         </ActionRow>
                     )}
-                    {feedback && <Message type={feedback.error ? 'error' : 'success'} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</Message>}
-                    <SearchStatus role="status">
-                        {loading && (canAskAi ? 'Checking Searchbase and preparing an answer…' : 'Looking for Searchbase matches…')}
-                        {answer && 'AI response ready.'}
-                    </SearchStatus>
-                    {answer && <SearchCard aria-label="AI response">
-                        <Heading level={2} variant="title4">AI response</Heading>
-                        <AnswerText>{answer.explanation}</AnswerText>
-                        {answer.search && <>
-                            <Heading level={3} variant="title4">{answer.search.title}</Heading>
-                            <p>{savedDraft ? 'Saved search' : 'Review this draft SPL before using it.'}</p>
-                            <pre tabIndex={0} aria-label={savedDraft ? 'Saved search SPL' : 'Draft SPL'}>
-                                <code><SplSyntax spl={savedDraft?.search ?? answer.search.spl} /></code>
-                            </pre>
-                            <ActionRow ref={draftActions}>
-                                {savedDraft ? (
-                                    <Link appearance="standalone" openInNewContext elementRef={focusSavedSearch}
-                                        to={splunkSearchAppUrl(addLeadingSearchCommand(savedDraft.search), range, savedDraft.dispatchContext)}>
-                                        Open in Search
-                                    </Link>
-                                ) : <>
-                                    {canValidateDraft(answer.search.spl) && (
-                                        <Button label={verifiedSpl === answer.search.spl ? 'Validate SPL again' : 'Validate SPL'}
-                                            disabled={draftBusy} onClick={() => { void reviewDraft(false); }} />
-                                    )}
-                                    {verifiedSpl === answer.search.spl && (
-                                        <Link appearance="standalone" openInNewContext
-                                            to={splunkSearchAppUrl(addLeadingSearchCommand(answer.search.spl), range)}>
-                                            Open draft in Search
-                                        </Link>
-                                    )}
-                                    {verifiedSpl === answer.search.spl && settings?.writable && (
-                                        <Button label="Save to Searchbase" disabled={draftBusy}
-                                            onClick={() => { void reviewDraft(true); }} />
-                                    )}
-                                </>}
-                            </ActionRow>
-                            {!savedDraft && !canValidateDraft(answer.search.spl) && (
-                                <p>Copy this SPL to Search to review commands, macros, or inputs before running it.</p>
-                            )}
-                        </>}
-                    </SearchCard>}
-                    {result && <Heading level={2} variant="title3">Searchbase matches</Heading>}
-                    <SearchStatus role="status">
-                        {result && (result.records.length
-                            ? `Showing ${result.visibleCount} of ${result.records.length} ${result.records.length === 1 ? 'match' : 'matches'} for “${result.question}”.`
-                            : `No close matches for “${result.question}”. Try a product name, metric, or data source.`)}
-                    </SearchStatus>
-                    {result && <>
-                        {result.records.length > 0 && <p>Searches open with the time range <strong>{range?.label ?? 'Last 24 hours'}</strong>.</p>}
-                        {Boolean(result.records.length && destinations?.length) && (
-                            <ControlGroup label="Add to a workspace section">
-                                <Select value={destinationId} disabled={adding} onChange={(_event, { value }) => setDestinationId(String(value))}>
-                                    <Select.Option value="" label="Choose a section" />
-                                    {destinations?.map(({ id, title }) => <Select.Option key={id} value={id} label={title} />)}
-                                </Select>
-                            </ControlGroup>
-                        )}
-                        {result.records.slice(0, result.visibleCount).map((record, index) => {
-                            const categoryLabel = [record.category, record.subCategory].filter(Boolean).join(' · ');
-                            const needsInputs = /\$[\w.]+\$/.test(record.search);
-                            const ambiguous = result.ambiguousIds.has(record.id);
-                            const searchbaseLabel = ambiguous ? 'Browse Searchbase' : 'Open in Searchbase';
-                            return <SearchCard key={`${record.ownerApp}:${record.id}`}>
-                                <Heading level={3} variant="title4" tabIndex={-1} elementRef={(heading) => {
-                                    if (heading && nextResultToFocus.current === index) {
-                                        nextResultToFocus.current = null;
-                                        heading.focus();
-                                    }
-                                }}>{record.searchName}</Heading>
-                                {categoryLabel && <p>{categoryLabel}</p>}
-                                {needsInputs && <p>This search needs inputs from its original view.</p>}
-                                <ActionRow>
-                                    {!needsInputs && (
-                                        <Link appearance="standalone" openInNewContext
-                                            aria-label={`Open in Search: ${record.searchName} (opens in new window)`}
-                                            to={splunkSearchAppUrl(addLeadingSearchCommand(record.search), range, record.dispatchContext)}>
-                                            Open in Search
-                                        </Link>
-                                    )}
-                                    {searchbaseInstalled === true && (
-                                        <Tooltip content={ambiguous
-                                            ? 'This search ID exists in more than one app. Find it by name and app in Searchbase.'
-                                            : 'View this saved search and its details in the Searchbase app.'} wrapContent>
-                                            <Link appearance="standalone" openInNewContext
-                                                aria-label={`${searchbaseLabel}: ${record.searchName} (opens in new window)`}
-                                                to={splunkSearchbaseEditUrl(ambiguous ? undefined : record.id)}>
-                                                {searchbaseLabel}
-                                            </Link>
-                                        </Tooltip>
-                                    )}
-                                    {!needsInputs && destination && (
-                                        <ActionRow>
-                                            <Tooltip content={WORKSPACE_ADD_HELP.personal}>
-                                                <Button appearance="secondary" label="Add for me" disabled={adding}
-                                                    aria-label={`Add for me: ${record.searchName} to ${destination.title}`}
-                                                    onClick={() => { void add(record, 'personal'); }} />
-                                            </Tooltip>
-                                            {canManageWorkspace && (
-                                                <Tooltip content={WORKSPACE_ADD_HELP.workspace}>
-                                                    <Button appearance="secondary" label="Add for everyone" disabled={adding}
-                                                        aria-label={`Add for everyone: ${record.searchName} to ${destination.title}`}
-                                                        onClick={() => { void add(record, 'workspace'); }} />
-                                                </Tooltip>
-                                            )}
-                                        </ActionRow>
-                                    )}
-                                </ActionRow>
-                                <CollapsiblePanel appearance="subtle" title="Search details" inset={false}>
-                                    <SearchDetailsBody>
-                                        <SearchbaseDrilldownGuidance metadata={{ ...record, title: record.searchName }} appearance="inline" />
-                                        <CatalogueDetails>
-                                            {record.tags.length > 0 && <><dt>Tags</dt><dd>{record.tags.join(', ')}</dd></>}
-                                            {record.defaultViz && <><dt>Default visualization</dt><dd>{record.defaultViz}</dd></>}
-                                            <dt>Search ID</dt><dd><code>{record.id}</code></dd>
-                                        </CatalogueDetails>
-                                    </SearchDetailsBody>
-                                </CollapsiblePanel>
-                                <CollapsiblePanel appearance="subtle" title="View SPL" inset={false}>
-                                    <pre tabIndex={0}><code><SplSyntax spl={record.search} /></code></pre>
-                                </CollapsiblePanel>
-                            </SearchCard>;
-                        })}
-                        {result.visibleCount < result.records.length && (
-                            <ActionRow>
-                                <Button appearance="secondary" label="Show more results" onClick={showMoreResults} />
-                            </ActionRow>
-                        )}
+                    {canAskAi ? (
+                        <>
+                            <ScreenReaderContent role="status">{progressText || (answer ? 'AI response ready.' : '')}</ScreenReaderContent>
+                            {conversation.length > 0 && <Transcript aria-label="Conversation">
+                                {conversation.map((turn) => (
+                                    <React.Fragment key={turn.id}>
+                                        <ChatQuestion ref={turn.id === currentTurn?.id ? latestChatQuestion : undefined}>
+                                            <strong>You</strong>
+                                            <p>{turn.question}</p>
+                                        </ChatQuestion>
+                                        {turn.id !== currentTurn?.id && turn.answer && (
+                                            <SearchCard aria-label="Earlier AI response">
+                                                <Heading level={2} variant="title4">Ask AI</Heading>
+                                                <AnswerText>{turn.answer.explanation}</AnswerText>
+                                            </SearchCard>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                                <SearchStatus aria-hidden="true" ref={chatProgress}>{progressText}</SearchStatus>
+                                {currentReply}
+                                {feedbackMessage}
+                            </Transcript>}
+                        </>
+                    ) : <>
+                        <SearchStatus role="status">{progressText}</SearchStatus>
+                        {feedbackMessage}
+                        <ScreenReaderContent role="status">
+                            {result && `Showing ${result.visibleCount} of ${result.records.length} Searchbase matches.`}
+                        </ScreenReaderContent>
                     </>}
+                    {canAskAi && result ? (
+                        <CollapsiblePanel appearance="subtle" title={`Searchbase matches (${result.records.length})`}
+                            open={showCatalogMatches} onChange={(_, { action }) => setShowCatalogMatches(action === 'open')} inset={false}>
+                            <Content>
+                                {catalogResults}
+                            </Content>
+                        </CollapsiblePanel>
+                    ) : catalogResults}
                 </Content>
             </Drawer.Body>
             <Drawer.Footer>
-                <Button appearance="secondary" label="Clear" disabled={(canAskAi && loading) || adding || draftBusy || (!question && !result)} onClick={clear} />
-                <Button appearance="primary" label={canAskAi ? (answer ? "Send follow-up" : "Ask AI") : "Find searches"} disabled={!question.trim() || loading || adding || draftBusy} onClick={() => { void findMatches(question, canAskAi); }} />
+                {canAskAi ? (
+                    <ChatComposer>
+                        {questionForm}
+                        <ComposerActions>
+                            {answer && <Button appearance="subtle" label="Read latest reply" onClick={() => latestReplyHeading.current?.focus()} />}
+                            <Button appearance="secondary" label="New chat" disabled={loading || adding || draftBusy || (!question && !conversation.length)} onClick={clear} />
+                            <Button appearance="primary" label={conversation.length ? 'Send follow-up' : 'Ask AI'}
+                                disabled={!question.trim() || loading || adding || draftBusy}
+                                onClick={() => { void findMatches(question, true); }} />
+                        </ComposerActions>
+                    </ChatComposer>
+                ) : <>
+                    <Button appearance="secondary" label="Clear" disabled={adding || draftBusy || (!question && !result)} onClick={clear} />
+                    <Button appearance="primary" label="Find searches" disabled={!question.trim() || loading || adding || draftBusy}
+                        onClick={() => { void findMatches(question); }} />
+                </>}
             </Drawer.Footer>
         </Drawer>
     </>;
