@@ -9,6 +9,7 @@ import Message from '@splunk/react-ui/Message';
 import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
 import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
+import TextArea from '@splunk/react-ui/TextArea';
 import Tooltip from '@splunk/react-ui/Tooltip';
 import { addLeadingSearchCommand } from '@splunk/splunk-utils/search';
 import { variables } from '@splunk/themes';
@@ -111,17 +112,31 @@ const ComposerActions = styled(ActionRow)`
 `;
 
 const ChatQuestion = styled.div`
+    justify-self: end;
+    max-width: 85%;
     padding: ${variables.spacingMedium};
     border-radius: ${variables.borderRadius};
     background: ${variables.backgroundColorSection};
     overflow-wrap: anywhere;
 
-    p { margin: ${variables.spacingXSmall} 0 0; }
+    p {
+        margin: ${variables.spacingXSmall} 0 0;
+        white-space: pre-wrap;
+    }
+`;
+
+const ChatReply = styled(SearchCard)`
+    margin-inline-end: ${variables.spacingXLarge};
 `;
 
 const Transcript = styled.section`
     display: grid;
     gap: ${variables.spacingMedium};
+`;
+
+const ChatStarters = styled.section`
+    display: grid;
+    gap: ${variables.spacingSmall};
 `;
 
 const SearchStatus = styled.div`
@@ -199,10 +214,10 @@ export default function AskAi({
     const [question, setQuestion] = useState('');
     const [rememberedQuestion] = useState(readQuestion);
     const resumedQuestion = useRef(rememberedQuestion);
-    const chatInput = useRef<HTMLInputElement>(null);
+    const chatInput = useRef<HTMLTextAreaElement>(null);
     const drawerContent = useRef<HTMLDivElement>(null);
     const latestChatQuestion = useRef<HTMLDivElement>(null);
-    const chatProgress = useRef<HTMLDivElement>(null);
+    const chatProgress = useRef<HTMLElement>(null);
     const modelWarning = useRef<HTMLDivElement>(null);
     const latestReplyHeading = useRef<HTMLHeadingElement>(null);
     const conversationSequence = useRef(0);
@@ -244,11 +259,17 @@ export default function AskAi({
     }, [open, canAskAi, currentTurn?.id]);
 
     useEffect(() => {
-        if (!open || !canAskAi) return;
+        if (!open || !canAskAi || drawerContent.current?.contains(document.activeElement)) return;
         const viewport = drawerContent.current?.parentElement?.getBoundingClientRect();
         const questionBounds = latestChatQuestion.current?.getBoundingClientRect();
         if (!viewport || !questionBounds || questionBounds.bottom < viewport.top || questionBounds.top > viewport.bottom) return;
-        const target = answer ? latestReplyHeading.current : modelFailed ? modelWarning.current : phase ? chatProgress.current : null;
+        if (answer) {
+            const heading = latestReplyHeading.current;
+            const replyBottom = heading?.parentElement?.getBoundingClientRect().bottom;
+            if (replyBottom && replyBottom > viewport.bottom) heading?.scrollIntoView({ block: 'start' });
+            return;
+        }
+        const target = modelFailed ? modelWarning.current : phase ? chatProgress.current : null;
         target?.scrollIntoView({ block: 'nearest' });
     }, [open, canAskAi, phase, answer, modelFailed]);
 
@@ -530,6 +551,10 @@ export default function AskAi({
                 // WebKit can end composition before the keydown that confirms it.
                 compositionEnter.current = event.key === 'Enter' &&
                     (composing.current || event.nativeEvent.isComposing || event.keyCode === 229);
+                if (canAskAi && event.key === 'Enter' && !event.shiftKey && !compositionEnter.current) {
+                    event.preventDefault();
+                    void findMatches(question, true);
+                }
             }}
             onKeyUp={() => { compositionEnter.current = false; }}
             onCompositionStart={() => {
@@ -538,20 +563,33 @@ export default function AskAi({
             }}
             onCompositionEnd={(event) => {
                 composing.current = false;
-                if (event.target instanceof HTMLInputElement) updateQuestion(event.target.value);
+                if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+                    updateQuestion(event.target.value);
+                }
             }}
         >
-            <ControlGroup label={canAskAi && conversation.length ? 'Your follow-up' : 'What are you looking for?'} help={canAskAi
-                ? (conversation.length ? undefined : 'Questions, recent replies, and selected Searchbase examples go to the configured model.')
-                : 'Results update as you type. Try “WAN packet loss”.'}>
-                <Text
-                    inputRef={canAskAi ? chatInput : undefined}
-                    placeholder={canAskAi && !conversation.length ? 'Which sites have the most WAN packet loss?' : undefined}
-                    maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
-                    value={question}
-                    disabled={adding || draftBusy ? 'dimmed' : false}
-                    onChange={(_event, { value }) => updateQuestion(value)}
-                />
+            <ControlGroup label={canAskAi ? 'Message Ask AI' : 'What are you looking for?'} help={canAskAi ? <>
+                {!conversation.length && <>Questions, recent replies, and selected Searchbase examples go to the configured model.<br /></>}
+                Enter to send. Shift+Enter for a new line.
+            </> : 'Results update as you type. Try “WAN packet loss”.'}>
+                {canAskAi ? (
+                    <TextArea
+                        inputRef={chatInput}
+                        rowsMin={2}
+                        rowsMax={4}
+                        maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
+                        value={question}
+                        disabled={adding || draftBusy}
+                        onChange={(_event, { value }) => updateQuestion(value)}
+                    />
+                ) : (
+                    <Text
+                        maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
+                        value={question}
+                        disabled={adding || draftBusy ? 'dimmed' : false}
+                        onChange={(_event, { value }) => updateQuestion(value)}
+                    />
+                )}
             </ControlGroup>
         </form>
     );
@@ -648,8 +686,16 @@ export default function AskAi({
 
     const recommendedSearch = answer?.source && result?.records.find(({ id, ownerApp }) =>
         id === answer.source?.id && ownerApp === answer.source?.ownerApp);
-    const currentReply = answer && <SearchCard aria-label="AI response">
-        <Heading level={2} variant="title4" tabIndex={-1} elementRef={latestReplyHeading}>Latest reply</Heading>
+    const followUp = answer?.search
+        ? { label: 'Explain this draft', prompt: 'Explain how this draft SPL works and list its output fields.' }
+        : recommendedSearch && {
+            label: 'Explain this search',
+            prompt: `Explain the SPL for “${recommendedSearch.searchName}” and list its output fields.`.slice(0, ASK_SEARCHBASE_QUESTION_LIMIT),
+        };
+    const currentReply = answer && <ChatReply aria-label="Latest Ask AI reply">
+        <Heading level={2} variant="title4" tabIndex={-1} elementRef={latestReplyHeading}>
+            Ask AI<ScreenReaderContent> latest reply</ScreenReaderContent>
+        </Heading>
         <AnswerText>{answer.explanation}</AnswerText>
         {!answer.search && recommendedSearch && <>
             <Heading level={3} variant="title4">{recommendedSearch.searchName}</Heading>
@@ -695,7 +741,14 @@ export default function AskAi({
                 <p>Copy this SPL to Search to review commands, macros, or inputs before running it.</p>
             )}
         </>}
-    </SearchCard>;
+        {followUp && (
+            <ActionRow>
+                <Button appearance="secondary" label={followUp.label}
+                    disabled={loading || adding || draftBusy || Boolean(question.trim())}
+                    onClick={() => { void findMatches(followUp.prompt, true); }} />
+            </ActionRow>
+        )}
+    </ChatReply>;
 
     const progressText = phase === 'model'
         ? (result?.records.length ? 'Searchbase matches are ready. Waiting for the model’s answer…' : 'Waiting for the model’s answer…')
@@ -707,7 +760,7 @@ export default function AskAi({
     );
     const askButtonLabel = modelFailed && question.trim() === currentTurn.question
         ? 'Try Ask AI again'
-        : conversation.length ? 'Send follow-up' : 'Ask AI';
+        : 'Send';
 
     return <>
         <Button
@@ -763,6 +816,19 @@ export default function AskAi({
                     {canAskAi ? (
                         <>
                             <ScreenReaderContent role="status">{progressText || (answer ? 'AI response ready.' : '')}</ScreenReaderContent>
+                            {conversation.length === 0 && (
+                                <ChatStarters aria-label="Suggested questions">
+                                    <Heading level={2} variant="title4">Try a question</Heading>
+                                    <ActionRow>
+                                        <Button appearance="secondary" label="Find a search for WAN packet loss"
+                                            disabled={Boolean(question.trim()) || loading}
+                                            onClick={() => { void findMatches('Find a search for WAN packet loss.', true); }} />
+                                        <Button appearance="secondary" label="Draft SPL for failed logins by hour"
+                                            disabled={Boolean(question.trim()) || loading}
+                                            onClick={() => { void findMatches('Draft SPL for failed logins by hour.', true); }} />
+                                    </ActionRow>
+                                </ChatStarters>
+                            )}
                             {conversation.length > 0 && <Transcript aria-label="Conversation">
                                 {conversation.map((turn) => (
                                     <React.Fragment key={turn.id}>
@@ -771,14 +837,26 @@ export default function AskAi({
                                             <p>{turn.question}</p>
                                         </ChatQuestion>
                                         {turn.id !== currentTurn?.id && turn.answer && (
-                                            <SearchCard aria-label="Earlier AI response">
+                                            <ChatReply aria-label="Earlier Ask AI reply">
                                                 <Heading level={2} variant="title4">Ask AI</Heading>
                                                 <AnswerText>{turn.answer.explanation}</AnswerText>
-                                            </SearchCard>
+                                                {turn.answer.search && (
+                                                    <CollapsiblePanel appearance="subtle" title={`View draft for ${turn.answer.search.title}`} inset={false}>
+                                                        <pre tabIndex={0} aria-label="Earlier draft SPL">
+                                                            <code><SplSyntax spl={turn.answer.search.spl} /></code>
+                                                        </pre>
+                                                    </CollapsiblePanel>
+                                                )}
+                                            </ChatReply>
                                         )}
                                     </React.Fragment>
                                 ))}
-                                <SearchStatus aria-hidden="true" ref={chatProgress}>{progressText}</SearchStatus>
+                                {progressText && (
+                                    <ChatReply aria-hidden="true" ref={chatProgress}>
+                                        <strong>Ask AI</strong>
+                                        <p>{progressText}</p>
+                                    </ChatReply>
+                                )}
                                 {currentReply}
                                 {modelFailed && (
                                     <Message type="warning" role="alert" elementRef={modelWarning}>
