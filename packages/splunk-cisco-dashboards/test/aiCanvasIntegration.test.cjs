@@ -14,7 +14,7 @@ function loadService() {
     const module = { exports: {} };
     const rest = (route, ns) => `/services/${ns?.app || '-'}/${ns?.owner || '-'}/${route}`;
     vm.runInNewContext(`(function(require,module,exports){${code}\n})`, {
-        URL, URLSearchParams, AbortController, setTimeout, clearTimeout, atob, btoa,
+        URL, URLSearchParams, AbortController, setTimeout, clearTimeout, atob, btoa, TextEncoder,
     })((id) => {
         if (id.endsWith('/url')) return { createRESTURL: rest, createURL: (url, params) => `${url}?${new URLSearchParams(params)}` };
         if (id.endsWith('/fetch')) return { getDefaultFetchInit: () => ({ headers: { 'X-Splunk-Form-Key': 'test-csrf' } }) };
@@ -232,6 +232,63 @@ test('card creation carries the native Splunk widget schema and search context',
     assert.equal(payload.data.props.vizOptions.vizType, 'bar');
     assert.equal(payload.data.props.searchMetadata.query.sid, 'job-id');
     assert.equal(payload.sources[0].query, panel.searchMetadata.query.query);
+});
+
+test('Workspace tables send a bounded snapshot with the selected SPL and range without dispatching a new search', async () => {
+    const service = loadService();
+    const mock = mockRequest((url) => {
+        if (url.includes('ai_canvas_auth')) return { data: { access_token: 'test-token' } };
+        if (url.includes('conf-ai-canvas')) return content({ ai_canvas_base_url: 'https://canvas.example.test' });
+        if (url.endsWith('/boards/existing-board/cards')) return { data: { cardId: ['card-1'] } };
+        throw new Error('Unexpected search dispatch or Canvas request');
+    });
+    const query = 'search index=network | stats count by device';
+    const columns = [{ field: 'device' }, { field: 'count' }];
+    const rows = Array.from({ length: 110 }, (_, index) => ({ device: `device-${index}`, count: String(index) }));
+    const panel = service.prepareWorkspaceTable({ query, earliest: '-24h', latest: 'now', columns, rows });
+    const session = await service.createCanvasIntegration(mock).openSession();
+    await session.add('existing-board', panel, 'Observed devices');
+
+    const { data, sources } = JSON.parse(mock.calls[2].init.body).cards[0];
+    assert.equal(data.props.vizOptions.vizType, 'table');
+    assert.deepEqual(data.props.resultsData.fields, [{ name: 'device' }, { name: 'count' }]);
+    assert.equal(data.props.resultsData.columns[0].length, service.CANVAS_PREVIEW_ROWS);
+    assert.equal(data.props.resultsData.columns[0][99], 'device-99');
+    assert.deepEqual(data.props.searchMetadata.query, {
+        query, earliest_time: '-24h', latest_time: 'now', dispatchState: 'DONE', resultsCount: 110,
+    });
+    assert.equal(sources[0].query, query);
+    assert.equal(mock.calls.length, 3);
+});
+
+test('Workspace tables reject unresolved inputs, empty results, and oversized UTF-8 previews', () => {
+    const { prepareWorkspaceTable } = loadService();
+    const options = { query: 'search index=test', columns: [{ field: 'message' }], rows: [{ message: 'a' }] };
+    assert.throws(() => prepareWorkspaceTable({ ...options, query: 'search host=$host$' }), /unresolved inputs/);
+    assert.throws(() => prepareWorkspaceTable({ ...options, rows: [] }), /no results/);
+    assert.throws(() => prepareWorkspaceTable({
+        ...options,
+        rows: [{ message: '界'.repeat(2 * 1024 * 1024) }],
+    }), /too large/);
+});
+
+test('the Workspace chart handoff reads the existing Dashboard Core search job', async () => {
+    const service = loadService();
+    const query = 'search index=network | timechart count';
+    const api = {
+        getDataSourceMetaData: () => ({ sid: 'workspace-chart-job' }),
+        getCompleteSearchQueryAndParameters: () => ({ query }),
+    };
+    const mock = mockRequest((url) => url.includes('results_preview')
+        ? { data: { fields: [{ name: 'count' }], columns: [[7]] } }
+        : content({ request: { earliest_time: '-4h', latest_time: 'now' }, resultCount: 1 }));
+    const panel = await service.createCanvasIntegration(mock).preparePanel(api, item, {
+        ds1: { type: 'ds.search', options: { query } },
+    });
+    assert.equal(panel.type, 'splunk.line');
+    assert.equal(panel.searchMetadata.query.query, query);
+    assert.equal(panel.searchMetadata.earliest_time, '-4h');
+    assert.ok(mock.calls.every(({ url, init }) => url.includes('/jobs/workspace-chart-job') && !init.method));
 });
 
 test('cross-launch keeps the platform tenant context and references only created cards', async () => {

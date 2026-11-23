@@ -1,3 +1,5 @@
+import { addLeadingSearchCommand } from "@splunk/splunk-utils/search";
+import type { DashboardCoreApi } from "@splunk/dashboard-types";
 import { resolveWorkspaceVisualization } from "@/common/config/workspaceVisualizations";
 import WorkspaceDefaultIcon from "@/common/components/workspace/WorkspaceDefaultIcon";
 import { dcScopeDashboardUrl } from "@/common/lib/dcNetworkingScope";
@@ -17,6 +19,15 @@ import EnterpriseViewOnlyPreset from "@splunk/dashboard-presets/EnterpriseViewOn
 import DotsThreeVertical from "@splunk/react-icons/DotsThreeVertical";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
 import Badge from "@splunk/react-ui/Badge";
+import {
+  AiCanvasDialog,
+  useAiCanvasEligibility,
+} from "../../common/components/AiCanvasDialog";
+import {
+  CANVAS_PREVIEW_ROWS,
+  canvasIntegration,
+  prepareWorkspaceTable,
+} from "../dashboardbuilder/aiCanvasIntegration";
 import Button from "@splunk/react-ui/Button";
 import Card from "@splunk/react-ui/Card";
 import CardLayout from "@splunk/react-ui/CardLayout";
@@ -6211,7 +6222,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             aria-label={activeDetailTable.title}
             className="grid min-h-0 min-w-0 grid-cols-1 grid-rows-1 overflow-hidden px-3 py-2"
             onKeyDown={(event) => {
-              if (event.key === "Escape" && !event.defaultPrevented) {
+              if (
+                event.key === "Escape" &&
+                !event.defaultPrevented &&
+                event.currentTarget.contains(event.target as Node)
+              ) {
                 event.stopPropagation();
                 setActiveDetailTable(null);
               }
@@ -7906,6 +7921,25 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
   const [sortState, setSortState] = useState<MetricDetailSortState | null>(
     null,
   );
+  const resultRequest = useMemo(
+    () => ({
+      activeConfig,
+      earliest: range.earliest,
+      latest: range.latest,
+      refreshToken,
+    }),
+    [activeConfig, range.earliest, range.latest, refreshToken],
+  );
+  const [completedRequest, setCompletedRequest] =
+    useState<typeof resultRequest | null>(null);
+  const chartApi = useRef<DashboardCoreApi | null>(null);
+  const updateChartApi = useCallback((api: DashboardCoreApi | null) => {
+    chartApi.current = api;
+  }, []);
+  const canvasTrigger = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+  const [canvasRequest, setCanvasRequest] =
+    useState<typeof resultRequest | null>(null);
+  const canvasEligible = useAiCanvasEligibility(Boolean(activeConfig.spl.trim()));
   const activeIsTable = isTableViz(activeConfig.defaultViz);
   const activeDefinition = useMemo(
     () =>
@@ -7986,6 +8020,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
         });
         setTableColumns(columns);
         setRows(nextRows);
+        setCompletedRequest(resultRequest);
       })
       .catch((error: unknown) => {
         if (
@@ -8008,13 +8043,35 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
       cancelled = true;
       controller.abort();
     };
-  }, [activeConfig, activeIsTable, range.earliest, range.latest, refreshToken]);
+  }, [activeConfig, activeIsTable, range.earliest, range.latest, resultRequest]);
 
   const availableStatus = activeConfig.availableStatus ?? "Available";
   const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";
   const statusField = activeConfig.statusField;
   const displayColumns =
     tableColumns.length > 0 ? tableColumns : activeConfig.columns;
+  const tableReady = completedRequest === resultRequest && rows.length > 0;
+  const prepareCanvasPanel = async (signal: AbortSignal) => {
+    if (activeIsTable) {
+      return prepareWorkspaceTable({
+        query: addLeadingSearchCommand(activeConfig.spl),
+        earliest: resultRequest.earliest,
+        latest: resultRequest.latest,
+        columns: displayColumns,
+        rows,
+      });
+    }
+    const api = chartApi.current;
+    if (!api || !activeDefinition) {
+      throw new Error("The search visualization is still loading. Try again.");
+    }
+    return canvasIntegration.preparePanel(
+      api,
+      activeDefinition.visualizations.viz_drilldown_result,
+      activeDefinition.dataSources,
+      signal,
+    );
+  };
   const columnCount = Math.max(displayColumns.length, 1);
   const sortedRows = useMemo(() => {
     if (!sortState) return rows;
@@ -8354,7 +8411,11 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
                     }
                     initialMode="view"
                   >
-                    <DashboardCore width="100%" height="420px" />
+                    <DashboardCore
+                      width="100%"
+                      height="420px"
+                      dashboardCoreApiRef={updateChartApi}
+                    />
                   </DashboardContextProvider>
                 </div>
               )
@@ -8393,8 +8454,28 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
             openInNewContext
             to={searchbaseUrl}
           />
+          {canvasEligible && (
+            <Button
+              appearance="secondary"
+              label="Add to AI Canvas"
+              elementRef={canvasTrigger}
+              onClick={() => setCanvasRequest(resultRequest)}
+              disabled={activeIsTable ? !tableReady : !activeDefinition}
+            />
+          )}
         </div>
       </div>
+      {canvasEligible && (
+        <AiCanvasDialog
+          draft={canvasRequest === resultRequest ? {
+            cardTitle: activeConfig.metadata.title,
+            preparePanel: prepareCanvasPanel,
+          } : null}
+          returnFocus={canvasTrigger}
+          transferNotice={`The selected search, time range, and up to ${CANVAS_PREVIEW_ROWS} result rows will be sent to the selected AI Canvas.`}
+          onClose={() => setCanvasRequest(null)}
+        />
+      )}
     </>
   );
 };

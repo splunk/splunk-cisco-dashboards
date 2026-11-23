@@ -101,6 +101,38 @@ export function canvasVisualization(type) {
     })[type] || 'table';
 }
 
+function boundedPreview(fields, columns) {
+    const resultsData = { fields, columns };
+    if (new TextEncoder().encode(JSON.stringify(resultsData)).length > 5 * 1024 * 1024) {
+        throw new Error('The search preview is too large for AI Canvas. Reduce the result size and try again.');
+    }
+    return resultsData;
+}
+
+export function prepareWorkspaceTable({ query, earliest, latest, columns, rows }) {
+    if (!query?.trim() || /\$[\w.]+\$/.test(query)) {
+        throw new Error('The search has unresolved inputs. Review the search and try again.');
+    }
+    if (!rows.length || !columns.length) {
+        throw new Error('The search has no results to add.');
+    }
+    // Workspace tables use one-shot searches, which return rows without a search job ID.
+    const previewRows = rows.slice(0, CANVAS_PREVIEW_ROWS);
+    const resultsData = boundedPreview(
+        columns.map(({ field }) => ({ name: field })),
+        columns.map(({ field }) => previewRows.map((row) => row[field] ?? '')),
+    );
+    return {
+        type: 'splunk.table',
+        resultsData,
+        searchMetadata: {
+            earliest_time: earliest,
+            latest_time: latest,
+            query: { query, earliest_time: earliest, latest_time: latest, dispatchState: 'DONE', resultsCount: rows.length },
+        },
+    };
+}
+
 export function buildCanvasCard(panel, title) {
     const props = {
         resultsData: panel.resultsData,
@@ -248,8 +280,7 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
         const preview = await local(`search/v2/jobs/${encode(sid)}/results_preview?${previewParams}`, namespace, { signal }, 'Failed to get panel search results.');
         if (!Array.isArray(preview.fields) || !Array.isArray(preview.columns)) {throw new Error('The panel search did not return usable results.');}
         if (!preview.columns.every(Array.isArray)) {throw new Error('The panel search returned invalid result columns.');}
-        const resultsData = { fields: preview.fields, columns: preview.columns.map((column) => column.slice(0, CANVAS_PREVIEW_ROWS)) };
-        if (JSON.stringify(resultsData).length > 5 * 1024 * 1024) {throw new Error('The panel preview is too large for AI Canvas. Reduce the panel result size and try again.');}
+        const resultsData = boundedPreview(preview.fields, preview.columns.map((column) => column.slice(0, CANVAS_PREVIEW_ROWS)));
         const earliest = job.request?.earliest_time ?? job.earliestTime ?? '';
         const latest = job.request?.latest_time ?? job.latestTime ?? '';
         const panel = {
