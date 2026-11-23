@@ -106,3 +106,11 @@ test("saving a reviewed draft parses it without execution and recovers an existi
   assert.match(calls[1].url, /configs\/conf-searchbase/);
   assert.equal(calls[1].options.body.get("name"), "ask_ai_test");
 });
+
+test("Ask AI settings default off, use administrator write access, and reload with the app", () => {
+  const resources = path.resolve(__dirname, "../src/main/resources/splunk");
+  assert.match(readFileSync(path.join(resources, "default/ask_ai.conf"), "utf8"), /^enabled = 0$/m);
+  assert.match(readFileSync(path.join(resources, "default/app.conf"), "utf8"), /^reload\.ask_ai = simple$/m);
+  assert.match(readFileSync(path.join(resources, "metadata/default.meta"), "utf8"),
+    /\[ask_ai\]\naccess = read : \[ \* \], write : \[ admin, sc_admin \]/);
+});
