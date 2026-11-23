@@ -321,14 +321,17 @@ export default function AskAi({
             if (save) {
                 const id = draftId || `ask_ai_${Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
                 setDraftId(id);
-                const saved = await saveDraftToSearchbase(draft, id, signal);
-                if (saved) {
-                    setResult((current) => current && ({
-                        ...current,
-                        records: [saved, ...current.records.filter((record) => record.id !== saved.id || record.ownerApp !== saved.ownerApp)],
-                        visibleCount: Math.max(current.visibleCount, 1),
-                    }));
-                }
+                const reference = result?.records.find(({ id: recordId, ownerApp }) =>
+                    recordId === answer.source?.id && ownerApp === answer.source?.ownerApp) ?? result?.records[0];
+                const saved = await saveDraftToSearchbase(draft, id, {
+                    description: answer.explanation,
+                    reference,
+                }, signal);
+                setResult((current) => current && ({
+                    ...current,
+                    records: [saved, ...current.records.filter((record) => record.id !== saved.id || record.ownerApp !== saved.ownerApp)],
+                    visibleCount: Math.max(current.visibleCount, 1),
+                }));
                 setFeedback({ text: 'Saved to Searchbase. You can add this search to a workspace section from the matching searches below.' });
             } else {
                 await validateDraft(draft.spl, signal);

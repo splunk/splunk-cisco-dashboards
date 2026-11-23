@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const { createHash } = require("node:crypto");
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
@@ -8,9 +9,9 @@ const ts = require("typescript");
 
 const source = readFileSync(path.resolve(__dirname, "../src/main/webapp/common/services/askAiToolkit.ts"), "utf8");
 const { outputText } = ts.transpileModule(source, {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
 });
-function load({ fetch, oneShot, catalogue = [] } = {}) {
+function load({ fetch, oneShot, catalogue = [], username = "codex" } = {}) {
   const service = {};
   const imports = {
     "@splunk/splunk-utils/fetch": { getDefaultFetchInit: () => ({ credentials: "include" }) },
@@ -21,7 +22,9 @@ function load({ fetch, oneShot, catalogue = [] } = {}) {
     "@splunk/splunk-utils/url": {
       createRESTURL: (route, ns) => `/${ns?.app ?? "system"}/${route}`,
     },
+    "crypto-js/md5": require("crypto-js/md5"),
     "../lib/constants": { INSIGHTS_APP_ID: "splunk-cisco-dashboards" },
+    "../lib/splunk": { getCurrentSplunkUsername: async () => username },
     "./searchbaseCatalogue": {
       clearSearchbaseCache() {},
       getSearchbaseCatalogue: async () => catalogue,
@@ -100,11 +103,29 @@ test("saving a reviewed draft parses it without execution and recovers an existi
     calls.push({ url, options });
     return { ok: url.endsWith("search/v2/parser"), status: 400 };
   } });
-  assert.equal(await saveDraftToSearchbase(draft, "ask_ai_test", new AbortController().signal), catalogue[0]);
+  const metadata = {
+    description: "Count by device. <script>example</script> & review",
+    reference: { category: "Compliance and Auditing", subCategory: "Search", tags: ["AI Defense", "Ask AI"] },
+  };
+  assert.equal(await saveDraftToSearchbase(draft, "ask_ai_test", metadata, new AbortController().signal), catalogue[0]);
   assert.equal(calls.length, 2);
   assert.equal(calls[0].options.body.get("parse_only"), "true");
   assert.match(calls[1].url, /configs\/conf-searchbase/);
-  assert.equal(calls[1].options.body.get("name"), "ask_ai_test");
+  const saved = calls[1].options.body;
+  assert.equal(saved.get("name"), "ask_ai_test");
+  assert.equal(saved.get("search_name"), draft.title);
+  assert.equal(saved.get("search"), catalogue[0].search);
+  assert.equal(saved.get("search_author"), "codex");
+  assert.equal(saved.get("updated_author"), "codex");
+  assert.equal(saved.get("search_origin"), "custom");
+  assert.equal(saved.get("category"), "Compliance and Auditing");
+  assert.equal(saved.get("sub_category"), "Search");
+  assert.equal(saved.get("tags"), "Ask AI, AI Defense");
+  assert.equal(saved.get("description"), "<p>Count by device. &lt;script&gt;example&lt;/script&gt; &amp; review</p>");
+  assert.match(saved.get("date_created"), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  assert.equal(saved.get("date_updated"), saved.get("date_created"));
+  const quid = createHash("md5").update(draft.title + catalogue[0].search).digest("hex").toUpperCase();
+  assert.equal(saved.get("quid"), quid);
 });
 
 test("Ask AI settings default off, use administrator write access, and reload with the app", () => {
@@ -130,4 +151,22 @@ test("Toolkit error result rows and partial structured drafts are not displayed 
     const { askModel } = load({ oneShot: async () => ({ results: [{ ai_result_1: text }] }) });
     await assert.rejects(askModel("Meraki offline devices", [], "approved", undefined, new AbortController().signal), expected);
   }
+});
+
+test("draft saves use complete defaults without a reference and require a signed-in author", async () => {
+  const draft = { title: "Device counts", spl: "index=devices | stats count" };
+  const catalogue = [{ id: "ask_ai_test", ownerApp: "splunk-cisco-dashboards", search: `search ${draft.spl}` }];
+  let saved;
+  const fetch = async (url, options) => {
+    if (url.includes("conf-searchbase")) saved = options.body;
+    return { ok: true };
+  };
+  await load({ catalogue, fetch }).saveDraftToSearchbase(draft, "ask_ai_test", { description: "" }, new AbortController().signal);
+  assert.equal(saved.get("category"), "Custom");
+  assert.equal(saved.get("sub_category"), "Search");
+  assert.equal(saved.get("tags"), "Ask AI");
+  assert.equal(saved.get("description"), "<p>Device counts</p>");
+
+  await assert.rejects(load({ username: "", fetch: async () => assert.fail("No save without an author") })
+    .saveDraftToSearchbase(draft, "ask_ai_test", { description: "" }, new AbortController().signal), /signed-in author/);
 });

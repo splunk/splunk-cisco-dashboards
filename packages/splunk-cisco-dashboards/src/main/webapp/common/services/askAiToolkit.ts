@@ -1,7 +1,9 @@
 import { getDefaultFetchInit } from '@splunk/splunk-utils/fetch';
 import { addLeadingSearchCommand, oneShot } from '@splunk/splunk-utils/search';
 import { createRESTURL } from '@splunk/splunk-utils/url';
+import md5 from 'crypto-js/md5';
 import { INSIGHTS_APP_ID } from '../lib/constants';
+import { getCurrentSplunkUsername } from '../lib/splunk';
 import { getSearchbaseCatalogue, clearSearchbaseCache, type SearchbaseRecord } from './searchbaseCatalogue';
 
 const TOOLKIT_APP = 'Splunk_ML_Toolkit';
@@ -183,16 +185,51 @@ export async function validateDraft(spl: string, signal: AbortSignal): Promise<v
     if (!response.ok) throw new Error('Splunk could not validate this SPL. Ask AI to revise it or review it in Search.');
 }
 
+interface DraftMetadata {
+    description: string;
+    reference?: Pick<SearchbaseRecord, 'category' | 'subCategory' | 'tags'>;
+}
+
+const DESCRIPTION_ENTITIES: Record<string, string> = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;',
+};
+
+function searchbaseDescription(text: string): string {
+    return '<p>' + text.replace(/[&<>]/g, (character) => DESCRIPTION_ENTITIES[character])
+        .replace(/\s+/g, ' ').trim() + '</p>';
+}
+
 export async function saveDraftToSearchbase(
     draft: NonNullable<AssistantAnswer['search']>,
     id: string,
+    metadata: DraftMetadata,
     signal: AbortSignal,
-): Promise<SearchbaseRecord | undefined> {
+): Promise<SearchbaseRecord> {
+    const author = await getCurrentSplunkUsername();
+    if (!author) throw new Error('Searchbase could not identify the signed-in author. Sign in and try again.');
     await validateDraft(draft.spl, signal);
+
+    const search = addLeadingSearchCommand(draft.spl);
+    const now = new Date();
+    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+        .toISOString().slice(0, 19).replace('T', ' ');
+    const { reference } = metadata;
+    const tags = [...new Set(['Ask AI', ...(reference?.tags ?? []).map((tag) => tag.trim()).filter(Boolean)])];
     const body = new URLSearchParams({
         name: id,
         search_name: draft.title,
-        search: addLeadingSearchCommand(draft.spl),
+        search,
+        search_author: author,
+        updated_author: author,
+        date_created: localDate,
+        date_updated: localDate,
+        description: searchbaseDescription(metadata.description.trim() || draft.title),
+        category: reference?.category.trim() || 'Custom',
+        sub_category: reference?.subCategory.trim() || 'Search',
+        tags: tags.join(', '),
+        search_origin: 'custom',
+        // Searchbase uses the digest of the title and exact SPL it stores.
+        quid: md5(draft.title + search).toString().toUpperCase(),
         default_viz: 'splunk.table',
     });
     const response = await fetch(createRESTURL('configs/conf-searchbase?output_mode=json', SETTINGS_NAMESPACE), {
@@ -204,7 +241,7 @@ export async function saveDraftToSearchbase(
     clearSearchbaseCache();
     const catalogue = await getSearchbaseCatalogue({ allApps: true });
     const saved = catalogue.find((record) => record.id === id && record.ownerApp === INSIGHTS_APP_ID);
-    if (saved?.search === addLeadingSearchCommand(draft.spl)) return saved;
+    if (saved?.search === search) return saved;
     throw new Error('Searchbase could not confirm the saved search. Retry to check the same record.');
 }
 
