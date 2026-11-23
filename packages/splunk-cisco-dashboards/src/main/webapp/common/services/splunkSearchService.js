@@ -112,6 +112,7 @@ const isTrueSearchJobValue = (value) =>
 
 const dispatchStageLabel = (priority) => {
   const normalized = normalizeDispatchPriority(priority);
+  if (normalized === INTERACTIVE_DRILLDOWN_PRIORITY) return "Interactive drilldown";
   if (normalized === 0) return "Signal Rail";
   if (normalized >= 10 && normalized < 100) {
     return `Section stage ${Math.floor(normalized / 10)}`;
@@ -358,6 +359,9 @@ export const MIN_CONCURRENT_TILE_SEARCHES = 1;
 export const MAX_CONCURRENT_TILE_SEARCHES = 4;
 export const DEFAULT_CONCURRENT_TILE_SEARCHES = 2;
 
+/** A clicked table drilldown can take the next free slot during staged loading. */
+export const INTERACTIVE_DRILLDOWN_PRIORITY = -1;
+
 /** Default priority for callers that do not participate in staged loading. */
 export const DEFAULT_DISPATCH_PRIORITY = 100;
 
@@ -384,6 +388,7 @@ export const subscribeSearchCapacityFailures = (listener) => {
 const dispatchWaitQueue = [];
 
 const normalizeDispatchPriority = (value) => {
+  if (value === INTERACTIVE_DRILLDOWN_PRIORITY) return value;
   const parsed = Number(value);
   return Number.isFinite(parsed)
     ? Math.max(0, Math.round(parsed))
@@ -441,7 +446,7 @@ const queuedPriorityCount = (priority) =>
 const nextQueuedPriority = () => {
   let next = null;
   for (const entry of dispatchWaitQueue) {
-    if (entry.signal?.aborted) continue;
+    if (entry.signal?.aborted || entry.priority === INTERACTIVE_DRILLDOWN_PRIORITY) continue;
     if (next === null || entry.priority < next) {
       next = entry.priority;
     }
@@ -452,20 +457,25 @@ const nextQueuedPriority = () => {
 const drainDispatchQueue = () => {
   if (capacityCooldownUntil > Date.now()) { return; }
   while (dispatchInFlight < dispatchConcurrency) {
-    if (activeDispatchPriority === null) {
-      activeDispatchPriority = nextQueuedPriority();
-      if (activeDispatchPriority === null) return;
-    }
-
-    const nextIndex = dispatchWaitQueue.findIndex(
-      (entry) => entry.priority === activeDispatchPriority,
+    // Interactive requests can use a free slot without changing the active
+    // dashboard stage or interrupting an already running search.
+    let nextIndex = dispatchWaitQueue.findIndex(
+      (entry) => entry.priority === INTERACTIVE_DRILLDOWN_PRIORITY,
     );
     if (nextIndex === -1) {
-      // A priority group is a barrier: do not begin the next group until
-      // every dispatch already running in the current group has settled.
-      if (dispatchInFlight > 0) return;
-      activeDispatchPriority = null;
-      continue;
+      if (activeDispatchPriority === null) {
+        activeDispatchPriority = nextQueuedPriority();
+        if (activeDispatchPriority === null) return;
+      }
+      nextIndex = dispatchWaitQueue.findIndex(
+        (entry) => entry.priority === activeDispatchPriority,
+      );
+      if (nextIndex === -1) {
+        // Wait for the active dashboard stage to settle before advancing.
+        if (dispatchInFlight > 0) return;
+        activeDispatchPriority = null;
+        continue;
+      }
     }
 
     const [next] = dispatchWaitQueue.splice(nextIndex, 1);
@@ -576,6 +586,7 @@ const acquireDispatchSlot = (signal, requestedPriority) => {
     // the active group. Searches already in flight are left alone; the
     // higher-priority work receives the next available slot.
     if (
+      entry.priority !== INTERACTIVE_DRILLDOWN_PRIORITY &&
       activeDispatchPriority !== null &&
       entry.priority < activeDispatchPriority
     ) {
@@ -591,6 +602,7 @@ const acquireDispatchSlot = (signal, requestedPriority) => {
       if (nextPriority >= entry.priority) return;
       entry.priority = nextPriority;
       if (
+        nextPriority !== INTERACTIVE_DRILLDOWN_PRIORITY &&
         activeDispatchPriority !== null &&
         nextPriority < activeDispatchPriority
       ) {

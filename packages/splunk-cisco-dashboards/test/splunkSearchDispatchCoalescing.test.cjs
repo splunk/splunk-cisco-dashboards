@@ -523,6 +523,67 @@ test("a late higher-priority rail search preempts queued section work", async ()
   }
 });
 
+test("a clicked drilldown starts in the next slot and dashboard tiles resume", async () => {
+  async function measure(interactive) {
+    let clock = 0;
+    let peak = 0;
+    const started = new Map();
+    const pending = new Map();
+    const loaded = loadService((_url, init) => {
+      const search = new URLSearchParams(String(init.body)).get("search");
+      const name = search.split("=").at(-1);
+      started.set(name, clock);
+      return new Promise((resolve) => {
+        pending.set(name, { resolve, signal: init.signal });
+        peak = Math.max(peak, pending.size);
+      });
+    });
+    const search = (name, dispatchPriority) =>
+      loaded.service.runSearch({ spl: `| makeresults | eval sample=${name}`, dispatchPriority });
+    const finish = async (name, at) => {
+      clock = at;
+      const request = pending.get(name);
+      assert.ok(request, `${name} should be running`);
+      assert.equal(request.signal.aborted, false);
+      pending.delete(name);
+      request.resolve({ status: 200, json: async () => ({ results: [{}] }) });
+      await nextTurn();
+    };
+
+    try {
+      const { INTERACTIVE_DRILLDOWN_PRIORITY } = loaded.service;
+      const tiles = ["first", "long", "queued"].map((name) => search(name, 10));
+      await nextTurn();
+      clock = 20;
+      const drilldown = search("details", interactive ? INTERACTIVE_DRILLDOWN_PRIORITY : undefined);
+      await nextTurn();
+      assert.deepEqual([...pending.keys()], ["first", "long"]);
+      await finish("first", 100);
+      assert.equal(pending.has("details"), interactive);
+      assert.equal(pending.has("queued"), !interactive);
+      if (interactive) {
+        await finish("details", 130);
+        assert.ok(pending.has("queued"), "tiles resume while the longer search is still running");
+        await finish("queued", 210);
+        await finish("long", 300);
+      } else {
+        await finish("queued", 180);
+        await finish("long", 300);
+        await finish("details", 330);
+      }
+      await Promise.all([...tiles, drilldown]);
+      assert.equal(peak, 2);
+      return started.get("details") - 20;
+    } finally {
+      loaded.service.__resetDispatchQueue();
+      loaded.restore();
+    }
+  }
+
+  assert.equal(await measure(false), 280);
+  assert.equal(await measure(true), 80);
+});
+
 test("concurrency changes apply to queued work and clamp to one through four", async () => {
   const pending = [];
   let fetchCount = 0;

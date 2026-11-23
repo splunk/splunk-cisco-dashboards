@@ -231,7 +231,11 @@ import {
   horizontalListSortingStrategy,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
-import { runSearch, subscribeSearchCapacityFailures } from "@/common/services/splunkSearchService";
+import {
+  INTERACTIVE_DRILLDOWN_PRIORITY,
+  runSearch,
+  subscribeSearchCapacityFailures,
+} from "@/common/services/splunkSearchService";
 import {
   getSearchbaseCatalogue,
   plainTextFromHtml,
@@ -7959,6 +7963,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
       tag: activeConfig.tag,
       appContext: activeConfig.dispatchContext,
       count: 1000,
+      dispatchPriority: INTERACTIVE_DRILLDOWN_PRIORITY,
       signal: controller.signal,
     })
       .then((res) => {
