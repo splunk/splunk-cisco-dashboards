@@ -92,9 +92,18 @@ const AnswerText = styled.p`
 `;
 
 const ChatComposer = styled.div`
-    width: 100%;
+    flex: 0 0 auto;
     display: grid;
     gap: ${variables.spacingSmall};
+    min-width: 0;
+    padding: ${variables.spacingLarge} ${variables.spacingXLarge};
+    border-bottom: 1px solid ${variables.borderColorWeak};
+
+    @media (max-height: 420px) {
+        box-sizing: border-box;
+        max-height: 50%;
+        overflow-y: auto;
+    }
 `;
 
 const ComposerActions = styled(ActionRow)`
@@ -516,10 +525,11 @@ export default function AskAi({
             }}
         >
             <ControlGroup label={canAskAi && conversation.length ? 'Your follow-up' : 'What are you looking for?'} help={canAskAi
-                ? (conversation.length ? undefined : 'For example, which sites have the most WAN packet loss?')
+                ? (conversation.length ? undefined : 'Questions, recent replies, and selected Searchbase examples go to the configured model.')
                 : 'Results update as you type. Try “WAN packet loss”.'}>
                 <Text
                     inputRef={canAskAi ? chatInput : undefined}
+                    placeholder={canAskAi && !conversation.length ? 'Which sites have the most WAN packet loss?' : undefined}
                     maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
                     value={question}
                     disabled={adding || draftBusy ? 'dimmed' : false}
@@ -701,12 +711,26 @@ export default function AskAi({
         />
         <Drawer open={open} onRequestClose={closeDrawer} returnFocus={trigger} width="min(560px, 100vw)">
             <Drawer.Header title={launcherLabel} subtitle={context} />
+            {canAskAi && (
+                <ChatComposer>
+                    {questionForm}
+                    <ComposerActions>
+                        {answer && <Button appearance="subtle" label="Read latest reply" onClick={() => latestReplyHeading.current?.focus()} />}
+                        {conversation.length > 0 && (
+                            <Button appearance="secondary" label="New chat" disabled={loading || adding || draftBusy} onClick={clear} />
+                        )}
+                        <Button appearance="primary" label={conversation.length ? 'Send follow-up' : 'Ask AI'}
+                            disabled={!question.trim() || loading || adding || draftBusy}
+                            onClick={() => { void findMatches(question, true); }} />
+                    </ComposerActions>
+                </ChatComposer>
+            )}
             <Drawer.Body>
                 <Content ref={drawerContent}>
-                    <p>{canAskAi
-                        ? 'Ask for a search, an SPL explanation, or a draft. Recent turns and selected Searchbase examples go to the configured model.'
-                        : 'Find existing searches in Searchbase by topic, product, or monitoring goal.'}</p>
-                    {!canAskAi && questionForm}
+                    {!canAskAi && <>
+                        <p>Find existing searches in Searchbase by topic, product, or monitoring goal.</p>
+                        {questionForm}
+                    </>}
                     {(searchbaseInstalled === false || searchbaseInstalled === null) && (
                         <ActionRow>
                             <Tooltip content="View the Searchbase app listing for installation instructions." wrapContent>
@@ -756,24 +780,13 @@ export default function AskAi({
                     ) : catalogResults}
                 </Content>
             </Drawer.Body>
-            <Drawer.Footer>
-                {canAskAi ? (
-                    <ChatComposer>
-                        {questionForm}
-                        <ComposerActions>
-                            {answer && <Button appearance="subtle" label="Read latest reply" onClick={() => latestReplyHeading.current?.focus()} />}
-                            <Button appearance="secondary" label="New chat" disabled={loading || adding || draftBusy || (!question && !conversation.length)} onClick={clear} />
-                            <Button appearance="primary" label={conversation.length ? 'Send follow-up' : 'Ask AI'}
-                                disabled={!question.trim() || loading || adding || draftBusy}
-                                onClick={() => { void findMatches(question, true); }} />
-                        </ComposerActions>
-                    </ChatComposer>
-                ) : <>
+            {!canAskAi && (
+                <Drawer.Footer>
                     <Button appearance="secondary" label="Clear" disabled={adding || draftBusy || (!question && !result)} onClick={clear} />
                     <Button appearance="primary" label="Find searches" disabled={!question.trim() || loading || adding || draftBusy}
                         onClick={() => { void findMatches(question); }} />
-                </>}
-            </Drawer.Footer>
+                </Drawer.Footer>
+            )}
         </Drawer>
     </>;
 }
