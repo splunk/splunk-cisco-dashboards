@@ -155,3 +155,15 @@ test("SPL highlighting preserves whitespace, quotes, and copyable search text", 
   assert.match(html, /data-spl-token="string"/);
   assert.equal(html.replace(/<[^>]*>/g, "").replaceAll("&quot;", '"').replaceAll("&gt;", ">"), spl);
 });
+
+test("Ask AI grounds a compound Meraki question in the search intent before the explanation request", () => {
+  const meraki = record("meraki_status", "Secure Networking - Meraki Fleet Device Status", {
+    description: "Counts offline devices by Meraki network.",
+  });
+  const unrelated = Array.from({ length: 5 }, (_, index) => record(`offline_${index}`,
+    `Offline Device Counts and Result Fields ${index}`, { category: "Platform", description: "Explains offline device counts and input fields." }));
+  const question = "Find a Meraki search that shows which networks have the most offline devices. Explain how it counts offline devices and which fields I’ll see in the results.";
+  const ranked = exportsFromSource.rankAssistantSearchMatches([...unrelated, meraki], question);
+  assert.deepEqual(ranked.matches, [meraki]);
+  assert.equal(ranked.examples[0], meraki);
+});

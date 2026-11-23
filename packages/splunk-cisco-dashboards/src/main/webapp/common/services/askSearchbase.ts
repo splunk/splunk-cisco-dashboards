@@ -1,7 +1,7 @@
 import type { SearchbaseRecord } from './searchbaseCatalogue';
 
 const QUESTION_WORDS = new Set(
-    'a across an and are build by can chart create dashboard day days did do each find for from get give has have hour hours how i in is last me minute minutes monitor most of on over past please search searches show the time to top trend was week weeks were what when where which with workspace'.split(' '),
+    'a across an and are build by can chart create dashboard day days did do each find for from get give has have hour hours how i in is last me minute minutes monitor most of on over past please search searches show shows that the time to top trend was week weeks were what when where which with workspace'.split(' '),
 );
 
 const normalize = (value: string): string =>
@@ -56,3 +56,14 @@ export const rankSearchbaseMatches = (
         first.record.id.localeCompare(second.record.id),
     ).map(({ record }) => record);
 };
+
+/** Keep an explanation request from diluting the search described first. */
+export function rankAssistantSearchMatches(records: readonly SearchbaseRecord[], question: string) {
+    const task = question.split(/[.!?](?:\s|$)/, 1)[0]?.trim() || question;
+    const matches = rankSearchbaseMatches(records, task);
+    return {
+        matches,
+        examples: matches.length >= 5 ? matches.slice(0, 5)
+            : rankSearchbaseMatches(records, task, true).slice(0, 5),
+    };
+}

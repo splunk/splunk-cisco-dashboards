@@ -114,3 +114,20 @@ test("Ask AI settings default off, use administrator write access, and reload wi
   assert.match(readFileSync(path.join(resources, "metadata/default.meta"), "utf8"),
     /\[ask_ai\]\naccess = read : \[ \* \], write : \[ admin, sc_admin \]/);
 });
+
+test("a plain-language clarification stays visible without draft or citation actions", async () => {
+  const text = "I don’t have a Meraki-specific example. Which field contains the device status?";
+  const { askModel } = load({ oneShot: async () => ({ results: [{ ai_result_1: text }] }) });
+  assert.deepEqual(await askModel("Meraki offline devices", [], "approved", undefined, new AbortController().signal),
+    { explanation: text });
+});
+
+test("Toolkit error result rows and partial structured drafts are not displayed as answers", async () => {
+  for (const [text, expected] of [
+    ["Request to the LLM has failed. Please check the provided Connection Management configuration settings.", /request failed/],
+    ['{"explanation":"Check your records","draft":', /incomplete structured output/],
+  ]) {
+    const { askModel } = load({ oneShot: async () => ({ results: [{ ai_result_1: text }] }) });
+    await assert.rejects(askModel("Meraki offline devices", [], "approved", undefined, new AbortController().signal), expected);
+  }
+});

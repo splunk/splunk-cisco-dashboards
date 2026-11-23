@@ -23,7 +23,7 @@ import {
     askModel, canValidateDraft, getAskAiSettings, saveDraftToSearchbase, validateDraft,
     type AskAiSettings, type AssistantAnswer,
 } from '@/common/services/askAiToolkit';
-import { ASK_SEARCHBASE_QUESTION_LIMIT, rankSearchbaseMatches } from '@/common/services/askSearchbase';
+import { ASK_SEARCHBASE_QUESTION_LIMIT, rankAssistantSearchMatches, rankSearchbaseMatches } from '@/common/services/askSearchbase';
 import { getSearchbaseCatalogue, type SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 
 const Content = styled.div`
@@ -231,10 +231,11 @@ export default function AskAi({
                     const controller = new AbortController();
                     modelRequest.current = controller;
                     try {
+                        const assistantMatches = rankAssistantSearchMatches(catalogue, submitted);
+                        if (records.length === 0) records = assistantMatches.matches;
                         const examples = records.slice(0, 5);
                         // Reserve context for the previous answer when refining a search.
-                        const related = [...(result?.records.slice(0, 2) ?? []),
-                            ...rankSearchbaseMatches(catalogue, submitted, true).slice(0, 5)];
+                        const related = [...(result?.records.slice(0, 2) ?? []), ...assistantMatches.examples];
                         for (const record of related) {
                             if (examples.length === 5) break;
                             if (!examples.includes(record)) examples.push(record);
@@ -252,7 +253,12 @@ export default function AskAi({
                         setAnswer(response);
                     } catch {
                         if (pending.current === request) {
-                            setFeedback({ text: 'The AI Toolkit model did not respond. You can still use the Searchbase matches below.', error: true });
+                            setFeedback({
+                                text: records.length
+                                    ? 'Ask AI could not complete this request. Try again or review the Searchbase matches below.'
+                                    : 'Ask AI could not complete this request. Try again or rephrase your question.',
+                                error: true,
+                            });
                         }
                     }
                 }
