@@ -203,6 +203,7 @@ export default function AskAi({
     const drawerContent = useRef<HTMLDivElement>(null);
     const latestChatQuestion = useRef<HTMLDivElement>(null);
     const chatProgress = useRef<HTMLDivElement>(null);
+    const modelWarning = useRef<HTMLDivElement>(null);
     const latestReplyHeading = useRef<HTMLHeadingElement>(null);
     const conversationSequence = useRef(0);
     const [result, setResult] = useState<Result | null>(null);
@@ -213,9 +214,10 @@ export default function AskAi({
     const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
 
     const [settings, setSettings] = useState<AskAiSettings>();
-    const [conversation, setConversation] = useState<(AssistantTurn & { id: number })[]>([]);
+    const [conversation, setConversation] = useState<(AssistantTurn & { id: number; modelFailed?: boolean })[]>([]);
     const currentTurn = conversation[conversation.length - 1];
     const answer = currentTurn?.answer;
+    const modelFailed = currentTurn?.modelFailed;
     const [showCatalogMatches, setShowCatalogMatches] = useState(false);
     const [draftId, setDraftId] = useState('');
     const [verifiedSpl, setVerifiedSpl] = useState('');
@@ -246,9 +248,9 @@ export default function AskAi({
         const viewport = drawerContent.current?.parentElement?.getBoundingClientRect();
         const questionBounds = latestChatQuestion.current?.getBoundingClientRect();
         if (!viewport || !questionBounds || questionBounds.bottom < viewport.top || questionBounds.top > viewport.bottom) return;
-        const target = answer ? latestReplyHeading.current : phase ? chatProgress.current : null;
+        const target = answer ? latestReplyHeading.current : modelFailed ? modelWarning.current : phase ? chatProgress.current : null;
         target?.scrollIntoView({ block: 'nearest' });
-    }, [open, canAskAi, phase, answer]);
+    }, [open, canAskAi, phase, answer, modelFailed]);
 
     useEffect(() => {
         let active = true;
@@ -290,7 +292,11 @@ export default function AskAi({
         setDraftId('');
         setFeedback(null);
         if (turnId !== undefined) {
-            setConversation((turns) => [...turns, { id: turnId, question: submitted }].slice(-CHAT_TURN_LIMIT));
+            const retrying = currentTurn?.modelFailed && submitted === currentTurn.question;
+            setConversation((turns) => [
+                ...(retrying ? turns.slice(0, -1) : turns),
+                { id: turnId, question: submitted },
+            ].slice(-CHAT_TURN_LIMIT));
             setQuestion('');
             chatInput.current?.focus({ preventScroll: true });
         } else {
@@ -299,13 +305,22 @@ export default function AskAi({
         try {
             const catalogue = await getSearchbaseCatalogue({ allApps: true, includeHidden: true });
             if (pending.current === request) {
-                let records = rankSearchbaseMatches(catalogue, submitted);
-                if (modelMode && turnId !== undefined) {
+                const ranked = rankSearchbaseMatches(catalogue, submitted);
+                const assistantMatches = modelMode ? rankAssistantSearchMatches(catalogue, submitted) : undefined;
+                const records = ranked.length ? ranked : assistantMatches?.matches ?? ranked;
+                // Searchbase's editor route accepts a stanza ID without its owning app.
+                const ownerById = new Map<string, string>();
+                const ambiguousIds = new Set<string>();
+                for (const { id, ownerApp } of catalogue) {
+                    const firstOwner = ownerById.get(id);
+                    if (firstOwner === undefined) ownerById.set(id, ownerApp);
+                    else if (firstOwner !== ownerApp) ambiguousIds.add(id);
+                }
+                setResult({ question: submitted, records, ambiguousIds, visibleCount: Math.min(RESULT_BATCH_SIZE, records.length) });
+                if (modelMode && turnId !== undefined && assistantMatches) {
                     const controller = new AbortController();
                     modelRequest.current = controller;
                     try {
-                        const assistantMatches = rankAssistantSearchMatches(catalogue, submitted);
-                        if (records.length === 0) records = assistantMatches.matches;
                         const examples = records.slice(0, conversation.length ? 3 : 5);
                         // Reserve context for the previous answer when refining a search.
                         const related = [...(result?.records.slice(0, 2) ?? []), ...records, ...assistantMatches.examples];
@@ -322,7 +337,21 @@ export default function AskAi({
                         const recommendation = examples.find((record) =>
                             record.id === response.source?.id && record.ownerApp === response.source?.ownerApp);
                         if (recommendation) {
-                            records = [recommendation, ...records.filter((record) => record !== recommendation)];
+                            setResult((current) => {
+                                if (!current) return current;
+                                const isRecommendation = ({ id, ownerApp }: SearchbaseRecord) =>
+                                    id === recommendation.id && ownerApp === recommendation.ownerApp;
+                                if (current.records.some(isRecommendation)) return current;
+                                return {
+                                    ...current,
+                                    records: [
+                                        ...current.records.slice(0, current.visibleCount),
+                                        recommendation,
+                                        ...current.records.slice(current.visibleCount),
+                                    ],
+                                    visibleCount: current.visibleCount + 1,
+                                };
+                            });
                         }
                         setConversation((turns) => turns.map((turn) => turn.id === turnId
                             ? { ...turn, answer: response }
@@ -330,25 +359,13 @@ export default function AskAi({
                     } catch {
                         if (pending.current === request) {
                             setQuestion((typed) => typed || submitted);
-                            setFeedback({
-                                text: records.length
-                                    ? 'Ask AI could not complete this request. Try again or review the Searchbase matches below.'
-                                    : 'Ask AI could not complete this request. Try again or rephrase your question.',
-                                error: true,
-                            });
+                            setConversation((turns) => turns.map((turn) => turn.id === turnId
+                                ? { ...turn, modelFailed: true }
+                                : turn));
+                            setShowCatalogMatches(records.length > 0);
                         }
                     }
                 }
-                if (pending.current !== request) return;
-                // Searchbase's editor route accepts a stanza ID without its owning app.
-                const ownerById = new Map<string, string>();
-                const ambiguousIds = new Set<string>();
-                for (const { id, ownerApp } of catalogue) {
-                    const firstOwner = ownerById.get(id);
-                    if (firstOwner === undefined) ownerById.set(id, ownerApp);
-                    else if (firstOwner !== ownerApp) ambiguousIds.add(id);
-                }
-                setResult({ question: submitted, records, ambiguousIds, visibleCount: Math.min(RESULT_BATCH_SIZE, records.length) });
             }
         } catch {
             if (pending.current === request) {
@@ -681,13 +698,16 @@ export default function AskAi({
     </SearchCard>;
 
     const progressText = phase === 'model'
-        ? 'Waiting for the model’s answer…'
+        ? (result?.records.length ? 'Searchbase matches are ready. Waiting for the model’s answer…' : 'Waiting for the model’s answer…')
         : phase === 'catalogue'
             ? (canAskAi ? 'Finding relevant Searchbase examples…' : 'Looking for Searchbase matches…')
             : '';
     const feedbackMessage = feedback && (
         <Message type={feedback.error ? 'error' : 'success'} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</Message>
     );
+    const askButtonLabel = modelFailed && question.trim() === currentTurn.question
+        ? 'Try Ask AI again'
+        : conversation.length ? 'Send follow-up' : 'Ask AI';
 
     return <>
         <Button
@@ -719,7 +739,7 @@ export default function AskAi({
                         {conversation.length > 0 && (
                             <Button appearance="secondary" label="New chat" disabled={loading || adding || draftBusy} onClick={clear} />
                         )}
-                        <Button appearance="primary" label={conversation.length ? 'Send follow-up' : 'Ask AI'}
+                        <Button appearance="primary" label={askButtonLabel}
                             disabled={!question.trim() || loading || adding || draftBusy}
                             onClick={() => { void findMatches(question, true); }} />
                     </ComposerActions>
@@ -760,6 +780,13 @@ export default function AskAi({
                                 ))}
                                 <SearchStatus aria-hidden="true" ref={chatProgress}>{progressText}</SearchStatus>
                                 {currentReply}
+                                {modelFailed && (
+                                    <Message type="warning" role="alert" elementRef={modelWarning}>
+                                        {result?.records.length
+                                            ? 'Ask AI couldn’t answer. Use the Searchbase matches below or try Ask AI again.'
+                                            : 'Ask AI couldn’t answer, and Searchbase found no close matches. Try a shorter question or a product name.'}
+                                    </Message>
+                                )}
                                 {feedbackMessage}
                             </Transcript>}
                         </>
@@ -770,7 +797,7 @@ export default function AskAi({
                             {result && `Showing ${result.visibleCount} of ${result.records.length} Searchbase matches.`}
                         </ScreenReaderContent>
                     </>}
-                    {canAskAi && result ? (
+                    {canAskAi && result ? (!modelFailed || result.records.length > 0) && (
                         <CollapsiblePanel appearance="subtle" title={`Searchbase matches (${result.records.length})`}
                             open={showCatalogMatches} onChange={(_, { action }) => setShowCatalogMatches(action === 'open')} inset={false}>
                             <Content>
