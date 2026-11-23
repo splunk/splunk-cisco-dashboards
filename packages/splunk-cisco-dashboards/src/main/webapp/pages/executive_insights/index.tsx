@@ -3896,6 +3896,24 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setActiveDetailTable(config);
   }, []);
 
+  const drilldownBackRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
+  const drilldownWasOpen = useRef(false);
+  const isDrilldownOpen = activeDetailTable !== null;
+  useLayoutEffect(() => {
+    if (isDrilldownOpen) {
+      drilldownBackRef.current?.focus({ preventScroll: true });
+    } else if (drilldownWasOpen.current) {
+      const trigger = drilldownReturnFocusRef.current;
+      const destination =
+        trigger?.isConnected && trigger !== document.body
+          ? trigger
+          : workspaceToggleRef.current;
+      destination?.focus({ preventScroll: true });
+      drilldownReturnFocusRef.current = null;
+    }
+    drilldownWasOpen.current = isDrilldownOpen;
+  }, [isDrilldownOpen]);
+
   const closeAddTilePicker = useCallback(() => setAddTileSection(null), []);
 
   const handleAddSearchToSection = useCallback(
@@ -6184,55 +6202,34 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             )}
           </div>
         </div>
-        <aside
-          aria-label={activeDetailTable?.title || "Drilldown details"}
-          className={cn(
-            "min-h-0 min-w-0 overflow-hidden px-3 py-2",
-            activeDetailTable ? "grid grid-cols-1 grid-rows-1" : "hidden",
-          )}
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && !event.defaultPrevented) {
-              event.stopPropagation();
-              setActiveDetailTable(null);
-            }
-          }}
-        >
-          <Drawer
-            divider="both"
-            initialFocus="first"
-            material="opaque"
-            onRequestClose={() => setActiveDetailTable(null)}
-            open={activeDetailTable !== null}
-            position="inline"
-            returnFocus={() => {
-              const trigger = drilldownReturnFocusRef.current;
-              const destination =
-                trigger?.isConnected && trigger !== document.body
-                  ? trigger
-                  : workspaceToggleRef.current;
-              destination?.focus({ preventScroll: true });
+        {activeDetailTable && (
+          <section
+            aria-label={activeDetailTable.title}
+            className="grid min-h-0 min-w-0 grid-cols-1 grid-rows-1 overflow-hidden px-3 py-2"
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && !event.defaultPrevented) {
+                event.stopPropagation();
+                setActiveDetailTable(null);
+              }
             }}
-            style={{ height: "100%" }}
-            width="100%"
           >
-            {activeDetailTable && (
-              <>
-                <div className="shrink-0 px-4 pt-3">
-                  <Button
-                    appearance="secondary"
-                    label="Back to workspace"
-                    onClick={() => setActiveDetailTable(null)}
-                  />
-                </div>
-                <MetricDrilldownContent
-                  config={activeDetailTable}
-                  range={timeRange}
-                  refreshToken={refreshToken}
+            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden sui-bg-popup">
+              <div className="shrink-0 px-4 pt-3">
+                <Button
+                  appearance="secondary"
+                  elementRef={drilldownBackRef}
+                  label="Back to workspace"
+                  onClick={() => setActiveDetailTable(null)}
                 />
-              </>
-            )}
-          </Drawer>
-        </aside>
+              </div>
+              <MetricDrilldownContent
+                config={activeDetailTable}
+                range={timeRange}
+                refreshToken={refreshToken}
+              />
+            </div>
+          </section>
+        )}
       </main>
 
       <HelpOverlay
@@ -8090,11 +8087,11 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
 
   return (
     <>
-      <Drawer.Header hideCloseButton title={config.title} subtitle={activeConfig.subtitle(range)} />
-      <Drawer.Body
-        className="scd-insights-layer-content"
-        style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", padding: 0 }}
-      >
+      <header className="shrink-0 border-b sui-border-weak px-4 py-3">
+        <Heading level={2} variant="title3">{config.title}</Heading>
+        <p className="text-sm sui-color-muted">{activeConfig.subtitle(range)}</p>
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-drilldown-body>
         {hasGuidance && (
           <div className="shrink-0 border-b sui-border-weak px-4">
             <TabBar
@@ -8369,8 +8366,8 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
             )}
           </div>
         )}
-      </Drawer.Body>
-      <Drawer.Footer className="scd-insights-layer-content" layout="none">
+      </div>
+      <div className="shrink-0 border-t sui-border-weak px-4 py-3" data-drilldown-actions>
         <div className="flex flex-wrap gap-2">
           <Button
             appearance="primary"
@@ -8385,7 +8382,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
             to={searchbaseUrl}
           />
         </div>
-      </Drawer.Footer>
+      </div>
     </>
   );
 };

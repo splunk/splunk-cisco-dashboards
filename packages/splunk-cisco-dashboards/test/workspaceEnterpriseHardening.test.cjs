@@ -1049,14 +1049,13 @@ const drilldownContent = profile.slice(
   profile.indexOf("const MetricDrilldownContent:"),
   profile.indexOf("interface SectionTitlesEditorModalProps"),
 );
-assert.match(profile, /<Drawer\s+divider="both"[\s\S]*?open=\{activeDetailTable !== null\}\s+position="inline"[\s\S]*?<MetricDrilldownContent/);
+assert.match(profile, /\{activeDetailTable && \(\s*<section\s+aria-label=\{activeDetailTable.title\}[\s\S]*?<MetricDrilldownContent/);
 assert.match(profile, /label="Back to workspace"\s+onClick=\{\(\) => setActiveDetailTable\(null\)\}/);
 assert.match(globalStyles, /\.scd-overview-drilldown-stage\[data-workspace-drilldown-open="true"\]\s*> \.scd-overview-drilldown-workspace\s*\{\s*display: none;/);
-assert.match(drilldownContent, /<Drawer.Body\s+className="scd-insights-layer-content"/);
-assert.match(drilldownContent, /<Drawer.Footer\s+className="scd-insights-layer-content"/);
+assert.match(drilldownContent, /<div[^>]*min-h-0 flex-1 flex-col overflow-hidden" data-drilldown-body>/);
 assert.match(drilldownContent, /activeTabId=\{showGuidance \? "guidance" : "results"\}/);
 assert.match(drilldownContent, /id=\{resultsPanelId\}[\s\S]*?hidden=\{showGuidance\}/);
-assert.match(drilldownContent, /<Drawer.Footer[\s\S]*?label="Open in Search"[\s\S]*?to=\{searchUrl\}[\s\S]*?label="Open in Searchbase"[\s\S]*?to=\{searchbaseUrl\}/);
+assert.match(drilldownContent, /data-drilldown-actions[\s\S]*?label="Open in Search"[\s\S]*?to=\{searchUrl\}[\s\S]*?label="Open in Searchbase"[\s\S]*?to=\{searchbaseUrl\}/);
 assert.match(profile, /record\.tags\.filter\([\s\S]*?tag !== record\.catalogueApp && tag !== record\.ownerApp/);
 assert.match(profile, /resultsRef\.current\?\.scrollTo\(resultsScroll\.current\)/);
 const detailOptionsSource = profile.slice(
@@ -1309,8 +1308,8 @@ assert.doesNotMatch(
 );
 assert.match(
   profile,
-  /<Drawer[\s\S]*?material="opaque"[\s\S]*?open=\{activeDetailTable !== null\}/,
-  "Insights drilldowns must use the solid Splunk UI drawer surface",
+  /<section\s+aria-label=\{activeDetailTable.title\}[\s\S]*?sui-bg-popup/,
+  "Full-width drilldowns must render on a solid theme surface",
 );
 assert.match(
   dashboardBuilderDrilldown,
