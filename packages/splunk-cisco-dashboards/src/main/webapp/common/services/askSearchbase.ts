@@ -14,17 +14,21 @@ const termsFor = (value: string): Set<string> =>
 
 export const ASK_SEARCHBASE_QUESTION_LIMIT = 500;
 
+const questionTerms = (question: string): string[] => [...new Set(normalize(question).split(' ')
+    .filter((word) => word && !QUESTION_WORDS.has(word) && !/^\d+([hmdw])?$/.test(word))
+    .map(term))];
+
 export const rankSearchbaseMatches = (
     records: readonly SearchbaseRecord[],
     question: string,
+    forModelExamples = false,
 ): SearchbaseRecord[] => {
-    const terms = [...new Set(normalize(question).split(' ')
-        .filter((word) => word && !QUESTION_WORDS.has(word) && !/^\d+([hmdw])?$/.test(word))
-        .map(term))];
+    const terms = questionTerms(question);
     if (!terms.length) return [];
 
     const phrase = terms.join(' ');
-    const minimumMatches = Math.ceil(terms.length * 0.7);
+    const minimumMatches = forModelExamples ? 1 : Math.ceil(terms.length * 0.7);
+    const minimumPrimaryMatches = forModelExamples ? 1 : Math.ceil(terms.length / 2);
     return records.flatMap((record) => {
         if (record.searchInternal || record.searchHidden || !record.id || !record.search?.trim()) return [];
 
@@ -32,7 +36,7 @@ export const rankSearchbaseMatches = (
         const metadata = termsFor([record.category, record.subCategory, ...record.tags].join(' '));
         const description = termsFor(record.description.replace(/<[^>]*>/g, ' '));
         const primaryMatches = terms.filter((word) => name.has(word) || metadata.has(word) || description.has(word));
-        if (primaryMatches.length < Math.ceil(terms.length / 2)) return [];
+        if (primaryMatches.length < minimumPrimaryMatches) return [];
 
         const searchTerms = termsFor(record.search.slice(0, 4096));
         const matched = terms.filter((word) => primaryMatches.includes(word) || searchTerms.has(word));

@@ -262,7 +262,7 @@ function scdSetupTuningUrl(pathname) {
 
 function scdSetupIsTuningHash(hash) {
   const setupRoute = String(hash || "").replace(/^#/, "");
-  return ["tune-indexes", "tune-cim", "review"].includes(setupRoute);
+  return ["tune-indexes", "tune-cim", "review", "ask-ai"].includes(setupRoute);
 }
 
 function scdSetupManageAppsUrl(pathname, appId) {
@@ -2237,6 +2237,13 @@ function scdSetupRenderPackageReviewStep(root) {
     skippedDetails.appendChild(skippedList);
     main.appendChild(skippedDetails);
   }
+  const askAi = scdSetupElement("section", "scd-setup__section");
+  askAi.appendChild(scdSetupElement("h2", "", "Ask AI (optional)"));
+  askAi.appendChild(scdSetupElement("p", "", "Connect an AI Toolkit model to explain and draft SPL in the workspace."));
+  const askAiLink = scdSetupElement("a", "scd-setup__button is-secondary", "Set up Ask AI");
+  askAiLink.href = `${window.location.pathname}?setup=1&tool=ask-ai#ask-ai`;
+  askAi.appendChild(askAiLink);
+  main.appendChild(askAi);
   content.appendChild(main);
 
   let packageActionMessage =
@@ -2281,7 +2288,9 @@ function scdSetupShowTuningStep(root) {
   window.history.replaceState(
     null,
     "",
-    scdSetupTuningUrl(window.location.pathname),
+    window.location.hash === "#ask-ai"
+      ? window.location.href
+      : scdSetupTuningUrl(window.location.pathname),
   );
   setupRoot.hidden = true;
   tunerRoot.hidden = false;

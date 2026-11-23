@@ -19,6 +19,10 @@ import { getCurrentSplunkUsername, userScopedStorageKey } from '@/common/config/
 import { Sparkles } from '@/common/icons/SuiIcon';
 import { isSearchBaseInstalled } from '@/common/lib/searchbase';
 import { splunkSearchAppUrl, splunkSearchbaseEditUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
+import {
+    askModel, canValidateDraft, getAskAiSettings, saveDraftToSearchbase, validateDraft,
+    type AskAiSettings, type AssistantAnswer,
+} from '@/common/services/askAiToolkit';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankSearchbaseMatches } from '@/common/services/askSearchbase';
 import { getSearchbaseCatalogue, type SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 
@@ -80,6 +84,16 @@ const CatalogueDetails = styled.dl`
 
     dt { font-weight: ${variables.fontWeightSemiBold}; }
     dd { margin: 0; }
+`;
+
+const AnswerText = styled.p`
+    white-space: pre-wrap;
+`;
+
+const SearchStatus = styled.div`
+    &:empty {
+        position: absolute;
+    }
 `;
 
 const QUESTION_STORAGE_KEY = 'scd:ask-ai:question';
@@ -151,7 +165,25 @@ export default function AskAi({
     const [adding, setAdding] = useState(false);
     const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
 
-    useEffect(() => () => { pending.current = null; }, []);
+    const [settings, setSettings] = useState<AskAiSettings>();
+    const [answer, setAnswer] = useState<AssistantAnswer>();
+    const [draftId, setDraftId] = useState('');
+    const [verifiedSpl, setVerifiedSpl] = useState('');
+    const [draftBusy, setDraftBusy] = useState(false);
+    const modelRequest = useRef<AbortController | null>(null);
+    const canAskAi = Boolean(settings?.enabled && settings.canUseModel);
+    const launcherLabel = canAskAi ? 'Ask AI' : 'Find searches';
+
+    useEffect(() => {
+        let active = true;
+        void getAskAiSettings().then((current) => { if (active) setSettings(current); }).catch(() => {});
+        return () => {
+            active = false;
+            pending.current = null;
+            modelRequest.current?.abort();
+        };
+    }, []);
+
     useEffect(() => {
         if (!open) return;
         let active = true;
@@ -166,20 +198,53 @@ export default function AskAi({
         setFeedback(null);
     }, [contextId]);
 
-    async function findMatches() {
+    async function findMatches(useModel = false) {
         const submitted = question.trim();
-        if (!submitted || pending.current || adding) return;
+        if (!submitted || pending.current || adding || draftBusy) return;
         const request = {};
         pending.current = request;
         nextResultToFocus.current = null;
         setLoading(true);
         setResult(null);
+        setAnswer(undefined);
+        setVerifiedSpl('');
+        setDraftId('');
         setFeedback(null);
         rememberQuestion(submitted);
         try {
             const catalogue = await getSearchbaseCatalogue({ allApps: true, includeHidden: true });
             if (pending.current === request) {
-                const records = rankSearchbaseMatches(catalogue, submitted);
+                let records = rankSearchbaseMatches(catalogue, submitted);
+                if (useModel && canAskAi && settings) {
+                    const controller = new AbortController();
+                    modelRequest.current = controller;
+                    try {
+                        const examples = records.slice(0, 5);
+                        // Reserve context for the previous answer when refining a search.
+                        const related = [...(result?.records.slice(0, 2) ?? []),
+                            ...rankSearchbaseMatches(catalogue, submitted, true).slice(0, 5)];
+                        for (const record of related) {
+                            if (examples.length === 5) break;
+                            if (!examples.includes(record)) examples.push(record);
+                        }
+                        const response = await askModel(
+                            submitted, examples, settings.connection, answer,
+                            AbortSignal.any([controller.signal, AbortSignal.timeout(60000)]),
+                        );
+                        if (pending.current !== request) return;
+                        const recommendation = examples.find((record) =>
+                            record.id === response.source?.id && record.ownerApp === response.source?.ownerApp);
+                        if (recommendation) {
+                            records = [recommendation, ...records.filter((record) => record !== recommendation)];
+                        }
+                        setAnswer(response);
+                    } catch {
+                        if (pending.current === request) {
+                            setFeedback({ text: 'The AI Toolkit model did not respond. You can still use the Searchbase matches below.', error: true });
+                        }
+                    }
+                }
+                if (pending.current !== request) return;
                 // Searchbase's editor route accepts a stanza ID without its owning app.
                 const ownerById = new Map<string, string>();
                 const ambiguousIds = new Set<string>();
@@ -196,6 +261,7 @@ export default function AskAi({
             }
         } finally {
             if (pending.current === request) {
+                modelRequest.current = null;
                 pending.current = null;
                 setLoading(false);
             }
@@ -227,10 +293,44 @@ export default function AskAi({
         }
     }
 
+    async function reviewDraft(save: boolean) {
+        const draft = answer?.search;
+        if (!draft || draftBusy) return;
+        setDraftBusy(true);
+        setFeedback(null);
+        const signal = AbortSignal.timeout(20000);
+        try {
+            if (save) {
+                const id = draftId || `ask_ai_${Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+                setDraftId(id);
+                const saved = await saveDraftToSearchbase(draft, id, signal);
+                if (saved) {
+                    setResult((current) => current && ({
+                        ...current,
+                        records: [saved, ...current.records.filter((record) => record.id !== saved.id || record.ownerApp !== saved.ownerApp)],
+                        visibleCount: Math.max(current.visibleCount, 1),
+                    }));
+                }
+                setFeedback({ text: 'Saved to Searchbase. You can add this search to a workspace section from the matching searches below.' });
+            } else {
+                await validateDraft(draft.spl, signal);
+                setVerifiedSpl(draft.spl);
+                setFeedback({ text: 'Splunk accepted the SPL syntax. Open in Search to check results with the workspace time range.' });
+            }
+        } catch (error) {
+            setFeedback({ text: error instanceof Error ? error.message : 'The draft could not be checked.', error: true });
+        } finally {
+            setDraftBusy(false);
+        }
+    }
+
     function clear() {
         resumedQuestion.current = '';
         nextResultToFocus.current = null;
         setQuestion('');
+        setAnswer(undefined);
+        setDraftId('');
+        setVerifiedSpl('');
         setResult(null);
         setFeedback(null);
         rememberQuestion('');
@@ -253,7 +353,7 @@ export default function AskAi({
     return <>
         <Button
             appearance="secondary"
-            label="Ask AI"
+            label={launcherLabel}
             hideLabel={!showLabel}
             icon={(
                 <AskAiSparkles aria-hidden="true" variant="filled" size={24} $gradientId={iconGradientId}>
@@ -271,12 +371,14 @@ export default function AskAi({
             onClick={openDrawer}
         />
         <Drawer open={open} onRequestClose={() => setOpen(false)} returnFocus={trigger} width="min(560px, 100vw)">
-            <Drawer.Header title="Ask AI" subtitle={context} />
+            <Drawer.Header title={launcherLabel} subtitle={context} />
             <Drawer.Body>
                 <Content>
-                    <p>Describe what you want to monitor. This preview finds matching searches in Searchbase.</p>
-                    <form onSubmit={(event) => { event.preventDefault(); void findMatches(); }}>
-                        <ControlGroup label="Monitoring question" help="For example, which sites have the most WAN packet loss?">
+                    <p>{canAskAi
+                        ? 'Ask for a search, an SPL explanation, or a draft. Your question and selected Searchbase examples go to the configured model.'
+                        : 'Find existing searches in Searchbase by topic, product, or monitoring goal.'}</p>
+                    <form onSubmit={(event) => { event.preventDefault(); void findMatches(canAskAi); }}>
+                        <ControlGroup label="What are you looking for?" help="For example, which sites have the most WAN packet loss?">
                             <Text
                                 maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
                                 value={question}
@@ -294,7 +396,38 @@ export default function AskAi({
                         </ActionRow>
                     )}
                     {feedback && <Message type={feedback.error ? 'error' : 'success'} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</Message>}
-                    {loading && <p role="status">Looking for Searchbase matches…</p>}
+                    <SearchStatus role="status">
+                        {loading && (canAskAi ? 'Checking Searchbase and preparing an answer…' : 'Looking for Searchbase matches…')}
+                        {answer && 'AI response ready.'}
+                    </SearchStatus>
+                    {answer && <SearchCard aria-label="AI response">
+                        <Heading level={2} variant="title4">AI response</Heading>
+                        <AnswerText>{answer.explanation}</AnswerText>
+                        {answer.search && <>
+                            <Heading level={3} variant="title4">{answer.search.title}</Heading>
+                            <p>Review this draft SPL before using it.</p>
+                            <pre tabIndex={0} aria-label="Draft SPL"><code><SplSyntax spl={answer.search.spl} /></code></pre>
+                            <ActionRow>
+                                {canValidateDraft(answer.search.spl) && (
+                                    <Button label={verifiedSpl === answer.search.spl ? 'Validate SPL again' : 'Validate SPL'}
+                                        disabled={draftBusy} onClick={() => { void reviewDraft(false); }} />
+                                )}
+                                {verifiedSpl === answer.search.spl && (
+                                    <Link appearance="standalone" openInNewContext
+                                        to={splunkSearchAppUrl(addLeadingSearchCommand(answer.search.spl), range)}>
+                                        Open draft in Search
+                                    </Link>
+                                )}
+                                {verifiedSpl === answer.search.spl && settings?.writable && (
+                                    <Button label="Save to Searchbase" disabled={draftBusy || Boolean(result?.records.some(({ id }) => id === draftId))}
+                                        onClick={() => { void reviewDraft(true); }} />
+                                )}
+                            </ActionRow>
+                            {!canValidateDraft(answer.search.spl) && (
+                                <p>Copy this SPL to Search to review commands, macros, or inputs before running it.</p>
+                            )}
+                        </>}
+                    </SearchCard>}
                     {result && <>
                         <Heading level={2} variant="title3">Searchbase matches</Heading>
                         <p role="status">{result.records.length
@@ -383,8 +516,8 @@ export default function AskAi({
                 </Content>
             </Drawer.Body>
             <Drawer.Footer>
-                <Button appearance="secondary" label="Clear" disabled={loading || adding || (!question && !result)} onClick={clear} />
-                <Button appearance="primary" label="Find searches" disabled={!question.trim() || loading || adding} onClick={() => { void findMatches(); }} />
+                <Button appearance="secondary" label="Clear" disabled={loading || adding || draftBusy || (!question && !result)} onClick={clear} />
+                <Button appearance="primary" label={canAskAi ? (answer ? "Send follow-up" : "Ask AI") : "Find searches"} disabled={!question.trim() || loading || adding || draftBusy} onClick={() => { void findMatches(canAskAi); }} />
             </Drawer.Footer>
         </Drawer>
     </>;

@@ -1,3 +1,4 @@
+import AskAiSetup from "@/common/components/AskAiSetup";
 import { SplSyntax } from '@/common/components/SplSyntax';
 import React, {
   useCallback,
@@ -2633,6 +2634,10 @@ function SetupFlowShell({
 }
 
 export default function MacroIndexTuningPage(): JSX.Element {
+  return window.location.hash === "#ask-ai" ? <AskAiSetup /> : <MacroIndexTuning />;
+}
+
+function MacroIndexTuning(): JSX.Element {
   const setupMode = isInitialSetupMode();
   const integratedSetupView = isIntegratedSetupView();
   const { colorScheme, setColorScheme } = useAppThemeControls();

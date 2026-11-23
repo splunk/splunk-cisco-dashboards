@@ -173,3 +173,7 @@ export = system
 [transforms/sgt_naming]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
+
+[ask_ai]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = none
