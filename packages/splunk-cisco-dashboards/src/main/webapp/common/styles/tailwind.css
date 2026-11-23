@@ -171,17 +171,9 @@ body.scd-overview-active .panel-body,
   min-height: 0;
 }
 
-@media (min-width: 768px) {
-  .scd-overview-drilldown-stage[data-workspace-drilldown-open="true"] {
-    grid-template-columns: minmax(0, 1fr) min(58%, 560px);
-  }
-}
-
-@media (max-width: 767px) {
-  .scd-overview-drilldown-stage[data-workspace-drilldown-open="true"]
-    > .scd-overview-drilldown-workspace {
-    display: none;
-  }
+.scd-overview-drilldown-stage[data-workspace-drilldown-open="true"]
+  > .scd-overview-drilldown-workspace {
+  display: none;
 }
 
 #scan-root .scd-c3-atmosphere {

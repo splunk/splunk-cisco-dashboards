@@ -1050,6 +1050,8 @@ const drilldownContent = profile.slice(
   profile.indexOf("interface SectionTitlesEditorModalProps"),
 );
 assert.match(profile, /<Drawer\s+divider="both"[\s\S]*?open=\{activeDetailTable !== null\}\s+position="inline"[\s\S]*?<MetricDrilldownContent/);
+assert.match(profile, /label="Back to workspace"\s+onClick=\{\(\) => setActiveDetailTable\(null\)\}/);
+assert.match(globalStyles, /\.scd-overview-drilldown-stage\[data-workspace-drilldown-open="true"\]\s*> \.scd-overview-drilldown-workspace\s*\{\s*display: none;/);
 assert.match(drilldownContent, /<Drawer.Body\s+className="scd-insights-layer-content"/);
 assert.match(drilldownContent, /<Drawer.Footer\s+className="scd-insights-layer-content"/);
 assert.match(drilldownContent, /activeTabId=\{showGuidance \? "guidance" : "results"\}/);

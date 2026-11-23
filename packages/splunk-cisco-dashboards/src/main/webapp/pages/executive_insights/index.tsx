@@ -6187,7 +6187,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         <aside
           aria-label={activeDetailTable?.title || "Drilldown details"}
           className={cn(
-            "min-h-0 min-w-0 overflow-hidden border-l sui-border-weak",
+            "min-h-0 min-w-0 overflow-hidden px-3 py-2",
             activeDetailTable ? "grid grid-cols-1 grid-rows-1" : "hidden",
           )}
           onKeyDown={(event) => {
@@ -6216,11 +6216,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             width="100%"
           >
             {activeDetailTable && (
-              <MetricDrilldownContent
-                config={activeDetailTable}
-                range={timeRange}
-                refreshToken={refreshToken}
-              />
+              <>
+                <div className="shrink-0 px-4 pt-3">
+                  <Button
+                    appearance="secondary"
+                    label="Back to workspace"
+                    onClick={() => setActiveDetailTable(null)}
+                  />
+                </div>
+                <MetricDrilldownContent
+                  config={activeDetailTable}
+                  range={timeRange}
+                  refreshToken={refreshToken}
+                />
+              </>
             )}
           </Drawer>
         </aside>
@@ -8081,7 +8090,7 @@ const MetricDrilldownContent: React.FC<MetricDrilldownContentProps> = ({
 
   return (
     <>
-      <Drawer.Header title={config.title} subtitle={activeConfig.subtitle(range)} />
+      <Drawer.Header hideCloseButton title={config.title} subtitle={activeConfig.subtitle(range)} />
       <Drawer.Body
         className="scd-insights-layer-content"
         style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", padding: 0 }}
