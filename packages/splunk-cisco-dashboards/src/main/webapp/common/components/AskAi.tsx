@@ -619,9 +619,22 @@ export default function AskAi({
         )}
     </>;
 
+    const recommendedSearch = answer?.source && result?.records.find(({ id, ownerApp }) =>
+        id === answer.source?.id && ownerApp === answer.source?.ownerApp);
     const currentReply = answer && <SearchCard aria-label="AI response">
         <Heading level={2} variant="title4" tabIndex={-1} elementRef={latestReplyHeading}>Latest reply</Heading>
         <AnswerText>{answer.explanation}</AnswerText>
+        {!answer.search && recommendedSearch && <>
+            <Heading level={3} variant="title4">{recommendedSearch.searchName}</Heading>
+            {!/\$[\w.]+\$/.test(recommendedSearch.search) && (
+                <ActionRow>
+                    <Link appearance="standalone" openInNewContext
+                        to={splunkSearchAppUrl(addLeadingSearchCommand(recommendedSearch.search), range, recommendedSearch.dispatchContext)}>
+                        Open in Search
+                    </Link>
+                </ActionRow>
+            )}
+        </>}
         {answer.search && <>
             <Heading level={3} variant="title4">{answer.search.title}</Heading>
             <p>{savedDraft ? 'Saved search' : 'Review this draft SPL before using it.'}</p>
