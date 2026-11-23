@@ -174,6 +174,10 @@ export default function AskAi({
     const [draftId, setDraftId] = useState('');
     const [verifiedSpl, setVerifiedSpl] = useState('');
     const [draftBusy, setDraftBusy] = useState(false);
+    const draftActions = useRef<HTMLDivElement>(null);
+    const drawerRevision = useRef(0);
+    const returnFocusToSavedSearch = useRef(false);
+    const savedDraft = draftId ? result?.records.find(({ id }) => id === draftId) : undefined;
     const modelRequest = useRef<AbortController | null>(null);
     const canAskAi = Boolean(settings?.enabled && settings.canUseModel);
     const launcherLabel = canAskAi ? 'Ask AI' : 'Find searches';
@@ -311,9 +315,17 @@ export default function AskAi({
         }
     }
 
+    const focusSavedSearch = useCallback((link: HTMLAnchorElement | HTMLButtonElement | null) => {
+        if (!link || !returnFocusToSavedSearch.current) return;
+        returnFocusToSavedSearch.current = false;
+        if (document.activeElement === document.body) link.focus({ preventScroll: true });
+    }, []);
+
     async function reviewDraft(save: boolean) {
         const draft = answer?.search;
         if (!draft || draftBusy) return;
+        const requestDrawerRevision = drawerRevision.current;
+        const actionsHadFocus = save && draftActions.current?.contains(document.activeElement);
         setDraftBusy(true);
         setFeedback(null);
         const signal = AbortSignal.timeout(20000);
@@ -327,6 +339,10 @@ export default function AskAi({
                     description: answer.explanation,
                     reference,
                 }, signal);
+                const actions = draftActions.current;
+                returnFocusToSavedSearch.current = Boolean(requestDrawerRevision === drawerRevision.current &&
+                    actions?.isConnected && (actions.contains(document.activeElement) ||
+                        (actionsHadFocus && document.activeElement === document.body)));
                 setResult((current) => current && ({
                     ...current,
                     records: [saved, ...current.records.filter((record) => record.id !== saved.id || record.ownerApp !== saved.ownerApp)],
@@ -396,6 +412,8 @@ export default function AskAi({
     }
 
     function closeDrawer() {
+        drawerRevision.current += 1;
+        returnFocusToSavedSearch.current = false;
         cancelFinderTimer();
         composing.current = false;
         compositionEnter.current = false;
@@ -483,25 +501,34 @@ export default function AskAi({
                         <AnswerText>{answer.explanation}</AnswerText>
                         {answer.search && <>
                             <Heading level={3} variant="title4">{answer.search.title}</Heading>
-                            <p>Review this draft SPL before using it.</p>
-                            <pre tabIndex={0} aria-label="Draft SPL"><code><SplSyntax spl={answer.search.spl} /></code></pre>
-                            <ActionRow>
-                                {canValidateDraft(answer.search.spl) && (
-                                    <Button label={verifiedSpl === answer.search.spl ? 'Validate SPL again' : 'Validate SPL'}
-                                        disabled={draftBusy} onClick={() => { void reviewDraft(false); }} />
-                                )}
-                                {verifiedSpl === answer.search.spl && (
-                                    <Link appearance="standalone" openInNewContext
-                                        to={splunkSearchAppUrl(addLeadingSearchCommand(answer.search.spl), range)}>
-                                        Open draft in Search
+                            <p>{savedDraft ? 'Saved search' : 'Review this draft SPL before using it.'}</p>
+                            <pre tabIndex={0} aria-label={savedDraft ? 'Saved search SPL' : 'Draft SPL'}>
+                                <code><SplSyntax spl={savedDraft?.search ?? answer.search.spl} /></code>
+                            </pre>
+                            <ActionRow ref={draftActions}>
+                                {savedDraft ? (
+                                    <Link appearance="standalone" openInNewContext elementRef={focusSavedSearch}
+                                        to={splunkSearchAppUrl(addLeadingSearchCommand(savedDraft.search), range, savedDraft.dispatchContext)}>
+                                        Open in Search
                                     </Link>
-                                )}
-                                {verifiedSpl === answer.search.spl && settings?.writable && (
-                                    <Button label="Save to Searchbase" disabled={draftBusy || Boolean(result?.records.some(({ id }) => id === draftId))}
-                                        onClick={() => { void reviewDraft(true); }} />
-                                )}
+                                ) : <>
+                                    {canValidateDraft(answer.search.spl) && (
+                                        <Button label={verifiedSpl === answer.search.spl ? 'Validate SPL again' : 'Validate SPL'}
+                                            disabled={draftBusy} onClick={() => { void reviewDraft(false); }} />
+                                    )}
+                                    {verifiedSpl === answer.search.spl && (
+                                        <Link appearance="standalone" openInNewContext
+                                            to={splunkSearchAppUrl(addLeadingSearchCommand(answer.search.spl), range)}>
+                                            Open draft in Search
+                                        </Link>
+                                    )}
+                                    {verifiedSpl === answer.search.spl && settings?.writable && (
+                                        <Button label="Save to Searchbase" disabled={draftBusy}
+                                            onClick={() => { void reviewDraft(true); }} />
+                                    )}
+                                </>}
                             </ActionRow>
-                            {!canValidateDraft(answer.search.spl) && (
+                            {!savedDraft && !canValidateDraft(answer.search.spl) && (
                                 <p>Copy this SPL to Search to review commands, macros, or inputs before running it.</p>
                             )}
                         </>}
