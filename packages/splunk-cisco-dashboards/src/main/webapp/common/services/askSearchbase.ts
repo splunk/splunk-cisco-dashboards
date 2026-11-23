@@ -61,9 +61,19 @@ export const rankSearchbaseMatches = (
 export function rankAssistantSearchMatches(records: readonly SearchbaseRecord[], question: string) {
     const task = question.split(/[.!?](?:\s|$)/, 1)[0]?.trim() || question;
     const matches = rankSearchbaseMatches(records, task);
+    if (matches.length >= 5) return { matches, examples: matches.slice(0, 5) };
+
+    const related = rankSearchbaseMatches(records, task, true);
+    // Product names can include words removed during scoring, such as "Dashboard".
+    const taskPhrase = ` ${normalize(task)} `;
+    const named = related.filter(({ searchName }) => {
+        const titleWords = normalize(searchName).split(' ');
+        return titleWords.some((word, index) =>
+            !QUESTION_WORDS.has(word) && titleWords[index + 1] &&
+            taskPhrase.includes(` ${word} ${titleWords[index + 1]} `));
+    });
     return {
         matches,
-        examples: matches.length >= 5 ? matches.slice(0, 5)
-            : rankSearchbaseMatches(records, task, true).slice(0, 5),
+        examples: [...new Set([...named, ...matches, ...related])].slice(0, 5),
     };
 }

@@ -167,3 +167,18 @@ test("Ask AI grounds a compound Meraki question in the search intent before the 
   assert.deepEqual(ranked.matches, [meraki]);
   assert.equal(ranked.examples[0], meraki);
 });
+
+test("Ask AI gives the named Nexus Dashboard scope priority over multi-product alerts", () => {
+  const broad = record("all_alerts", "Data Center Alerts", {
+    tags: ["Nexus Dashboard", "ACI", "MDS"],
+    description: "Reports alerts across several data center products.",
+  });
+  const scoped = record("nexus_dashboard_anomalies", "Open Nexus Dashboard anomalies", {
+    description: "Returns active anomalies for Nexus Dashboard.",
+  });
+  const question = "Are there any alerts in my Nexus dashboard in the last 24 hours?";
+  assert.equal(rankSearchbaseMatches([broad, scoped], question, true)[0], broad);
+  const ranked = exportsFromSource.rankAssistantSearchMatches([broad, scoped], question);
+  assert.equal(ranked.examples[0], scoped);
+  assert.ok(ranked.examples.includes(broad));
+});

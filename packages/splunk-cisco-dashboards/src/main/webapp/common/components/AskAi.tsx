@@ -357,7 +357,7 @@ export default function AskAi({
                     const controller = new AbortController();
                     modelRequest.current = controller;
                     try {
-                        const examples = records.slice(0, conversation.length ? 3 : 5);
+                        const examples = assistantMatches.examples.slice(0, conversation.length ? 3 : 5);
                         // Reserve context for the previous answer when refining a search.
                         const related = [...(result?.records.slice(0, 2) ?? []), ...records, ...assistantMatches.examples];
                         for (const record of related) {
