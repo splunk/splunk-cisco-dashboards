@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import Button from '@splunk/react-ui/Button';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
@@ -99,6 +99,7 @@ const SearchStatus = styled.div`
 const QUESTION_STORAGE_KEY = 'scd:ask-ai:question';
 const SEARCHBASE_LISTING_URL = 'https://splunkbase.splunk.com/app/7188';
 const RESULT_BATCH_SIZE = 5;
+const FIND_SEARCHES_DELAY_MS = 350;
 
 function readQuestion(): string {
     if (!getCurrentSplunkUsername()) return '';
@@ -154,6 +155,9 @@ export default function AskAi({
     const trigger = useRef<HTMLButtonElement | null>(null);
     const nextResultToFocus = useRef<number | null>(null);
     const pending = useRef<object | null>(null);
+    const finderTimer = useRef<number>();
+    const composing = useRef(false);
+    const compositionEnter = useRef(false);
     const activeContext = useRef(contextId);
     const [open, setOpen] = useState(false);
     const [searchbaseInstalled, setSearchbaseInstalled] = useState<boolean | null>();
@@ -173,6 +177,13 @@ export default function AskAi({
     const modelRequest = useRef<AbortController | null>(null);
     const canAskAi = Boolean(settings?.enabled && settings.canUseModel);
     const launcherLabel = canAskAi ? 'Ask AI' : 'Find searches';
+
+    const cancelFinderTimer = useCallback(() => {
+        window.clearTimeout(finderTimer.current);
+        finderTimer.current = undefined;
+    }, []);
+
+    useEffect(() => cancelFinderTimer, [canAskAi, cancelFinderTimer]);
 
     useEffect(() => {
         let active = true;
@@ -198,9 +209,10 @@ export default function AskAi({
         setFeedback(null);
     }, [contextId]);
 
-    async function findMatches(useModel = false) {
-        const submitted = question.trim();
-        if (!submitted || pending.current || adding || draftBusy) return;
+    async function findMatches(query: string, useModel = false) {
+        const submitted = query.trim();
+        if (!submitted || pending.current || adding || draftBusy || composing.current) return;
+        cancelFinderTimer();
         const request = {};
         pending.current = request;
         nextResultToFocus.current = null;
@@ -325,6 +337,9 @@ export default function AskAi({
     }
 
     function clear() {
+        cancelFinderTimer();
+        pending.current = null;
+        setLoading(false);
         resumedQuestion.current = '';
         nextResultToFocus.current = null;
         setQuestion('');
@@ -336,6 +351,27 @@ export default function AskAi({
         rememberQuestion('');
     }
 
+    function updateQuestion(value: string) {
+        setQuestion(value);
+        if (canAskAi || composing.current) return;
+        cancelFinderTimer();
+        const submitted = value.trim();
+        if (!submitted) {
+            clear();
+            return;
+        }
+        if (result?.question === submitted) return;
+        // The catalogue request can be shared with other views. Ignore its old
+        // result instead of aborting a fetch another view may still need.
+        pending.current = null;
+        setLoading(false);
+        setResult(null);
+        setFeedback(null);
+        finderTimer.current = window.setTimeout(() => {
+            void findMatches(submitted);
+        }, FIND_SEARCHES_DELAY_MS);
+    }
+
     function showMoreResults() {
         if (!result || result.visibleCount >= result.records.length) return;
         nextResultToFocus.current = result.visibleCount;
@@ -344,10 +380,21 @@ export default function AskAi({
 
     function openDrawer() {
         setOpen(true);
-        if (resumedQuestion.current) {
+        if (resumedQuestion.current || (!canAskAi && result?.question !== question.trim())) {
             resumedQuestion.current = '';
-            void findMatches();
+            void findMatches(question);
         }
+    }
+
+    function closeDrawer() {
+        cancelFinderTimer();
+        composing.current = false;
+        compositionEnter.current = false;
+        if (!canAskAi) {
+            pending.current = null;
+            setLoading(false);
+        }
+        setOpen(false);
     }
 
     return <>
@@ -370,19 +417,41 @@ export default function AskAi({
             elementRef={trigger}
             onClick={openDrawer}
         />
-        <Drawer open={open} onRequestClose={() => setOpen(false)} returnFocus={trigger} width="min(560px, 100vw)">
+        <Drawer open={open} onRequestClose={closeDrawer} returnFocus={trigger} width="min(560px, 100vw)">
             <Drawer.Header title={launcherLabel} subtitle={context} />
             <Drawer.Body>
                 <Content>
                     <p>{canAskAi
                         ? 'Ask for a search, an SPL explanation, or a draft. Your question and selected Searchbase examples go to the configured model.'
                         : 'Find existing searches in Searchbase by topic, product, or monitoring goal.'}</p>
-                    <form onSubmit={(event) => { event.preventDefault(); void findMatches(canAskAi); }}>
-                        <ControlGroup label="What are you looking for?" help="For example, which sites have the most WAN packet loss?">
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            if (!compositionEnter.current) void findMatches(question, canAskAi);
+                        }}
+                        onKeyDown={(event) => {
+                            // WebKit can end composition before the keydown that confirms it.
+                            compositionEnter.current = event.key === 'Enter' &&
+                                (composing.current || event.nativeEvent.isComposing || event.keyCode === 229);
+                        }}
+                        onKeyUp={() => { compositionEnter.current = false; }}
+                        onCompositionStart={() => {
+                            composing.current = true;
+                            cancelFinderTimer();
+                        }}
+                        onCompositionEnd={(event) => {
+                            composing.current = false;
+                            if (event.target instanceof HTMLInputElement) updateQuestion(event.target.value);
+                        }}
+                    >
+                        <ControlGroup label="What are you looking for?" help={canAskAi
+                            ? 'For example, which sites have the most WAN packet loss?'
+                            : 'Results update as you type. Try “WAN packet loss”.'}>
                             <Text
                                 maxLength={ASK_SEARCHBASE_QUESTION_LIMIT}
                                 value={question}
-                                onChange={(_event, { value }) => setQuestion(value)}
+                                disabled={adding || draftBusy ? 'dimmed' : false}
+                                onChange={(_event, { value }) => updateQuestion(value)}
                             />
                         </ControlGroup>
                     </form>
@@ -428,11 +497,13 @@ export default function AskAi({
                             )}
                         </>}
                     </SearchCard>}
-                    {result && <>
-                        <Heading level={2} variant="title3">Searchbase matches</Heading>
-                        <p role="status">{result.records.length
+                    {result && <Heading level={2} variant="title3">Searchbase matches</Heading>}
+                    <SearchStatus role="status">
+                        {result && (result.records.length
                             ? `Showing ${result.visibleCount} of ${result.records.length} ${result.records.length === 1 ? 'match' : 'matches'} for “${result.question}”.`
-                            : `No close matches for “${result.question}”. Try a product name, metric, or data source.`}</p>
+                            : `No close matches for “${result.question}”. Try a product name, metric, or data source.`)}
+                    </SearchStatus>
+                    {result && <>
                         {result.records.length > 0 && <p>Searches open with the time range <strong>{range?.label ?? 'Last 24 hours'}</strong>.</p>}
                         {Boolean(result.records.length && destinations?.length) && (
                             <ControlGroup label="Add to a workspace section">
@@ -516,8 +587,8 @@ export default function AskAi({
                 </Content>
             </Drawer.Body>
             <Drawer.Footer>
-                <Button appearance="secondary" label="Clear" disabled={loading || adding || draftBusy || (!question && !result)} onClick={clear} />
-                <Button appearance="primary" label={canAskAi ? (answer ? "Send follow-up" : "Ask AI") : "Find searches"} disabled={!question.trim() || loading || adding || draftBusy} onClick={() => { void findMatches(canAskAi); }} />
+                <Button appearance="secondary" label="Clear" disabled={(canAskAi && loading) || adding || draftBusy || (!question && !result)} onClick={clear} />
+                <Button appearance="primary" label={canAskAi ? (answer ? "Send follow-up" : "Ask AI") : "Find searches"} disabled={!question.trim() || loading || adding || draftBusy} onClick={() => { void findMatches(question, canAskAi); }} />
             </Drawer.Footer>
         </Drawer>
     </>;
