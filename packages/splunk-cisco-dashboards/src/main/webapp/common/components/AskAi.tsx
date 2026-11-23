@@ -11,6 +11,7 @@ import Select from '@splunk/react-ui/Select';
 import Text from '@splunk/react-ui/Text';
 import TextArea from '@splunk/react-ui/TextArea';
 import Tooltip from '@splunk/react-ui/Tooltip';
+import WaitSpinner from '@splunk/react-ui/WaitSpinner';
 import { addLeadingSearchCommand } from '@splunk/splunk-utils/search';
 import { variables } from '@splunk/themes';
 import styled from 'styled-components';
@@ -145,6 +146,21 @@ const SearchStatus = styled.div`
     }
 `;
 
+const ActivityStatus = styled(SearchStatus)`
+    &:not(:empty) {
+        display: flex;
+        align-items: center;
+        gap: ${variables.spacingSmall};
+        padding: ${variables.spacingSmall} ${variables.spacingMedium};
+        background: ${variables.backgroundColorSection};
+        border-radius: ${variables.borderRadius};
+
+        > :first-child { flex-shrink: 0; }
+        > span { min-width: 0; overflow-wrap: anywhere; }
+    }
+
+`;
+
 const QUESTION_STORAGE_KEY = 'scd:ask-ai:question';
 const SEARCHBASE_LISTING_URL = 'https://splunkbase.splunk.com/app/7188';
 const RESULT_BATCH_SIZE = 5;
@@ -233,7 +249,6 @@ export default function AskAi({
     const chatInput = useRef<HTMLTextAreaElement>(null);
     const drawerContent = useRef<HTMLDivElement>(null);
     const latestChatQuestion = useRef<HTMLDivElement>(null);
-    const chatProgress = useRef<HTMLElement>(null);
     const modelWarning = useRef<HTMLDivElement>(null);
     const latestReplyHeading = useRef<HTMLHeadingElement>(null);
     const conversationSequence = useRef(0);
@@ -250,7 +265,8 @@ export default function AskAi({
     const answer = currentTurn?.answer;
     const modelFailed = currentTurn?.modelFailed;
     const [showCatalogMatches, setShowCatalogMatches] = useState(false);
-    const [draftBusy, setDraftBusy] = useState(false);
+    const [draftOperation, setDraftOperation] = useState<'validate' | 'save' | null>(null);
+    const draftBusy = draftOperation !== null;
     const drawerRevision = useRef(0);
     const returnFocusToSearch = useRef<number | null>(null);
     const modelRequest = useRef<AbortController | null>(null);
@@ -281,9 +297,8 @@ export default function AskAi({
             if (replyBottom && replyBottom > viewport.bottom) heading?.scrollIntoView({ block: 'start' });
             return;
         }
-        const target = modelFailed ? modelWarning.current : phase ? chatProgress.current : null;
-        target?.scrollIntoView({ block: 'nearest' });
-    }, [open, canAskAi, phase, answer, modelFailed]);
+        if (modelFailed) modelWarning.current?.scrollIntoView({ block: 'nearest' });
+    }, [open, canAskAi, answer, modelFailed]);
 
     useEffect(() => {
         let active = true;
@@ -321,8 +336,10 @@ export default function AskAi({
         const retrying = currentTurn?.modelFailed && submitted === currentTurn.question;
         const explanationSpl = selectedSpl ?? (retrying ? currentTurn.explanationSpl : undefined);
         setPhase(explanationSpl === undefined ? 'catalogue' : 'model');
-        setResult(null);
-        setShowCatalogMatches(false);
+        if (explanationSpl === undefined) {
+            setResult(null);
+            setShowCatalogMatches(false);
+        }
         setFeedback(null);
         if (turnId !== undefined) {
             setConversation((turns) => [
@@ -399,7 +416,7 @@ export default function AskAi({
                             setConversation((turns) => turns.map((turn) => turn.id === turnId
                                 ? { ...turn, modelFailed: true }
                                 : turn));
-                            setShowCatalogMatches(records.length > 0);
+                            if (explanationSpl === undefined) setShowCatalogMatches(records.length > 0);
                         }
                     }
                 }
@@ -457,7 +474,7 @@ export default function AskAi({
         const actions = button.closest('[data-ask-ai-draft-actions]');
         const actionsHadFocus = actions?.contains(document.activeElement);
         const signal = AbortSignal.timeout(20000);
-        setDraftBusy(true);
+        setDraftOperation(save ? 'save' : 'validate');
         updateDraftReview(turn.id, { error: undefined });
         try {
             let review: DraftReview;
@@ -494,7 +511,7 @@ export default function AskAi({
         } catch (error) {
             updateDraftReview(turn.id, { error: error instanceof Error ? error.message : 'The draft could not be checked.' });
         } finally {
-            setDraftBusy(false);
+            setDraftOperation(null);
         }
     }
 
@@ -793,11 +810,17 @@ export default function AskAi({
         );
     }
 
-    const progressText = phase === 'model'
-        ? (result?.records.length ? 'Searchbase matches are ready. Waiting for the model’s answer…' : 'Waiting for the model’s answer…')
-        : phase === 'catalogue'
-            ? (canAskAi ? 'Finding relevant Searchbase examples…' : 'Looking for Searchbase matches…')
-            : '';
+    let activity = '';
+    if (draftOperation === 'validate') activity = 'Checking SPL syntax…';
+    if (draftOperation === 'save') activity = 'Saving the search to Searchbase…';
+    if (phase === 'catalogue') activity = 'Looking for Searchbase matches…';
+    if (phase === 'model') {
+        activity = currentTurn?.explanationSpl !== undefined
+            ? 'Explaining the selected SPL…'
+            : result?.records.length
+                ? 'Searchbase matches are ready. Waiting for the model’s answer…'
+                : 'Waiting for the model’s answer…';
+    }
     const feedbackMessage = feedback && (
         <Message type={feedback.error ? 'error' : 'success'} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</Message>
     );
@@ -829,6 +852,12 @@ export default function AskAi({
             <Drawer.Header title={launcherLabel} subtitle={context} />
             {canAskAi && (
                 <ChatComposer>
+                    <ActivityStatus role="status">
+                        {activity && <>
+                            <WaitSpinner screenReaderText={null} />
+                            <span>{activity}</span>
+                        </>}
+                    </ActivityStatus>
                     {questionForm}
                     <ComposerActions>
                         {answer && <Button appearance="subtle" label="Read latest reply" onClick={() => latestReplyHeading.current?.focus()} />}
@@ -858,7 +887,7 @@ export default function AskAi({
                     )}
                     {canAskAi ? (
                         <>
-                            <ScreenReaderContent role="status">{progressText || (answer ? 'AI response ready.' : '')}</ScreenReaderContent>
+                            <ScreenReaderContent role="status">{answer ? 'AI response ready.' : ''}</ScreenReaderContent>
                             {conversation.length === 0 && (
                                 <ChatStarters aria-label="Suggested questions">
                                     <Heading level={2} variant="title4">Try a question</Heading>
@@ -882,12 +911,6 @@ export default function AskAi({
                                         {renderReply(turn, turn.id === currentTurn?.id)}
                                     </React.Fragment>
                                 ))}
-                                {progressText && (
-                                    <ChatReply aria-hidden="true" ref={chatProgress}>
-                                        <strong>Ask AI</strong>
-                                        <p>{progressText}</p>
-                                    </ChatReply>
-                                )}
                                 {modelFailed && (
                                     <Message type="warning" role="alert" elementRef={modelWarning}>
                                         {currentTurn.explanationSpl !== undefined
@@ -901,13 +924,13 @@ export default function AskAi({
                             </Transcript>}
                         </>
                     ) : <>
-                        <SearchStatus role="status">{progressText}</SearchStatus>
+                        <SearchStatus role="status">{activity}</SearchStatus>
                         {feedbackMessage}
                         <ScreenReaderContent role="status">
                             {result && `Showing ${result.visibleCount} of ${result.records.length} Searchbase matches.`}
                         </ScreenReaderContent>
                     </>}
-                    {canAskAi && result ? (!modelFailed || result.records.length > 0) && (
+                    {canAskAi && result ? (!modelFailed || currentTurn.explanationSpl !== undefined || result.records.length > 0) && (
                         <CollapsiblePanel appearance="subtle" title={`Searchbase matches (${result.records.length})`}
                             open={showCatalogMatches} onChange={(_, { action }) => setShowCatalogMatches(action === 'open')} inset={false}>
                             <Content>
