@@ -193,6 +193,22 @@ interface Result {
     visibleCount: number;
 }
 
+interface DraftReview {
+    id?: string;
+    validated?: boolean;
+    saved?: SearchbaseRecord;
+    error?: string;
+}
+
+interface ChatTurn extends AssistantTurn {
+    id: number;
+    modelFailed?: boolean;
+    explanationSpl?: string;
+    recommendation?: SearchbaseRecord;
+    draftReference?: SearchbaseRecord;
+    draftReview?: DraftReview;
+}
+
 export default function AskAi({
     context,
     contextId = context,
@@ -229,18 +245,14 @@ export default function AskAi({
     const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
 
     const [settings, setSettings] = useState<AskAiSettings>();
-    const [conversation, setConversation] = useState<(AssistantTurn & { id: number; modelFailed?: boolean })[]>([]);
+    const [conversation, setConversation] = useState<ChatTurn[]>([]);
     const currentTurn = conversation[conversation.length - 1];
     const answer = currentTurn?.answer;
     const modelFailed = currentTurn?.modelFailed;
     const [showCatalogMatches, setShowCatalogMatches] = useState(false);
-    const [draftId, setDraftId] = useState('');
-    const [verifiedSpl, setVerifiedSpl] = useState('');
     const [draftBusy, setDraftBusy] = useState(false);
-    const draftActions = useRef<HTMLDivElement>(null);
     const drawerRevision = useRef(0);
-    const returnFocusToSavedSearch = useRef(false);
-    const savedDraft = draftId ? result?.records.find(({ id }) => id === draftId) : undefined;
+    const returnFocusToSearch = useRef<number | null>(null);
     const modelRequest = useRef<AbortController | null>(null);
     const canAskAi = Boolean(settings?.enabled && settings.canUseModel);
     const launcherLabel = canAskAi ? 'Ask AI' : 'Find searches';
@@ -297,7 +309,7 @@ export default function AskAi({
         setFeedback(null);
     }, [contextId]);
 
-    async function findMatches(query: string, useModel = false) {
+    async function findMatches(query: string, useModel = false, selectedSpl?: string) {
         const submitted = query.trim();
         if (!submitted || pending.current || adding || draftBusy || composing.current) return;
         cancelFinderTimer();
@@ -306,25 +318,26 @@ export default function AskAi({
         nextResultToFocus.current = null;
         const modelMode = useModel && canAskAi && settings;
         const turnId = modelMode ? ++conversationSequence.current : undefined;
-        setPhase('catalogue');
+        const retrying = currentTurn?.modelFailed && submitted === currentTurn.question;
+        const explanationSpl = selectedSpl ?? (retrying ? currentTurn.explanationSpl : undefined);
+        setPhase(explanationSpl === undefined ? 'catalogue' : 'model');
         setResult(null);
         setShowCatalogMatches(false);
-        setVerifiedSpl('');
-        setDraftId('');
         setFeedback(null);
         if (turnId !== undefined) {
-            const retrying = currentTurn?.modelFailed && submitted === currentTurn.question;
             setConversation((turns) => [
                 ...(retrying ? turns.slice(0, -1) : turns),
-                { id: turnId, question: submitted },
+                { id: turnId, question: submitted, explanationSpl },
             ].slice(-CHAT_TURN_LIMIT));
-            setQuestion('');
-            chatInput.current?.focus({ preventScroll: true });
+            if (selectedSpl === undefined) setQuestion('');
+            chatInput.current?.focus({ preventScroll: selectedSpl === undefined });
         } else {
             rememberQuestion(submitted);
         }
         try {
-            const catalogue = await getSearchbaseCatalogue({ allApps: true, includeHidden: true });
+            const catalogue = explanationSpl === undefined
+                ? await getSearchbaseCatalogue({ allApps: true, includeHidden: true })
+                : [];
             if (pending.current === request) {
                 const ranked = rankSearchbaseMatches(catalogue, submitted);
                 const assistantMatches = modelMode ? rankAssistantSearchMatches(catalogue, submitted) : undefined;
@@ -337,7 +350,9 @@ export default function AskAi({
                     if (firstOwner === undefined) ownerById.set(id, ownerApp);
                     else if (firstOwner !== ownerApp) ambiguousIds.add(id);
                 }
-                setResult({ question: submitted, records, ambiguousIds, visibleCount: Math.min(RESULT_BATCH_SIZE, records.length) });
+                if (explanationSpl === undefined) {
+                    setResult({ question: submitted, records, ambiguousIds, visibleCount: Math.min(RESULT_BATCH_SIZE, records.length) });
+                }
                 if (modelMode && turnId !== undefined && assistantMatches) {
                     const controller = new AbortController();
                     modelRequest.current = controller;
@@ -353,6 +368,7 @@ export default function AskAi({
                         const response = await askModel(
                             submitted, examples, modelMode.connection, conversation,
                             AbortSignal.any([controller.signal, AbortSignal.timeout(60000)]),
+                            explanationSpl,
                         );
                         if (pending.current !== request) return;
                         const recommendation = examples.find((record) =>
@@ -375,7 +391,7 @@ export default function AskAi({
                             });
                         }
                         setConversation((turns) => turns.map((turn) => turn.id === turnId
-                            ? { ...turn, answer: response }
+                            ? { ...turn, answer: response, recommendation, draftReference: recommendation ?? records[0] }
                             : turn));
                     } catch {
                         if (pending.current === request) {
@@ -427,47 +443,56 @@ export default function AskAi({
         }
     }
 
-    const focusSavedSearch = useCallback((link: HTMLAnchorElement | HTMLButtonElement | null) => {
-        if (!link || !returnFocusToSavedSearch.current) return;
-        returnFocusToSavedSearch.current = false;
-        if (document.activeElement === document.body) link.focus({ preventScroll: true });
-    }, []);
+    function updateDraftReview(turnId: number, review: DraftReview) {
+        setConversation((turns) => turns.map((turn) => turn.id === turnId
+            ? { ...turn, draftReview: { ...turn.draftReview, ...review } }
+            : turn));
+    }
 
-    async function reviewDraft(save: boolean) {
-        const draft = answer?.search;
-        if (!draft || draftBusy) return;
+    async function reviewDraft(turn: ChatTurn, save: boolean, button: HTMLElement) {
+        const reply = turn.answer;
+        if (!reply?.search || draftBusy || loading || adding) return;
+        const draft = reply.search;
         const requestDrawerRevision = drawerRevision.current;
-        const actionsHadFocus = save && draftActions.current?.contains(document.activeElement);
-        setDraftBusy(true);
-        setFeedback(null);
+        const actions = button.closest('[data-ask-ai-draft-actions]');
+        const actionsHadFocus = actions?.contains(document.activeElement);
         const signal = AbortSignal.timeout(20000);
+        setDraftBusy(true);
+        updateDraftReview(turn.id, { error: undefined });
         try {
+            let review: DraftReview;
             if (save) {
-                const id = draftId || `ask_ai_${Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
-                setDraftId(id);
-                const reference = result?.records.find(({ id: recordId, ownerApp }) =>
-                    recordId === answer.source?.id && ownerApp === answer.source?.ownerApp) ?? result?.records[0];
+                const id = turn.draftReview?.id || `ask_ai_${Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+                updateDraftReview(turn.id, { id });
                 const saved = await saveDraftToSearchbase(draft, id, {
-                    description: answer.explanation,
-                    reference,
+                    description: reply.explanation,
+                    reference: turn.draftReference,
                 }, signal);
-                const actions = draftActions.current;
-                returnFocusToSavedSearch.current = Boolean(requestDrawerRevision === drawerRevision.current &&
-                    actions?.isConnected && (actions.contains(document.activeElement) ||
-                        (actionsHadFocus && document.activeElement === document.body)));
-                setResult((current) => current && ({
-                    ...current,
-                    records: [saved, ...current.records.filter((record) => record.id !== saved.id || record.ownerApp !== saved.ownerApp)],
-                    visibleCount: Math.max(current.visibleCount, 1),
-                }));
-                setFeedback({ text: 'Saved to Searchbase. You can add this search to a workspace section from the matching searches below.' });
+                review = { saved };
+                setResult((current) => {
+                    if (!current) return { question: turn.question, ambiguousIds: new Set(), records: [saved], visibleCount: 1 };
+                    if (current.records.some(({ id: recordId, ownerApp }) => recordId === saved.id && ownerApp === saved.ownerApp)) return current;
+                    return {
+                        ...current,
+                        records: [
+                            ...current.records.slice(0, current.visibleCount),
+                            saved,
+                            ...current.records.slice(current.visibleCount),
+                        ],
+                        visibleCount: current.visibleCount + 1,
+                    };
+                });
             } else {
                 await validateDraft(draft.spl, signal);
-                setVerifiedSpl(draft.spl);
-                setFeedback({ text: 'Splunk accepted the SPL syntax. Open in Search to check results with the workspace time range.' });
+                review = { validated: true };
             }
+            if (requestDrawerRevision === drawerRevision.current && actions?.isConnected &&
+                (actions.contains(document.activeElement) || (actionsHadFocus && document.activeElement === document.body))) {
+                returnFocusToSearch.current = turn.id;
+            }
+            updateDraftReview(turn.id, review);
         } catch (error) {
-            setFeedback({ text: error instanceof Error ? error.message : 'The draft could not be checked.', error: true });
+            updateDraftReview(turn.id, { error: error instanceof Error ? error.message : 'The draft could not be checked.' });
         } finally {
             setDraftBusy(false);
         }
@@ -482,8 +507,6 @@ export default function AskAi({
         setQuestion('');
         setConversation([]);
         setShowCatalogMatches(false);
-        setDraftId('');
-        setVerifiedSpl('');
         setResult(null);
         setFeedback(null);
         if (!canAskAi) rememberQuestion('');
@@ -530,7 +553,7 @@ export default function AskAi({
 
     function closeDrawer() {
         drawerRevision.current += 1;
-        returnFocusToSavedSearch.current = false;
+        returnFocusToSearch.current = null;
         cancelFinderTimer();
         composing.current = false;
         compositionEnter.current = false;
@@ -684,71 +707,91 @@ export default function AskAi({
         )}
     </>;
 
-    const recommendedSearch = answer?.source && result?.records.find(({ id, ownerApp }) =>
-        id === answer.source?.id && ownerApp === answer.source?.ownerApp);
-    const followUp = answer?.search
-        ? { label: 'Explain this draft', prompt: 'Explain how this draft SPL works and list its output fields.' }
-        : recommendedSearch && {
-            label: 'Explain this search',
-            prompt: `Explain the SPL for “${recommendedSearch.searchName}” and list its output fields.`.slice(0, ASK_SEARCHBASE_QUESTION_LIMIT),
-        };
-    const currentReply = answer && <ChatReply aria-label="Latest Ask AI reply">
-        <Heading level={2} variant="title4" tabIndex={-1} elementRef={latestReplyHeading}>
-            Ask AI<ScreenReaderContent> latest reply</ScreenReaderContent>
-        </Heading>
-        <AnswerText>{answer.explanation}</AnswerText>
-        {!answer.search && recommendedSearch && <>
-            <Heading level={3} variant="title4">{recommendedSearch.searchName}</Heading>
-            {!/\$[\w.]+\$/.test(recommendedSearch.search) && (
-                <ActionRow>
-                    <Link appearance="standalone" openInNewContext
-                        to={splunkSearchAppUrl(addLeadingSearchCommand(recommendedSearch.search), range, recommendedSearch.dispatchContext)}>
-                        Open in Search
-                    </Link>
-                </ActionRow>
-            )}
-        </>}
-        {answer.search && <>
-            <Heading level={3} variant="title4">{answer.search.title}</Heading>
-            <p>{savedDraft ? 'Saved search' : 'Review this draft SPL before using it.'}</p>
-            <pre tabIndex={0} aria-label={savedDraft ? 'Saved search SPL' : 'Draft SPL'}>
-                <code><SplSyntax spl={savedDraft?.search ?? answer.search.spl} /></code>
-            </pre>
-            <ActionRow ref={draftActions}>
-                {savedDraft ? (
-                    <Link appearance="standalone" openInNewContext elementRef={focusSavedSearch}
-                        to={splunkSearchAppUrl(addLeadingSearchCommand(savedDraft.search), range, savedDraft.dispatchContext)}>
-                        Open in Search
-                    </Link>
-                ) : <>
-                    {canValidateDraft(answer.search.spl) && (
-                        <Button label={verifiedSpl === answer.search.spl ? 'Validate SPL again' : 'Validate SPL'}
-                            disabled={draftBusy} onClick={() => { void reviewDraft(false); }} />
-                    )}
-                    {verifiedSpl === answer.search.spl && (
-                        <Link appearance="standalone" openInNewContext
-                            to={splunkSearchAppUrl(addLeadingSearchCommand(answer.search.spl), range)}>
-                            Open draft in Search
-                        </Link>
-                    )}
-                    {verifiedSpl === answer.search.spl && settings?.writable && (
-                        <Button label="Save to Searchbase" disabled={draftBusy}
-                            onClick={() => { void reviewDraft(true); }} />
-                    )}
-                </>}
-            </ActionRow>
-            {!savedDraft && !canValidateDraft(answer.search.spl) && (
-                <p>Copy this SPL to Search to review commands, macros, or inputs before running it.</p>
-            )}
-        </>}
-        {followUp && (
-            <ActionRow>
-                <Button appearance="secondary" label={followUp.label}
-                    disabled={loading || adding || draftBusy || Boolean(question.trim())}
-                    onClick={() => { void findMatches(followUp.prompt, true); }} />
-            </ActionRow>
-        )}
-    </ChatReply>;
+    function renderReply(turn: ChatTurn, latest: boolean) {
+        const reply = turn.answer;
+        if (!reply) return null;
+        const { search: draft } = reply;
+        const { recommendation, draftReview } = turn;
+        const actionsDisabled = loading || adding || draftBusy;
+        const draftSpl = draftReview?.saved?.search ?? draft?.spl;
+        const canValidate = draftSpl !== undefined && canValidateDraft(draftSpl);
+        const viewLabel = draftReview?.saved ? 'View saved SPL' : 'View draft SPL';
+        const explainLabel = draftReview?.saved ? 'Explain this search' : 'Explain this draft';
+
+        return (
+            <ChatReply aria-label={latest ? 'Latest Ask AI reply' : 'Earlier Ask AI reply'}>
+                <Heading level={2} variant="title4" tabIndex={latest ? -1 : undefined}
+                    elementRef={latest ? latestReplyHeading : undefined}>
+                    Ask AI{latest && <ScreenReaderContent> latest reply</ScreenReaderContent>}
+                </Heading>
+                {draft && draftSpl !== undefined ? (
+                    <>
+                        <Heading level={3} variant="title4">{draft.title}</Heading>
+                        <p role="status">
+                            {draftReview?.saved ? 'Saved to Searchbase' : draftReview?.validated
+                                ? 'SPL syntax validated' : canValidate ? 'Draft SPL' : 'Draft SPL requires manual review'}
+                        </p>
+                        <ActionRow data-ask-ai-draft-actions>
+                            {(draftReview?.validated || draftReview?.saved) ? (
+                                <Link appearance="standalone" openInNewContext
+                                    elementRef={(link) => {
+                                        if (link && returnFocusToSearch.current === turn.id) {
+                                            returnFocusToSearch.current = null;
+                                            if (document.activeElement === document.body) link.focus();
+                                        }
+                                    }}
+                                    to={splunkSearchAppUrl(addLeadingSearchCommand(draftReview.saved?.search ?? draft.spl),
+                                        range, draftReview.saved?.dispatchContext)}>
+                                    Open in Search
+                                </Link>
+                            ) : canValidate && (
+                                <Button label="Validate SPL" disabled={actionsDisabled}
+                                    onClick={(event) => { void reviewDraft(turn, false, event.currentTarget); }} />
+                            )}
+                            {draftReview?.validated && !draftReview.saved && settings?.writable && (
+                                <Button appearance="secondary" label="Save to Searchbase" disabled={actionsDisabled}
+                                    onClick={(event) => { void reviewDraft(turn, true, event.currentTarget); }} />
+                            )}
+                            <Button appearance="secondary" label={explainLabel} aria-label={`${explainLabel} for ${draft.title}`}
+                                disabled={actionsDisabled}
+                                onClick={() => {
+                                    const prompt = `Explain the SPL for “${draft.title}” and list its output fields.`;
+                                    void findMatches(prompt, true, draftSpl);
+                                }} />
+                        </ActionRow>
+                        {draftReview?.error && <Message type="error" role="alert">{draftReview.error}</Message>}
+                        <CollapsiblePanel appearance="subtle" inset={false}
+                            title={<>{viewLabel}<ScreenReaderContent> for {draft.title}</ScreenReaderContent></>}>
+                            <pre tabIndex={0} aria-label={draftReview?.saved ? 'Saved search SPL' : 'Draft SPL'}>
+                                <code><SplSyntax spl={draftSpl} /></code>
+                            </pre>
+                            {!draftReview?.validated && !canValidate && (
+                                <p>Review this SPL and its data sources in Search before running it.</p>
+                            )}
+                        </CollapsiblePanel>
+                    </>
+                ) : recommendation && (
+                    <>
+                        <Heading level={3} variant="title4">{recommendation.searchName}</Heading>
+                        <ActionRow>
+                            {!/\$[\w.]+\$/.test(recommendation.search) && (
+                                <Link appearance="standalone" openInNewContext
+                                    to={splunkSearchAppUrl(addLeadingSearchCommand(recommendation.search), range, recommendation.dispatchContext)}>
+                                    Open in Search
+                                </Link>
+                            )}
+                            <Button appearance="secondary" label="Explain this search" disabled={actionsDisabled}
+                                onClick={() => {
+                                    const prompt = `Explain the SPL for “${recommendation.searchName}” and list its output fields.`;
+                                    void findMatches(prompt.slice(0, ASK_SEARCHBASE_QUESTION_LIMIT), true, recommendation.search);
+                                }} />
+                        </ActionRow>
+                    </>
+                )}
+                <AnswerText>{reply.explanation}</AnswerText>
+            </ChatReply>
+        );
+    }
 
     const progressText = phase === 'model'
         ? (result?.records.length ? 'Searchbase matches are ready. Waiting for the model’s answer…' : 'Waiting for the model’s answer…')
@@ -836,19 +879,7 @@ export default function AskAi({
                                             <strong>You</strong>
                                             <p>{turn.question}</p>
                                         </ChatQuestion>
-                                        {turn.id !== currentTurn?.id && turn.answer && (
-                                            <ChatReply aria-label="Earlier Ask AI reply">
-                                                <Heading level={2} variant="title4">Ask AI</Heading>
-                                                <AnswerText>{turn.answer.explanation}</AnswerText>
-                                                {turn.answer.search && (
-                                                    <CollapsiblePanel appearance="subtle" title={`View draft for ${turn.answer.search.title}`} inset={false}>
-                                                        <pre tabIndex={0} aria-label="Earlier draft SPL">
-                                                            <code><SplSyntax spl={turn.answer.search.spl} /></code>
-                                                        </pre>
-                                                    </CollapsiblePanel>
-                                                )}
-                                            </ChatReply>
-                                        )}
+                                        {renderReply(turn, turn.id === currentTurn?.id)}
                                     </React.Fragment>
                                 ))}
                                 {progressText && (
@@ -857,10 +888,11 @@ export default function AskAi({
                                         <p>{progressText}</p>
                                     </ChatReply>
                                 )}
-                                {currentReply}
                                 {modelFailed && (
                                     <Message type="warning" role="alert" elementRef={modelWarning}>
-                                        {result?.records.length
+                                        {currentTurn.explanationSpl !== undefined
+                                            ? 'Ask AI couldn’t explain this SPL. Try Ask AI again.'
+                                            : result?.records.length
                                             ? 'Ask AI couldn’t answer. Use the Searchbase matches below or try Ask AI again.'
                                             : 'Ask AI couldn’t answer, and Searchbase found no close matches. Try a shorter question or a product name.'}
                                     </Message>

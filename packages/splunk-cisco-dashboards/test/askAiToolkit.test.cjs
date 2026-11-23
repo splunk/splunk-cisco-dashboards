@@ -113,6 +113,29 @@ test("long conversations keep the latest clarification and draft within the prom
   assert.equal(sent.lastDraft, "index=devices | stats count");
 });
 
+test("explaining an earlier draft uses its exact SPL and returns only an explanation", async () => {
+  let sent;
+  const { askModel } = load({ oneShot: async ({ search }) => {
+    const prompt = decodeURIComponent(search.match(/urldecode\("([^"]+)"\)/)[1]);
+    sent = JSON.parse(prompt.slice(prompt.lastIndexOf("\n") + 1));
+    return { results: [{ ai_result_1: JSON.stringify({
+      explanation: "The selected draft counts failures.", citation: 1,
+      draft: { title: "Unrequested replacement", spl: "index=other | stats count" },
+    }) }] };
+  } });
+  const selected = `index=devices action=failure | eval note="${"a".repeat(2500)}" | stats count`;
+  const answer = await askModel("Explain this draft", [{
+    id: "other", ownerApp: "demo", searchName: "Another search", description: "", search: "index=other",
+  }], "approved", [{
+    question: "Draft a different search",
+    answer: { explanation: "A more recent draft.", search: { title: "Newer draft", spl: "index=newer" } },
+  }], new AbortController().signal, selected);
+  assert.equal(sent.selectedSpl, selected);
+  assert.equal(sent.lastDraft, undefined);
+  assert.deepEqual(sent.examples, []);
+  assert.deepEqual(answer, { explanation: "The selected draft counts failures." });
+});
+
 test("draft links and save reject write commands and unverified nested SPL", () => {
   const { canValidateDraft } = load();
   assert.equal(canValidateDraft('index=devices | eval note="literal | outputlookup" | stats count by device'), true);
