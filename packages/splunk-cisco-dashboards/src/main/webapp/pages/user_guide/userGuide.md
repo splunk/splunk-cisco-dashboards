@@ -40,7 +40,7 @@ Browse the current release and recorded historical versions below. The newest re
 - **Find searches and Ask AI (Preview):** Find existing Searchbase searches and add them to a workspace section. When an administrator enables an AI Toolkit model connection, authorized users can also explain, draft, and refine SPL from the same button. Open **Setup > Review packages > Set up Ask AI** to test and enable a connection.
 - **Workspace drilldowns:** Open a tile’s drilldown to view full-height results. Switch between named views when there are related searches, or open **Search guidance** for the active view. Returning to results restores your table sort and scroll position.
 - **Searchbase links:** Opening a saved search from the app starts at **Basic Information**.
-- **Workspace resets:** Reset personal workspace settings independently of the published workspace. Signal Rail preferences stay reset after reload.
+- **Workspace resets:** Reset personal workspace settings independently of the published workspace. On supported Splunk versions, a workspace factory reset restores packaged layouts and Signal Rail settings even when a packaged stanza has no local override. Adding a tile already on a later page brings it onto the first page.
 
 :::
 
@@ -747,7 +747,7 @@ Test the workspace with a role that represents the intended audience before publ
 ### Add and publish searches {#workspaces-add-and-publish-searches}
 
 - **Add for me** adds a private tile to the current user's browser-scoped workspace view.
-- **Add for everyone** adds a shared tile to the workspace layout and requires workspace-management permission.
+- **Add for everyone** adds a shared tile to the workspace layout and requires workspace-management permission. The section's **Add search** drawer selects this scope when you have permission.
 
 The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboards` that match the active section. Select **Entire catalogue** to browse compatible searches from other installed Searchbase providers. The app filter still starts with only `splunk-cisco-dashboards` selected. Searches already configured in the section remain hidden unless the user chooses to show added searches.
 
@@ -848,7 +848,7 @@ Workspace permission does not grant access to indexed data. Each viewer still ne
 
 - **Reset tile** clears your personal overrides for the selected tile and restores its published settings.
 - **Reset personal workspace** in **Configure tile** restores your tile, section, layout, map height, search concurrency, and Signal Rail settings to the workspace defaults.
-- **Reset workspace to factory defaults** in **Dashboard controls** restores the built-in workspace's published configuration and clears your personal workspace settings. Shared tile labels, mappings, thresholds, and search bindings also return to their packaged values. Other workspaces using those same tiles inherit these changes. Searchbase search definitions and organization-wide drilldowns keep their saved settings. Signal Rail items used by other workspaces also keep their saved settings.
+- **Reset workspace to factory defaults** in **Dashboard controls** uses Splunk Enterprise 10.6 or later to restore the built-in workspace's published configuration and clears your personal workspace settings. Shared tile labels, mappings, thresholds, and search bindings also return to their packaged values. Other workspaces using those same tiles inherit these changes. Searchbase search definitions and organization-wide drilldowns keep their saved settings. Signal Rail items used by other workspaces also keep their saved settings.
 - **Reset to defaults** in **Edit branding** restores the workspace title, subtitle, and logo for all viewers after confirmation.
 - **Reset to factory** in the topology editor restores the packaged map for all viewers of that topology and keeps custom section titles. In **Health Monitoring**, **Factory reset** restores just the selected KPI's saved settings after confirmation.
 

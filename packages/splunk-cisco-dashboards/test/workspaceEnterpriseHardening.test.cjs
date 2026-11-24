@@ -1151,6 +1151,16 @@ assert.match(
 );
 assert.match(workspaceService, /class InsightsWorkspaceConflictError/);
 assert.match(workspaceService, /assertLayoutIsCurrent/);
+assert.match(
+  profile,
+  /const handleAddSearchToSection[\s\S]*?new Set\(orderedIds\.slice\(0, currentVisibleCount\)\)[\s\S]*?const existingMetric[\s\S]*?existingMetric\?\.id/,
+  "A search on a later page must be promoted using its existing tile ID",
+);
+assert.match(
+  profile,
+  /setAddDestination\(canManageWorkspace \? "workspace" : "personal"\)/,
+  "Opening Add search restores the permitted default visibility",
+);
 assert.match(workspaceService, /resetBuiltInInsightsWorkspace/);
 assert.match(
   profile,

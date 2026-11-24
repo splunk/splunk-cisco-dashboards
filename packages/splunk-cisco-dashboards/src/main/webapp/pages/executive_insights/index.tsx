@@ -3957,11 +3957,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       );
       const canonicalIds = getFactoryTileOrder(section, visibleSectionMetrics);
       const orderedIds = shared ? canonicalIds : getSectionTileOrder(section, canonicalIds);
-      const sectionMaxAvailable = Math.min(
-        sectionTileBounds.maxCount,
-        orderedIds.length,
+      const currentVisibleCount = Math.min(
+        shared
+          ? (workspaceLayout[section]?.visibleCount ?? insightsWorkspace.fallbackTileCount)
+          : sectionTileCounts[section],
+        Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length),
       );
-      const configuredMetricIds = new Set(shared ? orderedIds : orderedIds.slice(0, sectionMaxAvailable));
+      const configuredMetricIds = new Set(orderedIds.slice(0, currentVisibleCount));
       const currentSearchbaseIds = new Set(
         visibleSectionMetrics
           .filter((metric) => configuredMetricIds.has(metric.id))
@@ -3979,11 +3981,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       ) {
         return "already-present" as const;
       }
-
-      const currentVisibleCount = Math.min(
-        shared ? (workspaceLayout[section]?.visibleCount ?? insightsWorkspace.fallbackTileCount) : sectionTileCounts[section],
-        Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length),
-      );
 
       const existingMetric = sectionMetrics.find((metric) =>
         searchbaseReferenceMatchesRecord(
@@ -6657,7 +6654,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setIncludeTableSearches(false);
     setActiveTags(new Set());
     setFiltersOpen(false);
-    setAddDestination("personal");
+    setAddDestination(canManageWorkspace ? "workspace" : "personal");
     setAddingRecordId(null);
     setSharedRemovalRecord(null);
     setSharedRemovalError(null);
@@ -6668,7 +6665,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
     return () => window.clearTimeout(id);
-  }, [currentAppOwner, open, profile.id, section]);
+  }, [canManageWorkspace, currentAppOwner, open, profile.id, section]);
 
   const handleAdd = async (record: SearchbaseRecord) => {
     setAddingRecordId(searchbaseRecordReference(record));

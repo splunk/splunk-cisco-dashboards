@@ -7,6 +7,7 @@ import sys
 import types
 import urllib.parse
 import unittest
+from unittest.mock import patch
 
 # Importing the handler directly from src/main/resources must not create a
 # release-input __pycache__ directory during local validation.
@@ -361,6 +362,50 @@ class WorkspaceRestValidationTest(unittest.TestCase):
         self.assertEqual(len(fake_rest.calls), 1)
         _path, kwargs = fake_rest.calls[0]
         self.assertTrue(kwargs["rawResult"])
+
+    def test_packaged_workspace_delete_falls_back_to_local_layer(self):
+        name = "signal_rail.secure_networking"
+        endpoint = "/scd_insights_workspaces/" + name
+        refused = json.dumps({"messages": [{
+            "type": "ERROR",
+            "text": "Object id={} cannot be deleted in config=insights_workspaces.".format(name),
+        }]}).encode()
+
+        for version, local_status, expected in (
+            ("10.6.1.1", 200, 200),
+            ("10.6.1.1", 404, 404),
+            ("10.5.3", None, 400),
+        ):
+            with self.subTest(version=version, local_status=local_status):
+                info = json.dumps({"entry": [{"content": {"version": version}}]}).encode()
+                responses = [(types.SimpleNamespace(status=400), refused),
+                             (types.SimpleNamespace(status=200), info)]
+                if local_status is not None:
+                    responses.append((types.SimpleNamespace(status=local_status), b"{}"))
+                with patch.object(fake_rest, "simpleRequest", side_effect=responses) as request:
+                    response = handler.WorkspaceMutationHandler(None, None).handle(json.dumps({
+                        "method": "DELETE", "rest_path": endpoint, "system_authtoken": "system-token",
+                    }))
+                self.assertEqual(response["status"], expected)
+                if local_status is not None:
+                    path, kwargs = request.call_args.args[0], request.call_args.kwargs
+                    self.assertTrue(path.endswith("/properties/insights_workspaces/" + name))
+                    self.assertEqual(kwargs["method"], "DELETE")
+                    self.assertEqual(kwargs["getargs"]["local_only"], "true")
+                else:
+                    self.assertEqual(request.call_count, 2)
+                    self.assertIn("Splunk 10.6", response["payload"]["error"])
+
+    def test_workspace_delete_keeps_unrelated_errors(self):
+        with patch.object(fake_rest, "simpleRequest", return_value=(
+            types.SimpleNamespace(status=400), b'{"messages":[{"text":"Unrelated rejection"}]}'
+        )) as request:
+            response = handler.WorkspaceMutationHandler(None, None).handle(json.dumps({
+                "method": "DELETE", "rest_path": "/scd_insights_workspaces/layout.example.security",
+                "system_authtoken": "system-token",
+            }))
+        self.assertEqual(response["status"], 400)
+        self.assertEqual(request.call_count, 1)
 
     def test_live_handler_rejects_before_system_write(self):
         app = handler.WorkspaceMutationHandler(None, None)

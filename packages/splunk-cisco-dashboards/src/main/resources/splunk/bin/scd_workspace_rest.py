@@ -352,15 +352,19 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
         PersistentServerConnectionApplication.__init__(self)
 
     def _proxy(
-        self, request, conf_name, stanza_name, method, settings=None, query_args=None
+        self, request, conf_name, stanza_name, method, settings=None, query_args=None,
+        local_only=False,
     ):
         system_token = request.get("system_authtoken")
         if not system_token:
             return {"status": 500, "payload": {"error": "System authorization is unavailable."}}
-        path = "/servicesNS/nobody/{}/configs/conf-{}".format(APP_NAME, conf_name)
+        suffix = "properties/{}" if local_only else "configs/conf-{}"
+        path = "/servicesNS/nobody/{}/{}".format(APP_NAME, suffix.format(conf_name))
         if stanza_name:
             path = "{}/{}".format(path, urllib.parse.quote(stanza_name, safe=""))
         get_args = {"output_mode": "json"}
+        if local_only:
+            get_args["local_only"] = "true"
         if query_args:
             get_args.update(query_args)
         # simpleRequest still raises ResourceNotFound for a 404 when only
@@ -379,6 +383,40 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
             "status": int(response.status),
             "payload": _response_payload(content),
         }
+
+    def _delete_workspace_stanza(self, request, stanza_name):
+        result = self._proxy(request, WORKSPACE_CONF, stanza_name, "DELETE")
+        # Generic config DELETE rejects packaged stanzas even with local
+        # overrides. Only retry that specific rejection as a local-layer delete.
+        protected = "Object id={} cannot be deleted in config={}.".format(
+            stanza_name, WORKSPACE_CONF
+        )
+        payload = result["payload"]
+        messages = payload.get("messages", []) if isinstance(payload, dict) else []
+        if result["status"] != 400 or not any(
+            isinstance(message, dict) and message.get("text") == protected
+            for message in messages
+        ):
+            return result
+
+        response, content = rest.simpleRequest(
+            "/services/server/info",
+            sessionKey=request["system_authtoken"],
+            getargs={"output_mode": "json"},
+            rawResult=True,
+        )
+        if response.status != 200:
+            return result
+        entries = _response_payload(content).get("entry", [])
+        version = entries[0].get("content", {}).get("version", "") if entries else ""
+        match = re.match(r"^(\d+)\.(\d+)", version)
+        if not match or tuple(map(int, match.groups())) < (10, 6):
+            return {
+                "status": 400,
+                "payload": {"error": "Resetting packaged workspace overrides requires Splunk 10.6 or later."},
+            }
+
+        return self._proxy(request, WORKSPACE_CONF, stanza_name, "DELETE", local_only=True)
 
     def _ensure_template_background_quota(self, request, stanza_name, data):
         """Bound shared background count and bytes before a system-auth write."""
@@ -463,6 +501,8 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
                 )
             if method == "DELETE":
                 fields_for_stanza(conf_name, stanza_name)
+                if conf_name == WORKSPACE_CONF:
+                    return self._delete_workspace_stanza(request, stanza_name)
                 return self._proxy(request, conf_name, stanza_name, "DELETE")
             return {"status": 405, "payload": {"error": "Method not allowed."}}
         except ValueError as error:
