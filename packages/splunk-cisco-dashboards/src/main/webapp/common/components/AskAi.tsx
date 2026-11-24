@@ -792,20 +792,27 @@ export default function AskAi({
                                 <Button label="Validate SPL" disabled={actionsDisabled}
                                     onClick={(event) => { void reviewDraft(turn, false, event.currentTarget); }} />
                             ) : (
-                                <>
-                                    <Button appearance="secondary" label="Copy SPL"
-                                        aria-label={`Copy SPL for ${draft.title}`}
-                                        onClick={(event) => { void copyDraft(turn.id, draftSpl, event.currentTarget); }} />
-                                    <Link appearance="standalone" openInNewContext to={splunkSearchAppUrl('', range)}>
-                                        Open in Search
-                                    </Link>
-                                    {searchbaseInstalled === true && (
-                                        <Link appearance="standalone" openInNewContext to={`${splunkSearchbaseEditUrl()}#/add/`}>
-                                            Add in Searchbase
-                                        </Link>
-                                    )}
-                                </>
+                                <Link appearance="standalone" openInNewContext to={splunkSearchAppUrl('', range)}>
+                                    Open in Search
+                                </Link>
                             )}
+                            {!draftReview?.saved && (
+                                <Button appearance="secondary" label="Copy SPL"
+                                    aria-label={`Copy SPL for ${draft.title}`}
+                                    onClick={(event) => { void copyDraft(turn.id, draftSpl, event.currentTarget); }} />
+                            )}
+                            {searchbaseInstalled === true && (draftReview?.saved ? (
+                                <Link appearance="standalone" openInNewContext
+                                    to={splunkSearchbaseEditUrl(draftReview.saved.id)}>
+                                    Open in Searchbase
+                                </Link>
+                            ) : (
+                                <Tooltip content="Opens the Add search form. Use Copy SPL to paste the query into the form." wrapContent>
+                                    <Link appearance="standalone" openInNewContext to={`${splunkSearchbaseEditUrl()}#/add/`}>
+                                        Add in Searchbase
+                                    </Link>
+                                </Tooltip>
+                            ))}
                             {draftReview?.validated && !draftReview.saved && settings?.writable && (
                                 <Button appearance="secondary" label="Save to Searchbase" disabled={actionsDisabled}
                                     onClick={(event) => { void reviewDraft(turn, true, event.currentTarget); }} />
