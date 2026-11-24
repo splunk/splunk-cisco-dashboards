@@ -386,7 +386,7 @@ function exerciseDevelopingStaticAssetExclusion() {
 // The preview profile is the Splunkbase filter minus the manifest's
 // previewRetained carve-outs: everything else developing must still be removed,
 // so a preview cannot quietly become a second developer profile.
-function exercisePreviewRetainedResources() {
+function exercisePreviewRetainedResources({ minified }) {
   const appRoot = makeTempRoot("preview-retained");
   const manifest = readManifest(BUILD_PROFILE_MANIFEST_SOURCE);
   const retainedIdentity = ({ file, stanza, key }) => `${file} ${stanza} ${key}`;
@@ -411,7 +411,10 @@ function exercisePreviewRetainedResources() {
       path.join(appRoot, "default", "server.conf"),
       "[shclustering]\nconf_replication_include.searchbase = true\nconf_replication_include.searchbase_canvases = true\n",
     );
-    for (const assetPath of manifest.developing.staticAssets) {
+    const stagedStaticAssets = manifest.developing.staticAssets.filter(
+      (asset) => minified || !asset.endsWith(".js.LICENSE.txt"),
+    );
+    for (const assetPath of stagedStaticAssets) {
       writeFile(path.join(appRoot, ...assetPath.split("/")), "development-only\n");
     }
     for (const configPath of manifest.developing.configFiles) {
@@ -432,7 +435,7 @@ function exercisePreviewRetainedResources() {
         `${viewId} must remain available in a preview`,
       );
     }
-    for (const assetPath of manifest.previewRetained.staticAssets) {
+    for (const assetPath of stagedStaticAssets.filter((asset) => manifest.previewRetained.staticAssets.includes(asset))) {
       assert.ok(
         fs.existsSync(path.join(appRoot, ...assetPath.split("/"))),
         `${assetPath} must remain available in a preview`,
@@ -462,7 +465,7 @@ function exercisePreviewRetainedResources() {
     );
     assert.deepEqual(
       previewResult.removedStaticAssets,
-      manifest.developing.staticAssets.filter((asset) => !manifest.previewRetained.staticAssets.includes(asset)).sort(),
+      stagedStaticAssets.filter((asset) => !manifest.previewRetained.staticAssets.includes(asset)).sort(),
       "Preview retains Canvas while excluding the expandable prototype web surface",
     );
     assert.deepEqual(
@@ -2317,7 +2320,8 @@ exerciseLocalInstallProfileDefaults();
 exerciseDirtyDefaultInstallSelectsDeveloper();
 exerciseExcludedViewLinkSafety();
 exerciseDevelopingStaticAssetExclusion();
-exercisePreviewRetainedResources();
+exercisePreviewRetainedResources({ minified: true });
+exercisePreviewRetainedResources({ minified: false });
 exercisePreviewRetentionMustBeDeveloping();
 exercisePromotedSearchbaseCatalogue();
 exerciseThreatSourcesAcceleration();

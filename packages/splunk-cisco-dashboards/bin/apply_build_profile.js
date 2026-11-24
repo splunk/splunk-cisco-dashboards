@@ -587,12 +587,17 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     fs.unlinkSync(path.join(appViewsDir, `${viewId}.xml`));
   }
 
+  const removedStaticAssets = [];
   for (const assetPath of excludedStaticAssets) {
     const absoluteAssetPath = path.join(appRoot, ...assetPath.split("/"));
     if (!fs.existsSync(absoluteAssetPath)) {
+      // Webpack emits extracted license notices only when it minifies a bundle
+      // with qualifying comments. An excluded bundle may have no sidecar.
+      if (assetPath.endsWith(".js.LICENSE.txt")) continue;
       throw new Error(`Staged app is missing manifest static asset: ${absoluteAssetPath}`);
     }
     fs.unlinkSync(absoluteAssetPath);
+    removedStaticAssets.push(assetPath);
   }
 
   for (const configPath of excludedConfigFiles) {
@@ -644,7 +649,7 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     developingSearchbaseStanzaIds,
     developingSavedSearchIds,
     removedViewIds: excludedViewIds,
-    removedStaticAssets: excludedStaticAssets,
+    removedStaticAssets,
     removedConfigFiles: excludedConfigFiles,
     removedConfSettings: excludedConfSettings,
     removedSearchbaseStanzaIds: excludedSearchbaseStanzaIds,
