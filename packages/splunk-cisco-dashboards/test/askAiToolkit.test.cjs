@@ -59,6 +59,50 @@ test("model availability requires enabled settings and permission to execute the
   }
 });
 
+test("data questions request new SPL while explicit find and explain keep their own intent", async () => {
+  const example = { id: "device", ownerApp: "demo", searchName: "Device health",
+    description: "", search: "index=devices | stats count" };
+  const prompts = [];
+  const { askAiIntent, askModel } = load({ oneShot: async ({ search }) => {
+    prompts.push(decodeURIComponent(search.match(/urldecode\("([^"]+)"\)/)[1]));
+    return { results: [{ ai_result_1: '{"explanation":"Device health","citation":1}' }] };
+  } });
+  const signal = new AbortController().signal;
+  assert.equal(askAiIntent("Which sites have the most packet loss?"), "draft");
+  assert.equal(askAiIntent("Explain this search"), "explain");
+  assert.equal((await askModel("Which sites have the most packet loss?", [example], "approved", [], signal)).source, undefined);
+  assert.match(prompts[0], /Create a new read-only SPL draft/);
+  assert.deepEqual((await askModel("Find a search for device health", [example], "approved", [], signal)).source,
+    { ownerApp: "demo", id: "device" });
+  assert.match(prompts[1], /Find an existing search/);
+});
+
+test("Nexus configuration counts use only the signed-in product account list", async () => {
+  const signal = new AbortController().signal;
+  const { isNexusAccountCountQuestion, draftNexusAccountCount, canValidateDraft } = load({
+    fetch: async (url, options) => {
+      assert.match(url, /^\/cisco_dc_networking_app_for_splunk\/cisco_dc_nd_account_list\?/);
+      assert.equal(options.credentials, "include");
+      assert.equal(options.signal, signal);
+      return { ok: true, json: async () => ({ entry: [
+        { name: "alpha" }, { name: "beta" }, { name: "alpha" },
+      ] }) };
+    },
+  });
+  for (const query of ["How many Nexus Dashboards I have configured?", "How many Nexus Dashboards are connected?"]) {
+    assert.equal(isNexusAccountCountQuestion(query), true);
+  }
+  for (const query of ["How many Nexus Dashboard anomalies?", "How many Nexus Dashboards are reachable?", "Find a search for Nexus Dashboard accounts"]) {
+    assert.equal(isNexusAccountCountQuestion(query), false);
+  }
+  const answer = await draftNexusAccountCount(signal);
+  assert.match(answer.explanation, /2 configured Nexus Dashboard accounts/);
+  assert.match(answer.search.spl, /splunk_server=local count=0 strict=true\n\| stats count/);
+  assert.equal(canValidateDraft(answer.search.spl), true);
+  assert.equal(canValidateDraft(answer.search.spl.replace("splunk_server=local", "splunk_server=*")), false);
+  await assert.rejects(load({ fetch: async () => ({ ok: false }) }).draftNexusAccountCount(signal), /account list is unavailable/);
+});
+
 test("drafting uses the configured Toolkit app and bounded, citable Searchbase examples", async () => {
   let request;
   const { askModel } = load({ oneShot: async (...args) => {
@@ -145,11 +189,34 @@ test("draft links and save reject write commands and unverified nested SPL", () 
   ]) assert.equal(canValidateDraft(draft), false, draft);
 });
 
+test("validating a leading index macro freezes a plain configured index filter", async () => {
+  const spl = '`index_dc` sourcetype="cisco:dc:nd:anomalies" | stats count';
+  const signal = new AbortController().signal;
+  const requests = [];
+  const validated = await load({ fetch: async (url, init) => {
+    requests.push(init);
+    if (url.includes("conf-macros/index_dc")) {
+      return { ok: true, json: async () => ({ entry: [{ content: { definition: "index IN (cisco_nd, net_ops)", iseval: "0" } }] }) };
+    }
+    assert.match(url, /search\/v2\/parser$/);
+    return { ok: true };
+  } }).validateDraft(spl, signal);
+  assert.equal(validated, 'index IN (cisco_nd, net_ops) sourcetype="cisco:dc:nd:anomalies" | stats count');
+  assert.equal(requests[1].body.get("q"), "search " + validated);
+  assert.equal(requests[1].body.get("parse_only"), "true");
+  let calls = 0;
+  await assert.rejects(load({ fetch: async () => {
+    calls += 1;
+    return { ok: true, json: async () => ({ entry: [{ content: { definition: "index=devices | outputlookup other.csv", iseval: "0" } }] }) };
+  } }).validateDraft(spl, signal), /not a plain index filter/);
+  assert.equal(calls, 1);
+});
+
 test("saving a reviewed draft parses it without execution and recovers an existing matching stanza on retry", async () => {
   const calls = [];
   const draft = { title: "Device counts", spl: "index=devices | stats count" };
   const catalogue = [{
-    id: "ask_ai_test", ownerApp: "splunk-cisco-dashboards", search: `search ${draft.spl}`,
+    id: "ask_ai_test", ownerApp: "splunk-cisco-dashboards", searchName: draft.title, search: `search ${draft.spl}`,
   }];
   const { saveDraftToSearchbase } = load({ catalogue, fetch: async (url, options) => {
     calls.push({ url, options });
@@ -159,7 +226,10 @@ test("saving a reviewed draft parses it without execution and recovers an existi
     description: "Count by device. <script>example</script> & review",
     reference: { category: "Compliance and Auditing", subCategory: "Search", tags: ["AI Defense", "Ask AI"] },
   };
-  assert.equal(await saveDraftToSearchbase(draft, "ask_ai_test", metadata, new AbortController().signal), catalogue[0]);
+  const writes = [];
+  assert.equal(await saveDraftToSearchbase(draft, "ask_ai_test", metadata, new AbortController().signal,
+    (spl) => writes.push(spl)), catalogue[0]);
+  assert.deepEqual(writes, [draft.spl]);
   assert.equal(calls.length, 2);
   assert.equal(calls[0].options.body.get("parse_only"), "true");
   assert.match(calls[1].url, /configs\/conf-searchbase/);
@@ -178,6 +248,8 @@ test("saving a reviewed draft parses it without execution and recovers an existi
   assert.equal(saved.get("date_updated"), saved.get("date_created"));
   const quid = createHash("md5").update(draft.title + catalogue[0].search).digest("hex").toUpperCase();
   assert.equal(saved.get("quid"), quid);
+  await assert.rejects(saveDraftToSearchbase({ ...draft, title: "Different title" }, "ask_ai_test",
+    metadata, new AbortController().signal), /could not confirm the saved search/);
 });
 
 test("Ask AI settings default off, use administrator write access, and reload with the app", () => {
@@ -207,7 +279,7 @@ test("Toolkit error result rows and partial structured drafts are not displayed 
 
 test("draft saves use complete defaults without a reference and require a signed-in author", async () => {
   const draft = { title: "Device counts", spl: "index=devices | stats count" };
-  const catalogue = [{ id: "ask_ai_test", ownerApp: "splunk-cisco-dashboards", search: `search ${draft.spl}` }];
+  const catalogue = [{ id: "ask_ai_test", ownerApp: "splunk-cisco-dashboards", searchName: draft.title, search: `search ${draft.spl}` }];
   let saved;
   const fetch = async (url, options) => {
     if (url.includes("conf-searchbase")) saved = options.body;

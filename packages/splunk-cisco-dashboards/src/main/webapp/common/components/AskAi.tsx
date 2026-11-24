@@ -23,7 +23,8 @@ import { Sparkles } from '@/common/icons/SuiIcon';
 import { isSearchBaseInstalled } from '@/common/lib/searchbase';
 import { splunkSearchAppUrl, splunkSearchbaseEditUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import {
-    askModel, canValidateDraft, getAskAiSettings, saveDraftToSearchbase, validateDraft,
+    askModel, canValidateDraft, draftNexusAccountCount, getAskAiSettings, isNexusAccountCountQuestion,
+    saveDraftToSearchbase, validateDraft,
     type AskAiSettings, type AssistantTurn,
 } from '@/common/services/askAiToolkit';
 import { ASK_SEARCHBASE_QUESTION_LIMIT, rankAssistantSearchMatches, rankSearchbaseMatches } from '@/common/services/askSearchbase';
@@ -211,7 +212,9 @@ interface Result {
 
 interface DraftReview {
     id?: string;
-    validated?: boolean;
+    validatedSpl?: string;
+    editedSpl?: string;
+    title?: string;
     saved?: SearchbaseRecord;
     error?: string;
     copyStatus?: string;
@@ -254,7 +257,7 @@ export default function AskAi({
     const latestReplyHeading = useRef<HTMLHeadingElement>(null);
     const conversationSequence = useRef(0);
     const [result, setResult] = useState<Result | null>(null);
-    const [phase, setPhase] = useState<'catalogue' | 'model' | null>(null);
+    const [phase, setPhase] = useState<'catalogue' | 'configuration' | 'model' | null>(null);
     const loading = phase !== null;
     const [destinationId, setDestinationId] = useState('');
     const [adding, setAdding] = useState(false);
@@ -336,7 +339,8 @@ export default function AskAi({
         const turnId = modelMode ? ++conversationSequence.current : undefined;
         const retrying = currentTurn?.modelFailed && submitted === currentTurn.question;
         const explanationSpl = selectedSpl ?? (retrying ? currentTurn.explanationSpl : undefined);
-        setPhase(explanationSpl === undefined ? 'catalogue' : 'model');
+        const countNexusAccounts = Boolean(modelMode && explanationSpl === undefined && isNexusAccountCountQuestion(submitted));
+        setPhase(countNexusAccounts ? 'configuration' : explanationSpl === undefined ? 'catalogue' : 'model');
         if (explanationSpl === undefined) {
             setResult(null);
             setShowCatalogMatches(false);
@@ -353,6 +357,15 @@ export default function AskAi({
             rememberQuestion(submitted);
         }
         try {
+            if (countNexusAccounts) {
+                const response = await draftNexusAccountCount(AbortSignal.timeout(15000));
+                if (pending.current === request) {
+                    setConversation((turns) => turns.map((turn) => turn.id === turnId
+                        ? { ...turn, answer: response }
+                        : turn));
+                }
+                return;
+            }
             const catalogue = explanationSpl === undefined
                 ? await getSearchbaseCatalogue({ allApps: true, includeHidden: true })
                 : [];
@@ -422,10 +435,16 @@ export default function AskAi({
                     }
                 }
             }
-        } catch {
+        } catch (error) {
             if (pending.current === request) {
                 if (turnId !== undefined) setQuestion((typed) => typed || submitted);
-                setFeedback({ text: 'Searchbase could not be loaded. Try again.', error: true });
+                setFeedback({
+                    text: countNexusAccounts
+                        ? (error instanceof Error && error.name !== 'TimeoutError'
+                            ? error.message : 'The Nexus Dashboard account list did not respond. Try again.')
+                        : 'Searchbase could not be loaded. Try again.',
+                    error: true,
+                });
             }
         } finally {
             if (pending.current === request) {
@@ -496,9 +515,16 @@ export default function AskAi({
     async function reviewDraft(turn: ChatTurn, save: boolean, button: HTMLElement) {
         const reply = turn.answer;
         if (!reply?.search || draftBusy || loading || adding) return;
-        const draft = reply.search;
+        const draft = {
+            title: (turn.draftReview?.title ?? reply.search.title).trim(),
+            spl: turn.draftReview?.validatedSpl ?? turn.draftReview?.editedSpl ?? reply.search.spl,
+        };
+        if (!draft.title || !draft.spl.trim()) {
+            updateDraftReview(turn.id, { error: 'Enter a search name and SPL before continuing.' });
+            return;
+        }
         const requestDrawerRevision = drawerRevision.current;
-        const actions = button.closest('[data-ask-ai-draft-actions]');
+        const actions = button.closest('[data-ask-ai-draft-card]');
         const actionsHadFocus = actions?.contains(document.activeElement);
         const signal = AbortSignal.timeout(20000);
         setDraftOperation(save ? 'save' : 'validate');
@@ -507,11 +533,13 @@ export default function AskAi({
             let review: DraftReview;
             if (save) {
                 const id = turn.draftReview?.id || `ask_ai_${Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
-                updateDraftReview(turn.id, { id });
                 const saved = await saveDraftToSearchbase(draft, id, {
-                    description: reply.explanation,
+                    description: turn.draftReview?.editedSpl === undefined ? reply.explanation : draft.title,
                     reference: turn.draftReference,
-                }, signal);
+                }, signal, (spl) => {
+                    if (spl !== undefined) updateDraftReview(turn.id, { id, validatedSpl: spl });
+                    else if (!turn.draftReview?.id) updateDraftReview(turn.id, { id: undefined });
+                });
                 review = { saved };
                 setResult((current) => {
                     if (!current) return { question: turn.question, ambiguousIds: new Set(), records: [saved], visibleCount: 1 };
@@ -527,8 +555,7 @@ export default function AskAi({
                     };
                 });
             } else {
-                await validateDraft(draft.spl, signal);
-                review = { validated: true };
+                review = { validatedSpl: await validateDraft(draft.spl, signal) };
             }
             if (requestDrawerRevision === drawerRevision.current && actions?.isConnected &&
                 (actions.contains(document.activeElement) || (actionsHadFocus && document.activeElement === document.body))) {
@@ -757,26 +784,29 @@ export default function AskAi({
         const { search: draft } = reply;
         const { recommendation, draftReview } = turn;
         const actionsDisabled = loading || adding || draftBusy;
-        const draftSpl = draftReview?.saved?.search ?? draft?.spl;
+        const editsLocked = actionsDisabled || Boolean(draftReview?.id);
+        const draftSpl = draftReview?.saved?.search ?? draftReview?.validatedSpl ?? draftReview?.editedSpl ?? draft?.spl;
+        const draftTitle = draftReview?.saved?.searchName ?? draftReview?.title ?? draft?.title ?? '';
         const canValidate = draftSpl !== undefined && canValidateDraft(draftSpl);
         const viewLabel = draftReview?.saved ? 'View saved SPL' : 'View draft SPL';
         const explainLabel = draftReview?.saved ? 'Explain this search' : 'Explain this draft';
 
         return (
-            <ChatReply aria-label={latest ? 'Latest Ask AI reply' : 'Earlier Ask AI reply'}>
+            <ChatReply aria-label={latest ? 'Latest Ask AI reply' : 'Earlier Ask AI reply'}
+                data-ask-ai-draft-card={draft ? '' : undefined}>
                 <Heading level={2} variant="title4" tabIndex={latest ? -1 : undefined}
                     elementRef={latest ? latestReplyHeading : undefined}>
                     Ask AI{latest && <ScreenReaderContent> latest reply</ScreenReaderContent>}
                 </Heading>
                 {draft && draftSpl !== undefined ? (
                     <>
-                        <Heading level={3} variant="title4">{draft.title}</Heading>
+                        <Heading level={3} variant="title4">{draftTitle || 'Draft search'}</Heading>
                         <p role="status">
-                            {draftReview?.saved ? 'Saved to Searchbase' : draftReview?.validated
+                            {draftReview?.saved ? 'Saved to Searchbase' : draftReview?.validatedSpl
                                 ? 'SPL syntax validated' : canValidate ? 'Draft SPL' : 'Draft SPL requires manual review'}
                         </p>
-                        <ActionRow data-ask-ai-draft-actions>
-                            {(draftReview?.validated || draftReview?.saved) ? (
+                        <ActionRow>
+                            {(draftReview?.validatedSpl || draftReview?.saved) ? (
                                 <Link appearance="standalone" openInNewContext
                                     elementRef={(link) => {
                                         if (link && returnFocusToSearch.current === turn.id) {
@@ -784,7 +814,7 @@ export default function AskAi({
                                             if (document.activeElement === document.body) link.focus();
                                         }
                                     }}
-                                    to={splunkSearchAppUrl(addLeadingSearchCommand(draftReview.saved?.search ?? draft.spl),
+                                    to={splunkSearchAppUrl(addLeadingSearchCommand(draftSpl),
                                         range, draftReview.saved?.dispatchContext)}>
                                     Open in Search
                                 </Link>
@@ -798,7 +828,7 @@ export default function AskAi({
                             )}
                             {!draftReview?.saved && (
                                 <Button appearance="secondary" label="Copy SPL"
-                                    aria-label={`Copy SPL for ${draft.title}`}
+                                    aria-label={`Copy SPL for ${draftTitle}`}
                                     onClick={(event) => { void copyDraft(turn.id, draftSpl, event.currentTarget); }} />
                             )}
                             {searchbaseInstalled === true && (draftReview?.saved ? (
@@ -806,37 +836,60 @@ export default function AskAi({
                                     to={splunkSearchbaseEditUrl(draftReview.saved.id)}>
                                     Open in Searchbase
                                 </Link>
-                            ) : (
+                            ) : (!settings?.writable || !canValidate) && (
                                 <Tooltip content="Opens the Add search form. Use Copy SPL to paste the query into the form." wrapContent>
                                     <Link appearance="standalone" openInNewContext to={`${splunkSearchbaseEditUrl()}#/add/`}>
-                                        Add in Searchbase
+                                        Open Searchbase form
                                     </Link>
                                 </Tooltip>
                             ))}
-                            {draftReview?.validated && !draftReview.saved && settings?.writable && (
+                            {!draftReview?.saved && settings?.writable && canValidate && (
                                 <Button appearance="secondary" label="Save to Searchbase" disabled={actionsDisabled}
                                     onClick={(event) => { void reviewDraft(turn, true, event.currentTarget); }} />
                             )}
-                            <Button appearance="secondary" label={explainLabel} aria-label={`${explainLabel} for ${draft.title}`}
+                            <Button appearance="secondary" label={explainLabel} aria-label={`${explainLabel} for ${draftTitle}`}
                                 disabled={actionsDisabled}
                                 onClick={() => {
-                                    const prompt = `Explain the SPL for “${draft.title}” and list its output fields.`;
+                                    const prompt = `Explain the SPL for “${draftTitle}” and list its output fields.`;
                                     void findMatches(prompt, true, draftSpl);
                                 }} />
                         </ActionRow>
                         {!canValidate && !draftReview?.saved && (
-                            <p>{searchbaseInstalled === true
+                            <p>{settings?.writable
+                                ? 'Use Edit draft to revise the SPL before saving.'
+                                : searchbaseInstalled === true
                                 ? 'Copy the SPL, then paste it into Search to review it or into Searchbase to save it manually.'
                                 : 'Copy the SPL, then paste it into Search to review it.'}</p>
                         )}
                         <SearchStatus role="status">{draftReview?.copyStatus}</SearchStatus>
                         {draftReview?.error && <Message type="error" role="alert">{draftReview.error}</Message>}
+                        {draftReview?.id && !draftReview.saved && !draftBusy && (
+                            <p>Retry Save to Searchbase to confirm the previous attempt before editing.</p>
+                        )}
                         <CollapsiblePanel appearance="subtle" inset={false}
-                            title={<>{viewLabel}<ScreenReaderContent> for {draft.title}</ScreenReaderContent></>}>
+                            title={<>{viewLabel}<ScreenReaderContent> for {draftTitle}</ScreenReaderContent></>}>
                             <pre tabIndex={0} aria-label={draftReview?.saved ? 'Saved search SPL' : 'Draft SPL'}>
                                 <code><SplSyntax spl={draftSpl} /></code>
                             </pre>
                         </CollapsiblePanel>
+                        {!draftReview?.saved && (
+                            <CollapsiblePanel appearance="subtle" inset={false}
+                                title={<>Edit draft<ScreenReaderContent> for {draftTitle}</ScreenReaderContent></>}>
+                                <Content>
+                                    <ControlGroup label="Search name">
+                                        <Text value={draftTitle} maxLength={160} disabled={editsLocked}
+                                            onChange={(_, { value }) => updateDraftReview(turn.id, { title: value, error: undefined })} />
+                                    </ControlGroup>
+                                    <ControlGroup label="Search SPL">
+                                        <TextArea value={draftSpl} rowsMin={3} rowsMax={9} disabled={editsLocked}
+                                            spellCheck={false} autoCorrect="off" autoCapitalize="off"
+                                            onChange={(_, { value }) => updateDraftReview(turn.id, {
+                                                editedSpl: value, validatedSpl: undefined, error: undefined, copyStatus: undefined,
+                                            })} />
+                                    </ControlGroup>
+                                </Content>
+                            </CollapsiblePanel>
+                        )}
                     </>
                 ) : recommendation && (
                     <>
@@ -871,6 +924,7 @@ export default function AskAi({
     if (draftOperation === 'validate') activity = 'Checking SPL syntax…';
     if (draftOperation === 'save') activity = 'Saving the search to Searchbase…';
     if (phase === 'catalogue') activity = 'Looking for Searchbase matches…';
+    if (phase === 'configuration') activity = 'Checking configured Nexus Dashboard accounts…';
     if (phase === 'model') {
         activity = currentTurn?.explanationSpl !== undefined
             ? 'Explaining the selected SPL…'
