@@ -6401,19 +6401,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           resetBrandingOverride();
           return true;
         }}
-        onResetToDefaults={() => {
+        onResetToDefaults={async () => {
           const packaged = PACKAGED_WORKSPACE_FALLBACKS.find(
             (candidate) => candidate.id === insightsWorkspace.id,
           );
-          void persistWorkspacePatch({
+          const saved = await persistWorkspacePatch({
             headerTitle: packaged?.headerTitle || insightsWorkspace.label,
             headerSubtitle: packaged?.headerSubtitle,
             defaultLogoSrc: packaged?.defaultLogoSrc,
             hideDefaultLogo:
               packaged?.hideDefaultLogo ?? insightsWorkspace.hideDefaultLogo,
           });
+          if (!saved) return false;
           resetBrandingOverride();
-          setBrandingEditorOpen(false);
+          return true;
         }}
       />
 
@@ -8775,7 +8776,7 @@ interface BrandingEditorModalProps {
   logoFallbackSrc: string;
   defaultIcon: React.ReactNode;
   onSave: (next: BrandingOverride) => boolean | Promise<boolean>;
-  onResetToDefaults: () => void;
+  onResetToDefaults: () => Promise<boolean>;
 }
 
 /**
@@ -8821,6 +8822,8 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   );
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const isUpdating = isSaving || isResetting;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Re-sync the form when the modal is (re)opened — picks up any
@@ -8837,13 +8840,13 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   // Esc-to-close. Listen on the window because focus moves around as
   // the user tabs through the form fields.
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen || isUpdating) return undefined;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, isUpdating, onClose]);
 
   if (!isOpen) return null;
 
@@ -8881,7 +8884,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   };
 
   const handleSave = async () => {
-    if (isSaving) return;
+    if (isUpdating) return;
     const next: BrandingOverride = {
       title: titleField.trim() || undefined,
       subtitle: subtitleField.trim() || undefined,
@@ -8902,6 +8905,23 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
     }
   };
 
+  const handleResetToDefaults = async () => {
+    if (isUpdating || !window.confirm("Restore the default title, subtitle, and logo for every viewer of this workspace?")) {
+      return;
+    }
+    setErrorMessage("");
+    setIsResetting(true);
+    try {
+      if (await onResetToDefaults()) {
+        onClose();
+      } else {
+        setErrorMessage("Could not restore the default branding. Try again.");
+      }
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const previewLogoSrc =
     normalizeSharedImageSource(logoDataUri) ||
     normalizeSharedImageSource(logoFallbackSrc);
@@ -8913,7 +8933,9 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
       variant="form"
       title="Edit branding"
       subtitle="Customize this workspace header"
-      onClose={onClose}
+      onClose={() => {
+        if (!isUpdating) onClose();
+      }}
       closeOnBackdrop={false}
       renderInDocumentBody
       contentClassName="overflow-y-auto"
@@ -9027,15 +9049,17 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
       <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
         <button
           type="button"
-          onClick={onResetToDefaults}
-          className="text-sm font-bold sui-color-default underline sui-hover-color-negative"
+          onClick={() => void handleResetToDefaults()}
+          disabled={isUpdating}
+          className="text-sm font-bold sui-color-default underline sui-hover-color-negative disabled:cursor-wait disabled:opacity-60"
         >
-          Reset to defaults
+          {isResetting ? "Restoring defaults…" : "Reset to defaults"}
         </button>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onClose}
+            disabled={isUpdating}
             className="rounded border sui-border-default sui-bg-page px-3 py-2 text-sm font-bold sui-color-default transition-colors sui-hover-bg-overlay"
           >
             Cancel
@@ -9045,7 +9069,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             onClick={() => {
               void handleSave();
             }}
-            disabled={isSaving}
+            disabled={isUpdating}
             className="rounded px-3 py-2 text-sm font-bold scd-action-primary transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving…" : "Save"}
