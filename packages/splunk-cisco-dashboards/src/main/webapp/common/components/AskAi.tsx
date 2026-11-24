@@ -803,6 +803,12 @@ export default function AskAi({
                                     void findMatches(prompt.slice(0, ASK_SEARCHBASE_QUESTION_LIMIT), true, recommendation.search);
                                 }} />
                         </ActionRow>
+                        <CollapsiblePanel appearance="subtle" inset={false}
+                            title={<>View SPL<ScreenReaderContent> for {recommendation.searchName}</ScreenReaderContent></>}>
+                            <pre tabIndex={0} aria-label={`SPL for ${recommendation.searchName}`}>
+                                <code><SplSyntax spl={recommendation.search} /></code>
+                            </pre>
+                        </CollapsiblePanel>
                     </>
                 )}
                 <AnswerText>{reply.explanation}</AnswerText>
