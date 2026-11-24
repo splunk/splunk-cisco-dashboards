@@ -23,7 +23,7 @@ import { Sparkles } from '@/common/icons/SuiIcon';
 import { isSearchBaseInstalled } from '@/common/lib/searchbase';
 import { splunkSearchAppUrl, splunkSearchbaseEditUrl, type SplunkSearchTimeRange } from '@/common/lib/splunkSearchUrl';
 import {
-    askModel, canValidateDraft, draftNexusAccountCount, getAskAiSettings, isNexusAccountCountQuestion,
+    askModel, canValidateDraft, createAskAiDraftId, draftNexusAccountCount, getAskAiSettings, isNexusAccountCountQuestion,
     saveDraftToSearchbase, validateDraft,
     type AskAiSettings, type AssistantTurn,
 } from '@/common/services/askAiToolkit';
@@ -532,7 +532,7 @@ export default function AskAi({
         try {
             let review: DraftReview;
             if (save) {
-                const id = turn.draftReview?.id || `ask_ai_${Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+                const id = turn.draftReview?.id ?? createAskAiDraftId();
                 const saved = await saveDraftToSearchbase(draft, id, {
                     description: turn.draftReview?.editedSpl === undefined ? reply.explanation : draft.title,
                     reference: turn.draftReference,

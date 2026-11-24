@@ -292,6 +292,13 @@ interface DraftMetadata {
     reference?: Pick<SearchbaseRecord, 'category' | 'subCategory' | 'tags'>;
 }
 
+export function createAskAiDraftId(now = new Date()): string {
+    const timestamp = now.toISOString().slice(0, 19).replace(/[-:]/g, '') + 'Z';
+    const suffix = Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) =>
+        byte.toString(16).padStart(2, '0')).join('');
+    return `ask_ai_${timestamp}_${suffix}`;
+}
+
 const DESCRIPTION_ENTITIES: Record<string, string> = {
     '&': '&amp;', '<': '&lt;', '>': '&gt;',
 };

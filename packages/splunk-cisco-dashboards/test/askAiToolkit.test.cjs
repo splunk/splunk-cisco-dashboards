@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const { createHash } = require("node:crypto");
+const { createHash, webcrypto } = require("node:crypto");
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
@@ -30,7 +30,7 @@ function load({ fetch, oneShot, catalogue = [], username = "codex" } = {}) {
       getSearchbaseCatalogue: async () => catalogue,
     },
   };
-  new Function("exports", "require", "fetch", outputText)(service, (id) => imports[id], fetch);
+  new Function("exports", "require", "fetch", "crypto", outputText)(service, (id) => imports[id], fetch, webcrypto);
   return service;
 }
 
@@ -212,11 +212,22 @@ test("validating a leading index macro freezes a plain configured index filter",
   assert.equal(calls, 1);
 });
 
+test("Ask AI stanza IDs include UTC time and distinguish drafts made in the same second", () => {
+  const { createAskAiDraftId } = load();
+  const now = new Date("2026-11-24T10:30:42.123-05:00");
+  const first = createAskAiDraftId(now);
+  const second = createAskAiDraftId(now);
+  assert.match(first, /^ask_ai_20261124T153042Z_[a-f0-9]{24}$/);
+  assert.match(second, /^ask_ai_20261124T153042Z_[a-f0-9]{24}$/);
+  assert.notEqual(first, second);
+});
+
 test("saving a reviewed draft parses it without execution and recovers an existing matching stanza on retry", async () => {
   const calls = [];
   const draft = { title: "Device counts", spl: "index=devices | stats count" };
+  const id = load().createAskAiDraftId(new Date("2026-11-24T15:30:42Z"));
   const catalogue = [{
-    id: "ask_ai_test", ownerApp: "splunk-cisco-dashboards", searchName: draft.title, search: `search ${draft.spl}`,
+    id, ownerApp: "splunk-cisco-dashboards", searchName: draft.title, search: `search ${draft.spl}`,
   }];
   const { saveDraftToSearchbase } = load({ catalogue, fetch: async (url, options) => {
     calls.push({ url, options });
@@ -227,14 +238,14 @@ test("saving a reviewed draft parses it without execution and recovers an existi
     reference: { category: "Compliance and Auditing", subCategory: "Search", tags: ["AI Defense", "Ask AI"] },
   };
   const writes = [];
-  assert.equal(await saveDraftToSearchbase(draft, "ask_ai_test", metadata, new AbortController().signal,
+  assert.equal(await saveDraftToSearchbase(draft, id, metadata, new AbortController().signal,
     (spl) => writes.push(spl)), catalogue[0]);
   assert.deepEqual(writes, [draft.spl]);
   assert.equal(calls.length, 2);
   assert.equal(calls[0].options.body.get("parse_only"), "true");
   assert.match(calls[1].url, /configs\/conf-searchbase/);
   const saved = calls[1].options.body;
-  assert.equal(saved.get("name"), "ask_ai_test");
+  assert.equal(saved.get("name"), id);
   assert.equal(saved.get("search_name"), draft.title);
   assert.equal(saved.get("search"), catalogue[0].search);
   assert.equal(saved.get("search_author"), "codex");
@@ -248,7 +259,7 @@ test("saving a reviewed draft parses it without execution and recovers an existi
   assert.equal(saved.get("date_updated"), saved.get("date_created"));
   const quid = createHash("md5").update(draft.title + catalogue[0].search).digest("hex").toUpperCase();
   assert.equal(saved.get("quid"), quid);
-  await assert.rejects(saveDraftToSearchbase({ ...draft, title: "Different title" }, "ask_ai_test",
+  await assert.rejects(saveDraftToSearchbase({ ...draft, title: "Different title" }, id,
     metadata, new AbortController().signal), /could not confirm the saved search/);
 });
 
