@@ -37,51 +37,16 @@ import { createFetchInit } from '@splunk/splunk-utils/fetch';
 import { getSearchAppContext } from './splunkSearchService';
 import { clearSearchbaseCache } from './searchbaseCatalogue';
 import {
-    AGENTIC_SOC_WORKSPACE_SOURCE_ID,
     EXECUTIVE_WORKSPACE_SOURCE_ID,
-    PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS,
     isWorkspaceSourceId,
+    type InsightsWorkspace,
     type WorkspaceSourceId,
 } from '@/common/config/insightsWorkspaces';
 
 const APP_NAME = 'splunk-cisco-dashboards';
 const CONF_BASENAME = 'searchbase';
 
-const DEFAULT_EXECUTIVE_WORKSPACE_STANZA_IDS = [
-    'building_resilience_environmental_health_index',
-    'building_resilience_water_leak_detection',
-    'building_resilience_wireless_devices_to_review_count',
-    'executive_dashboard_active_clients',
-    'executive_dashboard_issue_summary_kpis',
-    'executive_dashboard_building_domain_score',
-    'executive_dashboard_building_occupancy',
-    'executive_dashboard_it_domain_score',
-    'executive_dashboard_security_domain_score',
-    'it_critical_systems_compliance_rate',
-    'it_critical_systems_configuration_changes',
-    'it_critical_systems_device_health_score',
-    'it_critical_systems_device_inventory_by_type',
-    'it_critical_systems_network_health_score',
-    'it_critical_systems_syslog_severity_distribution',
-    'security_resilience_dns_blocked_queries',
-    'security_resilience_email_threat_count',
-    'security_resilience_rogue_device_detection',
-    'security_resilience_web_threat_count',
-    'executive_dashboard_active_devices',
-    'executive_dashboard_collab_devices',
-    'executive_dashboard_wifi_clients',
-    'building_resilience_rooms_occupied_trend',
-    'executive_dashboard_ds_ux_score',
-    'overview_active_critical_alerts',
-    'overview_xdr_critical_incidents',
-    'overview_ap_health',
-    'executive_dashboard_critical_website_availability',
-    'executive_dashboard_firewall_blocked_with_baseline',
-    'executive_dashboard_threat_sources_with_baseline',
-    'executive_dashboard_failed_logon_with_baseline',
-    'security_ai_defense_block_rate_kpi',
-    'identity_duo_tenant_kpis',
-] as const;
+declare const __PACKAGED_OVERVIEW_DEFINITIONS__: Readonly<Record<string, unknown>>;
 
 const STANZA_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
 const DRILLDOWN_TARGET_LIMIT = 24;
@@ -148,8 +113,9 @@ const getCsrfToken = (): string | null => {
     return match ? decodeURIComponent(match[1]) : null;
 };
 
-const buildStanzaUrl = (owner: string, appName: string, stanza: string): string =>
-    `/en-US/splunkd/__raw/servicesNS/${owner}/${appName}/configs/conf-${CONF_BASENAME}/${encodeURIComponent(stanza)}`;
+const buildStanzaUrl = (owner: string, appName: string, stanza?: string): string =>
+    `/en-US/splunkd/__raw/servicesNS/${owner}/${appName}/configs/conf-${CONF_BASENAME}` +
+    (stanza ? `/${encodeURIComponent(stanza)}` : '');
 
 const extractErrorMessage = async (response: Response, fallback: string): Promise<string> => {
     try {
@@ -230,27 +196,6 @@ const writeStanzaKeys = async (
     if (response.ok) return;
     throw new SearchbaseTileConfigError(
         await extractErrorMessage(response, `Couldn't save searchbase.conf stanza "${stanza}"`),
-        response.status
-    );
-};
-
-const deleteStanzaLocalOverride = async (stanza: string): Promise<void> => {
-    if (!isInSplunkRuntime()) return;
-    const appName = getSearchAppContext() || APP_NAME;
-    const deleteInit = createFetchInit({
-        method: 'DELETE',
-        headers: { Accept: 'application/json' },
-    });
-    const response = await fetch(
-        `${buildStanzaUrl('nobody', appName, stanza)}?output_mode=json`,
-        deleteInit
-    );
-    if (response.ok || response.status === 404) return;
-    throw new SearchbaseTileConfigError(
-        await extractErrorMessage(
-            response,
-            `Couldn't reset searchbase.conf stanza "${stanza}"`
-        ),
         response.status
     );
 };
@@ -698,27 +643,97 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
     clearSearchbaseCache();
 };
 
+const overviewEntries = (value: unknown): unknown[] =>
+    Array.isArray(value) ? value : value && typeof value === 'object' ? [value] : [];
+
+/** Restore this workspace's overview entries without removing other stanza settings. */
 export const resetInsightsWorkspaceTileConfig = async (
-    currentOwnerStanzaIds: readonly (string | undefined | null)[],
-    workspaceId: WorkspaceSourceId = EXECUTIVE_WORKSPACE_SOURCE_ID
+    packagedWorkspace: InsightsWorkspace
 ): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
-    const packagedStanzaIds =
-        workspaceId === EXECUTIVE_WORKSPACE_SOURCE_ID
-            ? DEFAULT_EXECUTIVE_WORKSPACE_STANZA_IDS
-            : workspaceId === AGENTIC_SOC_WORKSPACE_SOURCE_ID
-              ? PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS
-              : [];
-    const stanzaIds = new Set<string>(packagedStanzaIds);
-    currentOwnerStanzaIds.forEach((raw) => {
-        const stanza = typeof raw === 'string' ? raw.trim() : '';
-        if (!stanza || !STANZA_ID_PATTERN.test(stanza)) return;
-        stanzaIds.add(stanza);
-    });
-
-    await Promise.all(
-        Array.from(stanzaIds, (stanza) => deleteStanzaLocalOverride(stanza))
+    const appName = getSearchAppContext() || APP_NAME;
+    const response = await fetch(
+        `${buildStanzaUrl('nobody', appName)}?output_mode=json&count=0`,
+        createFetchInit({ method: 'GET', headers: { Accept: 'application/json' } })
     );
-    clearSearchbaseCache();
+    if (!response.ok) {
+        throw new SearchbaseTileConfigError(
+            await extractErrorMessage(response, "Couldn't load Searchbase for workspace reset"),
+            response.status
+        );
+    }
+    const { entry } = (await response.json()) as {
+        entry?: Array<ConfStanzaEntry & { name: string; acl?: { app?: string } }>;
+    };
+    if (!Array.isArray(entry)) {
+        throw new SearchbaseTileConfigError('Searchbase returned an invalid catalogue.');
+    }
+
+    const packagedSections = new Set<string>(packagedWorkspace.sections.map(({ id }) => id));
+    const inScope = (value: unknown): boolean => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+        const definition = value as Record<string, unknown>;
+        return typeof definition.section === 'string' &&
+            packagedSections.has(definition.section.trim()) &&
+            entryWorkspace(definition) === packagedWorkspace.sourceWorkspace;
+    };
+
+    const restorations = new Map<string, string>();
+    const removals = new Map<string, string>();
+    const seen = new Set<string>();
+    for (const stanza of entry) {
+        if (!STANZA_ID_PATTERN.test(stanza.name) || (stanza.acl?.app && stanza.acl.app !== appName)) {
+            continue;
+        }
+        const packaged = overviewEntries(
+            Object.prototype.hasOwnProperty.call(__PACKAGED_OVERVIEW_DEFINITIONS__, stanza.name)
+                ? __PACKAGED_OVERVIEW_DEFINITIONS__[stanza.name]
+                : undefined
+        ).filter(inScope);
+        if (seen.has(stanza.name)) {
+            throw new SearchbaseTileConfigError(`Searchbase returned duplicate stanza "${stanza.name}".`);
+        }
+        seen.add(stanza.name);
+        const rawOptions = stanza.content?.viz_options;
+        if (typeof rawOptions !== 'string' || (!packaged.length && !rawOptions.includes('"overview"'))) {
+            if (!packaged.length) continue;
+        }
+        let options: Record<string, unknown> = {};
+        if (typeof rawOptions === 'string' && rawOptions.trim()) {
+            const parsed: unknown = JSON.parse(rawOptions);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new SearchbaseTileConfigError(`Invalid visualization options for "${stanza.name}".`);
+            }
+            options = parsed as Record<string, unknown>;
+        }
+        const current = overviewEntries(options.overview);
+        const selected = current.filter(inScope);
+        if (JSON.stringify(selected) === JSON.stringify(packaged)) continue;
+        const restored = [
+            ...current.filter((definition) => !inScope(definition)),
+            ...packaged,
+        ];
+        if (restored.length) options.overview = restored;
+        else delete options.overview;
+        (packaged.length ? restorations : removals).set(stanza.name, JSON.stringify(options));
+    }
+
+    // Validate the entire plan before writing. A missing packaged stanza must
+    // not turn a rebind reset into removal of the only remaining tile.
+    for (const [name, definitions] of Object.entries(__PACKAGED_OVERVIEW_DEFINITIONS__)) {
+        if (!seen.has(name) && overviewEntries(definitions).some(inScope)) {
+            throw new SearchbaseTileConfigError(`Packaged Searchbase stanza "${name}" is unavailable.`);
+        }
+    }
+
+    try {
+        // Restore original owners before removing moved entries. A retry can
+        // resolve a brief duplicate if a later write fails.
+        for (const [stanza, vizOptions] of [...restorations, ...removals]) {
+            await writeStanzaKeys(stanza, { viz_options: vizOptions });
+        }
+    } finally {
+        clearSearchbaseCache();
+    }
 };

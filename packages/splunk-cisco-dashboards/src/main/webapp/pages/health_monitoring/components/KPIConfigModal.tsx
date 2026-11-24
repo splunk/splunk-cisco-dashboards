@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Button from '@splunk/react-ui/Button';
+import Modal from '@splunk/react-ui/Modal';
 import {
     Activity,
     BarChart3,
@@ -14,6 +15,7 @@ import {
     X,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { createKPIInstance } from '@/data/kpi-templates';
 import type {
     KPIChartType,
     KPIIconName,
@@ -59,6 +61,8 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
     onFactoryReset,
 }) => {
     const [draft, setDraft] = useState<KPIInstance | null>(kpi);
+    const [confirmReset, setConfirmReset] = useState(false);
+    const resetButtonRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
 
     useEffect(() => {
         setDraft(kpi);
@@ -67,11 +71,11 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
     useEffect(() => {
         if (!kpi) return undefined;
         const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onClose();
+            if (event.key === 'Escape' && !confirmReset) onClose();
         };
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
-    }, [kpi, onClose]);
+    }, [confirmReset, kpi, onClose]);
 
     const IconPreview = useMemo(() => {
         if (!draft) return Gauge;
@@ -104,7 +108,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
         );
     };
 
-    return createPortal(
+    const editor = (
         <div
             className="fixed inset-0 z-[9997] flex items-center justify-center overflow-hidden sui-bg-page p-3 backdrop-blur-sm sm:p-5"
             onMouseDown={(event) => {
@@ -112,6 +116,8 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
             }}
             role="dialog"
             aria-modal="true"
+            aria-hidden={confirmReset || undefined}
+            style={confirmReset ? { visibility: 'hidden' } : undefined}
             aria-label={`Configure ${kpi.title}`}
         >
             <div className="flex max-h-[92vh] w-[min(500px,96vw)] flex-col overflow-hidden rounded-xl border    shadow-2xl sui-border-default sui-bg-page sui-color-active">
@@ -371,17 +377,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                         type="button"
                         onClick={() => {
                             if (template) {
-                                setDraft({
-                                    ...draft,
-                                    ...template,
-                                    instanceId: draft.instanceId,
-                                    templateId: draft.templateId,
-                                    sectionId: draft.sectionId,
-                                    display: { ...template.display },
-                                    thresholds: { ...template.thresholds },
-                                    series: [...template.series],
-                                    tags: [...template.tags],
-                                });
+                                setDraft(createKPIInstance(template, draft.sectionId, draft.instanceId));
                             }
                         }}
                         className="mr-auto inline-flex h-9 items-center gap-2 rounded-lg border  px-3 text-xs font-black uppercase  transition sui-hover-border-info sui-hover-color-info sui-border-default sui-color-active"
@@ -392,7 +388,9 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                     <Button
                         appearance="destructive"
                         label="Factory reset"
-                        onClick={() => onFactoryReset(kpi)}
+                        disabled={!template}
+                        elementRef={resetButtonRef}
+                        onClick={() => setConfirmReset(true)}
                     />
                     <button
                         type="button"
@@ -410,7 +408,34 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                     </button>
                 </footer>
             </div>
-        </div>,
+        </div>
+    );
+
+    return createPortal(
+        <>
+            {editor}
+            <Modal
+                open={confirmReset}
+                onRequestClose={() => setConfirmReset(false)}
+                returnFocus={resetButtonRef}
+            >
+                <Modal.Header title="Restore factory tile settings?" />
+                <Modal.Body>
+                    <p>This replaces the saved settings for {kpi.title} with the factory settings.</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button appearance="secondary" label="Cancel" onClick={() => setConfirmReset(false)} />
+                    <Button
+                        appearance="destructive"
+                        label="Reset tile"
+                        onClick={() => {
+                            setConfirmReset(false);
+                            onFactoryReset(kpi);
+                        }}
+                    />
+                </Modal.Footer>
+            </Modal>
+        </>,
         portalTarget
     );
 };

@@ -2557,10 +2557,12 @@ const readLegacyPersistedTopology = (
 
 const clearLegacyPersistedTopology = (): void => {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(
-    userScopedStorageKey(LEGACY_TOPOLOGY_STORAGE_KEY),
-  );
-  window.localStorage.removeItem(LEGACY_TOPOLOGY_STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(userScopedStorageKey(LEGACY_TOPOLOGY_STORAGE_KEY));
+    window.localStorage.removeItem(LEGACY_TOPOLOGY_STORAGE_KEY);
+  } catch {
+    // The canonical topology has already been saved.
+  }
 };
 
 const emitTopologyConfigChanged = (): void => {
@@ -2611,17 +2613,6 @@ const sanitizeTopologyPayload = (
     sectionTitleFallback,
   ),
 });
-
-/**
- * Public-facing helper for the "Reset all customisations" flow on
- * the Overview page. As of the shared `customer_topology.conf`
- * migration, the canonical topology is global app state, so this
- * helper only removes the retired per-browser localStorage payload.
- * The Topology Editor's Factory button is the explicit global reset.
- */
-export const clearCustomerTopologyStorage = (): void => {
-  clearLegacyPersistedTopology();
-};
 
 export const usePersistedTopology = (
   fallback: CustomerTopology,
@@ -10976,8 +10967,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
       <Modal.Body>
         {confirmation === "factory" ? (
           <p>
-            This replaces the shared map for every user with the app factory
-            topology. This action cannot be undone.
+            This restores the packaged map for every viewer of this topology.
+            Custom section titles are kept. This action cannot be undone.
           </p>
         ) : (
           <p>Your unsaved map changes will be lost.</p>

@@ -1159,12 +1159,12 @@ assert.match(
 );
 assert.match(
   profile,
-  /permanently removes app-local insights_workspaces\.conf and [\s\S]*?searchbase\.conf overrides/,
-  "Factory reset must warn before removing shared local overrides",
+  /Tile defaults also [\s\S]*?apply to other workspaces that use the same tiles/,
+  "Factory reset must warn about changes to shared tile defaults",
 );
 assert.match(
   profile,
-  /resetInsightsWorkspaceTileConfig\([\s\S]*?resetBuiltInInsightsWorkspace\([\s\S]*?handleResetAllCustomizations\(\)/,
+  /await resetSignalTickerConfig\(\);\s*await resetInsightsWorkspaceTileConfig\([\s\S]*?resetBuiltInInsightsWorkspace\([\s\S]*?handleResetAllCustomizations\(\)/,
   "Full reset must clear Searchbase, workspace conf, and personal preferences",
 );
 assert.match(
@@ -1434,7 +1434,7 @@ assert.match(
   /previouslyFocused\?\.isConnected[\s\S]*?focus\(\{ preventScroll: true \}\)/,
   "Shared workspace dialogs must restore the invoking control without scrolling",
 );
-assert.match(profile, /returnFocus=\{pickerReturnFocusRef\}/);
+assert.match(profile, /returnFocus=\{\(\) => \{\s*const trigger = pickerReturnFocusRef\.current;\s*\(trigger\?\.isConnected \? trigger : headerActionsToggleRef\.current\)\?\.focus\(\)/);
 assert.match(profile, /returnFocus=\{addTileReturnFocusRef\}/);
 assert.match(
   profile,

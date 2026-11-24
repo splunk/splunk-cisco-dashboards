@@ -395,6 +395,25 @@ export const parseInsightsWorkspaceEntries = (
   };
 };
 
+const loadWorkspaceEntries = async (): Promise<ConfRestEntry[]> => {
+  const response = await fetch(
+    `${buildReadBaseUrl()}?output_mode=json&count=0`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      await extractErrorMessage(response, "Couldn't load Insights workspaces"),
+    );
+  }
+  const json = (await response.json()) as { entry?: ConfRestEntry[] };
+  if (!Array.isArray(json.entry)) throw new Error("Invalid Insights workspace configuration.");
+  return json.entry;
+};
+
 export const loadInsightsWorkspaces =
   async (): Promise<InsightsWorkspaceBundle> => {
     if (!isInSplunkRuntime()) {
@@ -406,27 +425,7 @@ export const loadInsightsWorkspaces =
       };
     }
 
-    const response = await fetch(
-      `${buildReadBaseUrl()}?output_mode=json&count=0`,
-      {
-        method: "GET",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      },
-    );
-    if (!response.ok) {
-      throw new Error(
-        await extractErrorMessage(
-          response,
-          "Couldn't load Insights workspaces",
-        ),
-      );
-    }
-
-    const json = (await response.json()) as { entry?: ConfRestEntry[] };
-    return parseInsightsWorkspaceEntries(
-      Array.isArray(json.entry) ? json.entry : [],
-    );
+    return parseInsightsWorkspaceEntries(await loadWorkspaceEntries());
   };
 
 const workspaceStanzaName = (workspaceId: WorkspaceId): string =>
@@ -737,24 +736,38 @@ export const resetBuiltInInsightsWorkspace = async (
     );
   }
 
-  const packagedSignalItemIds = getDefaultSignalTickerConfig(
-    packagedWorkspace.id,
-  ).items.map((item) => item.id);
-  const stanzaNames = new Set<string>([
-    workspaceStanzaName(packagedWorkspace.id),
-    `${SIGNAL_RAIL_STANZA_PREFIX}${packagedWorkspace.id}`,
-    ...packagedWorkspace.sections.map((section) =>
-      layoutStanzaName(packagedWorkspace.id, section.id),
-    ),
-  ]);
-  for (const rawId of packagedSignalItemIds) {
-    const id = rawId.trim();
-    if (/^[a-z][a-z0-9_]{0,127}$/.test(id)) {
-      stanzaNames.add(`${SIGNAL_ITEM_STANZA_PREFIX}${id}`);
+  if (!isInSplunkRuntime()) return;
+  const entries = await loadWorkspaceEntries();
+  const layoutPrefix = `${LAYOUT_STANZA_PREFIX}${workspace.id}.`;
+  const layouts = new Set(packagedWorkspace.sections.map((section) =>
+    layoutStanzaName(packagedWorkspace.id, section.id),
+  ));
+  const railName = signalRailStanzaName(workspace.id);
+  const itemsUsedElsewhere = new Set<string>();
+  for (const { name, content } of entries) {
+    if (typeof name !== "string") continue;
+    if (name.startsWith(layoutPrefix) && /^[a-z][a-z0-9_]{0,63}$/.test(name.slice(layoutPrefix.length))) {
+      layouts.add(name);
+    }
+    if (name.startsWith(SIGNAL_RAIL_STANZA_PREFIX) && name !== railName) {
+      for (const id of splitCsv(content?.items)) itemsUsedElsewhere.add(id);
+    }
+  }
+  for (const other of PACKAGED_WORKSPACE_FALLBACKS) {
+    if (other.id === workspace.id) continue;
+    for (const { id } of getDefaultSignalTickerConfig(other.id).items) {
+      itemsUsedElsewhere.add(id);
     }
   }
 
-  await Promise.all(
-    Array.from(stanzaNames, (stanzaName) => deleteStanza(stanzaName)),
-  );
+  const packagedSignalItemIds = getDefaultSignalTickerConfig(packagedWorkspace.id)
+    .items.map(({ id }) => id);
+  await deleteStanza(railName);
+  for (const id of packagedSignalItemIds) {
+    if (/^[a-z][a-z0-9_]{0,127}$/.test(id) && !itemsUsedElsewhere.has(id)) {
+      await deleteStanza(signalItemStanzaName(id));
+    }
+  }
+  for (const name of layouts) await deleteStanza(name);
+  await deleteStanza(workspaceStanzaName(workspace.id));
 };

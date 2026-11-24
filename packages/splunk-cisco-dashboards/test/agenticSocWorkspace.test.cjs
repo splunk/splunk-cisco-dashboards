@@ -1033,8 +1033,8 @@ assert.equal(
 
 assert.match(
   searchbaseTileConfigService,
-  /workspaceId === AGENTIC_SOC_WORKSPACE_SOURCE_ID[\s\S]*PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS/,
-  "Agentic reset must seed packaged stanza IDs before adding effective runtime IDs",
+  /__PACKAGED_OVERVIEW_DEFINITIONS__/,
+  "Agentic reset must read the packaged tile definitions",
 );
 assert.match(
   insightsWorkspaceService,
@@ -1063,7 +1063,7 @@ assert.match(
 );
 assert.match(
   executiveInsights,
-  /resetInsightsWorkspaceTileConfig\([\s\S]*?packagedWorkspace\.sourceWorkspace[\s\S]*?resetBuiltInInsightsWorkspace/,
+  /resetInsightsWorkspaceTileConfig\(packagedWorkspace\)[\s\S]*?resetBuiltInInsightsWorkspace/,
   "Factory reset caller must use the packaged source instead of an effective workspace override",
 );
 

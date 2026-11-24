@@ -442,7 +442,7 @@ export interface DisplaySectionPatch {
 export interface KpiPickerPanelProps {
   open: boolean;
   context: KpiPickerContext | null;
-  returnFocus: React.MutableRefObject<HTMLElement | null>;
+  returnFocus: () => void;
   onClose: () => void;
   onApply: (tileId: string, override: MetricOverride) => void;
   onClearOverride: (tileId: string) => void;
@@ -493,6 +493,7 @@ export interface KpiPickerPanelProps {
    * reset and (typically) closing the picker after.
    */
   onResetAllCustomizations?: () => void;
+  resettingPersonalWorkspace?: boolean;
   /**
    * Optional workspace-layout publish handler. Insights uses this to
    * write the current section tile order/counts to the active workspace's
@@ -743,6 +744,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   drilldownBindings,
   onTestInSearch,
   onResetAllCustomizations,
+  resettingPersonalWorkspace = false,
   onPublishWorkspaceLayout,
   onSaveSharedVisualization,
   sharedVisualizationStatus = "idle",
@@ -1964,7 +1966,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
    * having to also click Apply.
    */
   const handleApplyDisplayToSection = () => {
-    if (!context?.sectionId || !onApplyDisplayToSection) return;
+    if (resettingPersonalWorkspace || !context?.sectionId || !onApplyDisplayToSection) return;
     onApplyDisplayToSection(context.sectionId, {
       hidePeak: hidePeakInput,
       hideDelta: hideDeltaInput,
@@ -1988,14 +1990,15 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   const handleResetAllCustomizations = () => {
     if (!onResetAllCustomizations) return;
     setConfirmation({
-      title: "Reset all dashboard customizations?",
+      title: "Reset personal workspace settings?",
       body: (
         <Paragraph>
-          This removes personal tile, section, map, and layout customizations.
-          Published workspace configuration is kept. This cannot be undone.
+          This restores the published defaults for your tiles, sections, layout,
+          map height, and Signal Rail. It also resets search concurrency.
+          This cannot be undone.
         </Paragraph>
       ),
-      confirmLabel: "Factory reset",
+      confirmLabel: "Reset personal settings",
       destructive: true,
       onConfirm: onResetAllCustomizations,
     });
@@ -2057,7 +2060,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         divider="both"
         material="glass"
         onRequestClose={() => {
-          if (!confirmation && sharedVisualizationStatus !== "saving") onClose();
+          if (!confirmation && !resettingPersonalWorkspace && sharedVisualizationStatus !== "saving") onClose();
         }}
         open={open}
         position="page"
@@ -3066,9 +3069,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         <Paragraph>Shared default: {CHART_STYLE_OPTIONS.find(option => option.v === context.currentSharedVizOverride)?.label ?? "Search default"}. Publishing affects this tile in this workspace only. Existing personal choices still take precedence.</Paragraph>
                         <Button
                           label={sharedVisualizationStatus === "saving" ? "Saving…" : "Save as workspace default for all users"}
-                          aria-disabled={sharedVisualizationStatus === "saving"}
+                          aria-disabled={resettingPersonalWorkspace || sharedVisualizationStatus === "saving"}
                           onClick={(event) => {
-                            if (sharedVisualizationStatus === "saving") return;
+                            if (resettingPersonalWorkspace || sharedVisualizationStatus === "saving") return;
                             confirmationReturnFocusRef.current = event.currentTarget;
                             setConfirmation({
                             title: "Save shared visualization default?",
@@ -3188,6 +3191,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             appearance="standalone"
                             icon={<Eye aria-hidden="true" />}
                             label={`Apply to all tiles in ${context.sectionLabel || "section"}`}
+                            disabled={resettingPersonalWorkspace}
                             onClick={handleApplyDisplayToSection}
                           />
                         </Layout>
@@ -3414,15 +3418,18 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
               appearance="subtle"
               icon={<RotateCcw aria-hidden="true" />}
               label="Reset tile"
-              disabled={sharedVisualizationStatus === "saving"}
+              disabled={resettingPersonalWorkspace || sharedVisualizationStatus === "saving"}
               onClick={handleResetThisTile}
             />
+            <span role="status" className={resettingPersonalWorkspace ? undefined : "sr-only"}>
+              {resettingPersonalWorkspace ? "Resetting personal settings…" : ""}
+            </span>
             {onResetAllCustomizations && (
               <Button
                 appearance="destructiveSecondary"
                 icon={<RotateCcw aria-hidden="true" />}
-                label="Factory reset"
-                disabled={sharedVisualizationStatus === "saving"}
+                label="Reset personal workspace"
+                disabled={resettingPersonalWorkspace || sharedVisualizationStatus === "saving"}
                 onClick={(event) => {
                   confirmationReturnFocusRef.current = event.currentTarget;
                   handleResetAllCustomizations();
@@ -3432,7 +3439,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             {onPublishWorkspaceLayout && (
               <Button
                 appearance="standalone"
-                disabled={workspaceLayoutStatus === "saving" || sharedVisualizationStatus === "saving"}
+                disabled={resettingPersonalWorkspace || workspaceLayoutStatus === "saving" || sharedVisualizationStatus === "saving"}
                 icon={
                   workspaceLayoutStatus === "saving" ? (
                     <WaitSpinner screenReaderText={null} />
@@ -3453,14 +3460,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 }}
               />
             )}
-            <Button appearance="secondary" onClick={onClose} label="Cancel" disabled={sharedVisualizationStatus === "saving"} />
+            <Button appearance="secondary" onClick={onClose} label="Cancel" disabled={resettingPersonalWorkspace || sharedVisualizationStatus === "saving"} />
             <Button
               appearance="primary"
               onClick={(event) => {
                 confirmationReturnFocusRef.current = event.currentTarget;
                 handleApply();
               }}
-              disabled={!canApply || sharedVisualizationStatus === "saving"}
+              disabled={!canApply || resettingPersonalWorkspace || sharedVisualizationStatus === "saving"}
               label="Apply"
             />
           </Layout>

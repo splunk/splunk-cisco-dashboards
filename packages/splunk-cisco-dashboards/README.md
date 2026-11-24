@@ -12,6 +12,7 @@ networking pillars and workplace scenarios.
 
 - **Ask AI (Preview):** Describe what you want to monitor to find existing Searchbase searches. Review the top five matches first and select **Show more results** to see the next five. Expand **Search details** for available explanations and solutions, or **View SPL** for color-coded SPL. Use **Open in Search** to run a match or **Open in Searchbase** to view its saved entry. If Searchbase is unavailable, use the Splunkbase listing for installation instructions. In a workspace, choose a section to enable **Add for me** and, if you manage the workspace, **Add for everyone**. Hover over or focus either button for details. This preview uses the Searchbase catalogue to find matches. SPL generation is planned for a later version.
 - **Workspace drilldowns:** Open a tile’s drilldown to view full-height results. Switch between named views when there are related searches, or open **Search guidance** for the active view. Returning to results restores your table sort and scroll position.
+- **Workspace resets:** Reset your personal workspace to its published defaults, or restore a built-in workspace’s published settings and shared tile defaults as an administrator. Signal Rail preferences stay reset after reload.
 
 ### 1.0.90
 - **New dashboards:** DC Networking Operations, Catalyst Operations (Preview), and Security Operations Overview (Preview).

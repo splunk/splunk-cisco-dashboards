@@ -147,7 +147,7 @@ const clearBrowserStorage = (...storageKeys: string[]): void => {
 export interface UsePersistedSignalTickerResult {
     config: SignalTickerConfig;
     setConfig: (config: SignalTickerConfig) => void;
-    resetAll: () => void;
+    resetAll: () => Promise<void>;
     isWorkspaceDefault: boolean;
     itemCount: number;
     persistenceStatus: SignalTickerPersistenceStatus;
@@ -187,14 +187,14 @@ export const usePersistedSignalTicker = (
     }, []);
 
     const persistNow = useCallback(
-        (nextConfig: SignalTickerConfig) => {
+        (nextConfig: SignalTickerConfig, reset = false) => {
             const generation = saveGenerationRef.current + 1;
             saveGenerationRef.current = generation;
-            const displayPatch = createSignalTickerDisplayPreferencePatch(
-                defaultConfig,
-                nextConfig
-            );
+            const displayPatch = reset
+                ? undefined
+                : createSignalTickerDisplayPreferencePatch(defaultConfig, nextConfig);
             const shouldPersistShared =
+                !reset &&
                 typeof persistSharedConfig === 'function' &&
                 !sharedSignalTickerConfigsEqual(defaultConfig, nextConfig);
             if (activeRef.current) {
@@ -215,22 +215,23 @@ export const usePersistedSignalTicker = (
                                   displayPatch
                               )
                             : await deleteSignalTickerPreference(workspaceId);
-                        if (!saved) {
+                        if (!saved && !reset) {
                             throw new Error(
                                 'Authenticated Splunk preference storage is unavailable.'
                             );
                         }
                         clearBrowserStorage(userStorageKey, legacyStorageKey);
+                        if (reset) remoteAvailableRef.current = saved;
                         if (
                             activeRef.current &&
                             generation === saveGenerationRef.current
                         ) {
                             dirtySinceLoadRef.current = false;
-                            setPersistenceStatus('account');
+                            setPersistenceStatus(saved ? 'account' : 'browser');
                             setPersistenceError(undefined);
                         }
                     } catch (error) {
-                        writeBrowserFallback(userStorageKey, nextConfig);
+                        if (!reset) writeBrowserFallback(userStorageKey, nextConfig);
                         if (
                             activeRef.current &&
                             generation === saveGenerationRef.current
@@ -242,8 +243,10 @@ export const usePersistedSignalTicker = (
                                     : String(error)
                             );
                         }
+                        if (reset) throw error;
                     }
                 });
+            return writeChainRef.current;
         },
         [
             defaultConfig,
@@ -299,9 +302,10 @@ export const usePersistedSignalTicker = (
             workspaceId
         );
 
+        const generationAtLoad = saveGenerationRef.current;
         loadSignalTickerPreference(workspaceId)
             .then((result) => {
-                if (cancelled) return;
+                if (cancelled || generationAtLoad !== saveGenerationRef.current) return;
                 remoteAvailableRef.current = result.available;
                 if (!result.available) {
                     if (!dirtySinceLoadRef.current) {
@@ -362,7 +366,7 @@ export const usePersistedSignalTicker = (
                 setPersistenceStatus('account');
             })
             .catch((error) => {
-                if (cancelled) return;
+                if (cancelled || generationAtLoad !== saveGenerationRef.current) return;
                 remoteAvailableRef.current = false;
                 if (!dirtySinceLoadRef.current) {
                     const next = browserFallback ?? defaultConfig;
@@ -418,22 +422,16 @@ export const usePersistedSignalTicker = (
         [schedulePersist, userStorageKey]
     );
 
-    const resetAll = useCallback(() => {
+    const resetAll = useCallback(async () => {
         if (saveTimerRef.current !== null && typeof window !== 'undefined') {
             window.clearTimeout(saveTimerRef.current);
             saveTimerRef.current = null;
         }
         pendingConfigRef.current = null;
-        configRef.current = defaultConfig;
         dirtySinceLoadRef.current = true;
+        await persistNow(defaultConfig, true);
+        configRef.current = defaultConfig;
         setConfigState(defaultConfig);
-        clearBrowserStorage(userStorageKey, legacyStorageKey);
-
-        if (remoteAvailableRef.current === true) {
-            persistNow(defaultConfig);
-        } else if (remoteAvailableRef.current === false) {
-            setPersistenceStatus('browser');
-        }
     }, [defaultConfig, legacyStorageKey, persistNow, userStorageKey]);
 
     const itemCount = useMemo(() => config.items.length, [config.items.length]);

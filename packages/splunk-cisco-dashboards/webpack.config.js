@@ -86,6 +86,23 @@ const FAST_UNMINIFIED_BUILD = process.argv.includes('--no-optimization-minimize'
 const webappRoot = path.join(__dirname, 'src/main/webapp');
 const splunkRoot = path.join(__dirname, 'src/main/resources/splunk');
 const stageRoot = path.join(__dirname, 'stage');
+const packagedSearchbasePath = path.join(splunkRoot, 'default/searchbase.conf');
+
+// Ship only the packaged overview definitions required by workspace reset.
+const readPackagedOverviewDefinitions = () => {
+    const definitions = {};
+    let stanza;
+    for (const line of fs.readFileSync(packagedSearchbasePath, 'utf8').split(/\r?\n/)) {
+        const header = line.match(/^\[([^\]]+)\]$/);
+        if (header) stanza = header[1];
+        const options = line.match(/^viz_options\s*=\s*(.+)$/);
+        if (!stanza || !options || !options[1].includes('"overview"')) continue;
+        const { overview } = JSON.parse(options[1]);
+        if (overview) definitions[stanza] = overview;
+    }
+    return JSON.stringify(definitions);
+};
+
 const workspaceRoot = path.resolve(__dirname, '..', '..');
 
 const SOURCE_MAP_DIRECTIVE_PATTERN = /^[ \t]*(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=[^\r\n]*(?:\*\/)?(?:\r?\n|$)/gm;
@@ -327,6 +344,10 @@ const commonConfig = webpackMerge(baseConfig, {
         new webpack.DefinePlugin({
             'process.env.APP_BUILD': JSON.stringify(APP_BUILD),
             'process.env.APP_VERSION': JSON.stringify(APP_VERSION),
+            __PACKAGED_OVERVIEW_DEFINITIONS__: webpack.DefinePlugin.runtimeValue(
+                readPackagedOverviewDefinitions,
+                { fileDependencies: [packagedSearchbasePath] }
+            ),
         }),
     ],
 });

@@ -135,7 +135,6 @@ import {
 } from "@/common/components/workspace/canvasVizPredicates";
 import {
   CustomerTopologyMap,
-  clearCustomerTopologyStorage,
   TopologySiteTable,
   usePersistedTopology,
 } from "@/common/components/workspace/CustomerTopologyMap";
@@ -1314,17 +1313,6 @@ const writePriorityDrilldownView = (viewName: string): void => {
   } catch {
     // Storage may be unavailable; the in-memory state still works
     // for the current session.
-  }
-};
-
-const clearPriorityDrilldownView = (): void => {
-  if (typeof window === "undefined" || !window.localStorage) return;
-  try {
-    window.localStorage.removeItem(
-      userScopedStorageKey(PRIORITY_DRILLDOWN_STORAGE_KEY),
-    );
-  } catch {
-    // Storage unavailable; ignore.
   }
 };
 
@@ -3122,6 +3110,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const {
     concurrency: searchConcurrency,
     setConcurrency: setSearchConcurrency,
+    reset: resetSearchConcurrency,
   } = usePersistedSearchConcurrency(insightsWorkspace.id);
   const [focusedSection, setFocusedSection] = useState<SectionId | null>(null);
   const [sectionTilePages, setSectionTilePages] = useState<
@@ -3599,14 +3588,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // 58.33% (= 7/12, matching the legacy fixed grid), but that left
   // the map column too wide for an exec view where the metrics are
   // the primary read.
-  const SPLIT_KEY = userScopedStorageKey("scd_overview_split_pct");
+  const SPLIT_KEY = userScopedStorageKey(
+    `scd_overview_split_pct.${insightsWorkspace.id}`,
+  );
   const SPLIT_DEFAULT = 66.67;
   const SPLIT_MIN = 35;
   const SPLIT_MAX = 80;
   const [leftPct, setLeftPct] = useState<number>(() => {
     if (typeof window === "undefined") return SPLIT_DEFAULT;
     try {
-      const saved = readUserScopedStorageItem(SPLIT_KEY);
+      const saved = readUserScopedStorageItem(SPLIT_KEY) ??
+        readUserScopedStorageItem(userScopedStorageKey("scd_overview_split_pct"));
       const n = saved ? Number(saved) : NaN;
       return Number.isFinite(n) && n >= SPLIT_MIN && n <= SPLIT_MAX
         ? n
@@ -3624,7 +3616,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       // split still works for the session, we just can't
       // persist it. No-op rather than spamming console.errors.
     }
-  }, [leftPct]);
+  }, [SPLIT_KEY, leftPct]);
 
   // While the splitter is being dragged, every mousemove updates the
   // percentage. We keep the handler attached to the window (not the
@@ -4276,13 +4268,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     ],
   );
 
-  // Bump this counter to force a fresh mount of <CustomerTopologyMap>.
-  // localStorage `storage` events only fire across tabs, so wiping
-  // the persisted topology in this tab won't reseed the map's
-  // internal state on its own — a remount via `key={topologyResetKey}`
-  // gets the hook to re-read storage (now empty) and fall back to
-  // the canonical CUSTOMER_TOPOLOGY factory.
-  const [topologyResetKey, setTopologyResetKey] = useState(0);
   const workspaceTopology = getWorkspaceTopology(isDcNetworking ? "dc_networking" : insightsWorkspace.id);
 
   // Read the persisted topology so the dashboard header can show the
@@ -4706,47 +4691,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     [overrides, renderMetricConfig, setOverride],
   );
 
-  // "Factory reset" — wipes every persisted dashboard customisation
-  // in one shot. The picker shows a `window.confirm()` prompt before
-  // calling this, so misclicks are caught at the UI layer; we only
-  // get here if the user has explicitly agreed.
-  //
-  // What gets reset (and the localStorage keys cleared):
-  //   • metricOverrides.v1            — per-tile picker bindings
-  //   • searchbaseDrilldowns.v1       — picker-wired drilldown bindings
-  //   • sectionLayout.v1              — visible section roster
-  //   • sectionTileCounts.v1          — visible tile count per section
-  //                                      (restored to the active shared
-  //                                      factory default)
-  //   • sectionTileAdditions.v1       — per-user searchbase tiles added
-  //                                      into profile sections
-  //   • sectionHiddenTiles.v1         — per-user hidden factory tiles
-  //   • sectionHeights.v1             — vertical room per section
-  //   • sectionPresentation.v1        — collapsed state per section
-  //   • sectionTileOrder.v1           — drag-to-reorder preference
-  //   • customerTopology.v4           — retired per-browser map payload
-  //   • scd_overview_split_pct        — tiles ↔ map splitter position
-  //   • scd_overview_map_pos          — leftover map-position localStorage
-  //   • scd_overview_map_visible      — leftover map-visibility localStorage
-  //   • scd_overview_map_height       — map panel height (workspace / compact)
-  //   • priorityDrilldown.v1          — pinned app-local drill-down target
-  //   • insights_workspace_preferences.conf — private Signal Rail display
-  //                                      prefs; leftover item patches are
-  //                                      ignored after hydration
-  //
-  // What is intentionally NOT reset:
-  //   • header branding (title / subtitle / logo) — identity, not
-  //     dashboard layout or tile state
-  //   • theme (light / dark) — UI preference, not layout
-  //   • shared Overview factory defaults — app-wide state, not a
-  //     per-user customisation
-  //   • shared searchbase tile configuration — app-wide state, not a
-  //     per-user customisation
-  //   • shared customer_topology.conf — site/link and section-title
-  //     edits are global app state, not per-user layout preference
-  //
-  // After reset, we close the picker and bump `topologyResetKey` to
-  // clear any retired in-browser topology payload from old builds.
+  // Reset the current workspace's personal state against its published defaults.
   const handleResetAllCustomizations = useCallback(() => {
     resetAllOverrides();
     resetAllSearchbaseDrilldowns();
@@ -4759,20 +4704,18 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionTileOrder();
     setSectionTilePages({});
     setShowAllTileSections({});
-    resetSignalTickerConfig();
-    clearCustomerTopologyStorage();
-    setTopologyResetKey((n) => n + 1);
+    resetSearchConcurrency();
     setLeftPct(SPLIT_DEFAULT);
     setMapPosition(insightsWorkspace.mapPosition);
     setMapVisible(insightsWorkspace.mapVisible);
     setMapHeightMode(MAP_HEIGHT_DEFAULT);
-    setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
     setFocusedSection(null);
-    clearPriorityDrilldownView();
     setAddTileSection(null);
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        window.localStorage.removeItem(SPLIT_KEY);
+        // Write the default so a reset workspace cannot inherit the old
+        // browser-wide split when the page immediately reloads.
+        window.localStorage.setItem(SPLIT_KEY, String(SPLIT_DEFAULT));
         window.localStorage.removeItem(MAP_POS_KEY);
         window.localStorage.removeItem(MAP_VISIBILITY_KEY);
         window.localStorage.removeItem(MAP_HEIGHT_KEY);
@@ -4781,8 +4724,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         // above are authoritative for this session anyway.
       }
     }
-    setPickerContext(null);
+    closePicker();
   }, [
+    closePicker,
     resetAllOverrides,
     resetAllSearchbaseDrilldowns,
     resetAllSectionLayout,
@@ -4792,7 +4736,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionHeights,
     resetAllSectionPresentation,
     resetAllSectionTileOrder,
-    resetSignalTickerConfig,
+    resetSearchConcurrency,
     SPLIT_KEY,
     SPLIT_DEFAULT,
     setLeftPct,
@@ -4806,21 +4750,45 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setMapHeightMode,
   ]);
 
+  const resetInProgressRef = useRef(false);
+  const [resettingPersonalWorkspace, setResettingPersonalWorkspace] = useState(false);
+  const handleResetPersonalWorkspace = useCallback(async () => {
+    if (resetInProgressRef.current) return;
+    resetInProgressRef.current = true;
+    setResettingPersonalWorkspace(true);
+    try {
+      await resetSignalTickerConfig();
+      handleResetAllCustomizations();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Could not reset personal workspace settings.");
+    } finally {
+      resetInProgressRef.current = false;
+      setResettingPersonalWorkspace(false);
+    }
+  }, [handleResetAllCustomizations, resetSignalTickerConfig]);
+
+  const handleResetSignalTicker = useCallback(() => {
+    void resetSignalTickerConfig().catch((error) => {
+      window.alert(error instanceof Error ? error.message : "Could not reset Signal Rail settings.");
+    });
+  }, [resetSignalTickerConfig]);
+
   const handleResetWorkspaceToFactory = useCallback(async () => {
-    if (!insightsWorkspace.isBuiltIn || factoryResetStatus === "resetting") {
+    if (!insightsWorkspace.isBuiltIn || !canManageWorkspaceConfig ||
+      !canManageFactoryConfig || resetInProgressRef.current) {
       return;
     }
     const confirmed =
       typeof window === "undefined" ||
       window.confirm(
         `Reset ${insightsWorkspace.label} to packaged factory defaults?\n\n` +
-          "This permanently removes app-local insights_workspaces.conf and " +
-          "searchbase.conf overrides for this workspace, plus your personal " +
-          "tile, section, Signal Rail, and map preferences. Other workspaces " +
-          "and indexed data are not changed. This cannot be undone.",
+          "This restores the published workspace and its shared tile defaults, " +
+          "and clears your personal workspace settings. Tile defaults also " +
+          "apply to other workspaces that use the same tiles. This cannot be undone.",
       );
     if (!confirmed) return;
 
+    resetInProgressRef.current = true;
     setFactoryResetStatus("resetting");
     try {
       const packagedWorkspace = PACKAGED_WORKSPACE_FALLBACKS.find(
@@ -4831,10 +4799,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           "Only built-in workspaces can be reset to packaged defaults.",
         );
       }
-      await resetInsightsWorkspaceTileConfig(
-        baseMetricConfig.map((metric) => metric.searchbaseId),
-        packagedWorkspace.sourceWorkspace,
-      );
+      // Finish queued preference writes before restoring the published defaults.
+      await resetSignalTickerConfig();
+      await resetInsightsWorkspaceTileConfig(packagedWorkspace);
       await resetBuiltInInsightsWorkspace(insightsWorkspace);
       handleResetAllCustomizations();
       window.location.reload();
@@ -4845,18 +4812,18 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       );
       setFactoryResetStatus("error");
       if (typeof window !== "undefined") {
-        window.alert(
-          error instanceof Error
-            ? error.message
-            : "Could not reset this workspace to factory defaults.",
-        );
+        const detail = error instanceof Error ? ` ${error.message}` : "";
+        window.alert(`The workspace reset did not finish. Some settings may already have been restored. You can retry the reset.${detail}`);
       }
+    } finally {
+      resetInProgressRef.current = false;
     }
   }, [
-    baseMetricConfig,
-    factoryResetStatus,
+    canManageFactoryConfig,
+    canManageWorkspaceConfig,
     handleResetAllCustomizations,
     insightsWorkspace,
+    resetSignalTickerConfig,
   ]);
 
   const handlePublishWorkspaceLayout = useCallback(async () => {
@@ -5450,7 +5417,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       window.confirm(
                         `Reset ${overrideCount} customised tile${
                           overrideCount === 1 ? "" : "s"
-                        } to their default search bindings?`,
+                        } to their published tile settings?`,
                       )
                     ) {
                       resetAllOverrides();
@@ -5465,7 +5432,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 canManageFactoryConfig &&
                 insightsWorkspace.isBuiltIn && (
                   <Menu.Item
-                    description="Removes local config overrides and personal layout settings"
+                    description="Restores published workspace settings and shared tile defaults"
                     disabled={factoryResetStatus === "resetting"}
                     onClick={() => {
                       closeHeaderActions();
@@ -6082,7 +6049,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                          to the same swap pattern in the
                                          future. */}
                       <CustomerTopologyMap
-                        key={`${insightsWorkspace.id}-${topologyResetKey}`}
+                        key={insightsWorkspace.id}
                         topology={workspaceTopology}
                         commandOnly={isDcNetworking}
                         canManageTopology={canManageSharedTopology}
@@ -6338,7 +6305,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       <KpiPickerPanel
         open={pickerContext !== null}
         context={pickerContext}
-        returnFocus={pickerReturnFocusRef}
+        returnFocus={() => {
+          const trigger = pickerReturnFocusRef.current;
+          (trigger?.isConnected ? trigger : headerActionsToggleRef.current)?.focus();
+        }}
         onClose={closePicker}
         onApply={handlePickerApply}
         onApplyDisplayToSection={handleApplyDisplayToSection}
@@ -6361,7 +6331,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             window.open(url, "_blank", "noopener,noreferrer");
           }
         }}
-        onResetAllCustomizations={handleResetAllCustomizations}
+        onResetAllCustomizations={() => void handleResetPersonalWorkspace()}
+        resettingPersonalWorkspace={resettingPersonalWorkspace}
         onPublishWorkspaceLayout={
           canManageWorkspaceConfig ? handlePublishWorkspaceLayout : undefined
         }
@@ -6389,7 +6360,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         }
         onIncludeTableSearchesChange={setSignalTickerIncludeTableSearches}
         onChange={setSignalTickerConfig}
-        onReset={resetSignalTickerConfig}
+        onReset={handleResetSignalTicker}
         isWorkspaceDefault={signalTickerIsWorkspaceDefault}
         persistenceStatus={signalTickerPersistenceStatus}
         persistenceError={signalTickerPersistenceError}

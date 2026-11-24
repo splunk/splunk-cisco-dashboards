@@ -326,7 +326,6 @@ export const deleteSignalTickerPreference = async (
 
     const name = stanzaName(workspaceId);
     const key = stanzaPresenceKey(owner, name);
-    if (!(await preferenceStanzaExists(owner, name))) return true;
 
     const response = await fetch(
         `${buildBaseUrl(owner)}/${encodeURIComponent(name)}?output_mode=json`,

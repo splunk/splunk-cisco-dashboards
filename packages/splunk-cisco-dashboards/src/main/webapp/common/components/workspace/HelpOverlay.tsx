@@ -60,11 +60,11 @@ const CUSTOMIZATION_SCOPE: ScopeRow[] = [
     },
     {
         action: '"Reset tile" button (picker footer)',
-        scope: 'Clears every customisation on this tile',
+        scope: 'Clears your personal settings for this tile',
     },
     {
-        action: '"Factory reset" button (picker footer)',
-        scope: 'Clears every customisation across the whole dashboard',
+        action: '"Reset personal workspace" button (picker footer)',
+        scope: 'Restores the published defaults for your personal workspace settings',
     },
     {
         action: 'Signal Rail settings',

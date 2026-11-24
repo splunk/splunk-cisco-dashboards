@@ -187,6 +187,7 @@ const DashboardContent: React.FC = () => {
     const [configKpi, setConfigKpi] = useState<KPIInstance | null>(null);
     const [expandedKpi, setExpandedKpi] = useState<KPIInstance | null>(null);
     const exportRef = useRef<HTMLDivElement | null>(null);
+    const configReturnFocusRef = useRef<HTMLElement | null>(null);
     const { exporting, exportAs } = useExportPage({
         targetRef: exportRef,
         fileName: 'health-monitoring-dashboard',
@@ -290,10 +291,26 @@ const DashboardContent: React.FC = () => {
         }));
     }, []);
 
+    const openConfig = useCallback((kpi: KPIInstance) => {
+        configReturnFocusRef.current = document.querySelector<HTMLButtonElement>(
+            `[data-kpi-instance="${CSS.escape(kpi.instanceId)}"] button[aria-label^="Configure "]`
+        );
+        setConfigKpi(kpi);
+    }, []);
+
+    const closeConfig = useCallback(() => {
+        setConfigKpi(null);
+        window.requestAnimationFrame(() => {
+            const trigger = configReturnFocusRef.current;
+            const fallback = exportRef.current?.querySelector<HTMLElement>('header input[type="search"]');
+            (trigger?.isConnected ? trigger : fallback)?.focus();
+        });
+    }, []);
+
     const handleApplyConfig = useCallback((nextKpi: KPIInstance) => {
         setSections((current) => replaceKpi(current, nextKpi));
-        setConfigKpi(null);
-    }, []);
+        closeConfig();
+    }, [closeConfig]);
 
     const handleFactoryReset = useCallback((target: KPIInstance) => {
         const template = getTemplateById(target.templateId);
@@ -304,8 +321,8 @@ const DashboardContent: React.FC = () => {
             target.instanceId
         );
         setSections((current) => replaceKpi(current, reset));
-        setConfigKpi(null);
-    }, []);
+        closeConfig();
+    }, [closeConfig]);
 
     const jumpToKpi = useCallback((instanceId: string) => {
         window.setTimeout(() => {
@@ -338,7 +355,7 @@ const DashboardContent: React.FC = () => {
                     searchTerm={searchTerm}
                     onAdd={(target) => setBrowserTarget(target)}
                     onMove={handleMove}
-                    onConfigure={setConfigKpi}
+                    onConfigure={openConfig}
                     onExpand={setExpandedKpi}
                     onRemove={handleRemove}
                 />
@@ -496,7 +513,7 @@ const DashboardContent: React.FC = () => {
             <KPIConfigModal
                 kpi={configKpi}
                 template={configTemplate}
-                onClose={() => setConfigKpi(null)}
+                onClose={closeConfig}
                 onApply={handleApplyConfig}
                 onFactoryReset={handleFactoryReset}
             />

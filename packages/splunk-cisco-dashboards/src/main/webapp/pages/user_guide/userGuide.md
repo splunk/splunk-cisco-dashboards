@@ -40,6 +40,7 @@ Browse the current release and recorded historical versions below. The newest re
 - **Find searches and Ask AI (Preview):** Find existing Searchbase searches and add them to a workspace section. When an administrator enables an AI Toolkit model connection, authorized users can also explain, draft, and refine SPL from the same button. Open **Setup > Review packages > Set up Ask AI** to test and enable a connection.
 - **Workspace drilldowns:** Open a tile’s drilldown to view full-height results. Switch between named views when there are related searches, or open **Search guidance** for the active view. Returning to results restores your table sort and scroll position.
 - **Searchbase links:** Opening a saved search from the app starts at **Basic Information**.
+- **Workspace resets:** Reset personal workspace settings independently of the published workspace. Signal Rail preferences stay reset after reload.
 
 :::
 
@@ -845,9 +846,10 @@ Workspace permission does not grant access to indexed data. Each viewer still ne
 
 ### Reset behavior
 
-- **Reset tile** clears the current user's display override for that tile.
-- **Reset workspace to factory defaults** on a built-in workspace removes app-local workspace and factory tile overrides and clears the current user's preferences for that workspace.
-- A factory reset does not change another workspace or delete indexed data.
+- **Reset tile** clears your personal overrides for the selected tile and restores its published settings.
+- **Reset personal workspace** in **Configure tile** restores your tile, section, layout, map height, search concurrency, and Signal Rail settings to the workspace defaults.
+- **Reset workspace to factory defaults** in **Dashboard controls** restores the built-in workspace's published configuration and clears your personal workspace settings. Shared tile labels, mappings, thresholds, and search bindings also return to their packaged values. Other workspaces using those same tiles inherit these changes. Searchbase search definitions and organization-wide drilldowns keep their saved settings. Signal Rail items used by other workspaces also keep their saved settings.
+- **Reset to factory** in the topology editor restores the packaged map for all viewers of that topology and keeps custom section titles. In **Health Monitoring**, **Factory reset** restores just the selected KPI's saved settings after confirmation.
 
 ## Site connectivity {#site-connectivity}
 
