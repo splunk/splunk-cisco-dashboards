@@ -4548,6 +4548,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const [factoryResetStatus, setFactoryResetStatus] = useState<
     "idle" | "resetting" | "error"
   >("idle");
+  const [factoryResetOpen, setFactoryResetOpen] = useState(false);
+  const [factoryResetError, setFactoryResetError] = useState<string>();
 
   const handleSaveFactoryTileConfig = useCallback(
     async (patch: FactoryTileConfigApplyPatch) => {
@@ -4775,18 +4777,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       !canManageFactoryConfig || resetInProgressRef.current) {
       return;
     }
-    const confirmed =
-      typeof window === "undefined" ||
-      window.confirm(
-        `Reset ${insightsWorkspace.label} to packaged factory defaults?\n\n` +
-          "This restores the published workspace and its shared tile defaults, " +
-          "and clears your personal workspace settings. Tile defaults also " +
-          "apply to other workspaces that use the same tiles. This cannot be undone.",
-      );
-    if (!confirmed) return;
-
     resetInProgressRef.current = true;
     setFactoryResetStatus("resetting");
+    setFactoryResetError(undefined);
     try {
       const packagedWorkspace = PACKAGED_WORKSPACE_FALLBACKS.find(
         (candidate) => candidate.id === insightsWorkspace.id,
@@ -4808,10 +4801,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         error,
       );
       setFactoryResetStatus("error");
-      if (typeof window !== "undefined") {
-        const detail = error instanceof Error ? ` ${error.message}` : "";
-        window.alert(`The workspace reset did not finish. Some settings may already have been restored. You can retry the reset.${detail}`);
-      }
+      const detail = error instanceof Error ? ` ${error.message}` : "";
+      setFactoryResetError(
+        `The workspace reset did not finish. Some settings may already have been restored. You can retry the reset.${detail}`,
+      );
     } finally {
       resetInProgressRef.current = false;
     }
@@ -5432,8 +5425,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     description="Restores published workspace settings and shared tile defaults"
                     disabled={factoryResetStatus === "resetting"}
                     onClick={() => {
-                      closeHeaderActions();
-                      void handleResetWorkspaceToFactory();
+                      closeHeaderActions(false);
+                      setFactoryResetError(undefined);
+                      setFactoryResetOpen(true);
                     }}
                     startAdornment={<RotateCcw aria-hidden="true" />}
                   >
@@ -6298,6 +6292,45 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           onClose={closeAddTilePicker}
         />
       )}
+
+      <Modal
+        initialFocus="container"
+        open={factoryResetOpen}
+        onRequestClose={() => {
+          if (factoryResetStatus !== "resetting") setFactoryResetOpen(false);
+        }}
+        returnFocus={headerActionsToggleRef}
+      >
+        <Modal.Header
+          title={`Reset ${insightsWorkspace.label} to factory defaults?`}
+          hideCloseButton={factoryResetStatus === "resetting"}
+        />
+        <Modal.Body>
+          <p>
+            This restores the published workspace and its shared tile defaults
+            and clears your personal workspace settings. Tile defaults also
+            apply to other workspaces that use the same tiles. This cannot be undone.
+          </p>
+          <span role="status" className={factoryResetStatus === "resetting" ? undefined : "sr-only"}>
+            {factoryResetStatus === "resetting" ? "Resetting workspace…" : ""}
+          </span>
+          {factoryResetError && <Message type="error" role="alert">{factoryResetError}</Message>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            appearance="secondary"
+            label="Cancel"
+            disabled={factoryResetStatus === "resetting"}
+            onClick={() => setFactoryResetOpen(false)}
+          />
+          <Button
+            appearance="destructive"
+            label={factoryResetError ? "Retry factory reset" : "Reset workspace"}
+            disabled={factoryResetStatus === "resetting"}
+            onClick={() => void handleResetWorkspaceToFactory()}
+          />
+        </Modal.Footer>
+      </Modal>
 
       <KpiPickerPanel
         open={pickerContext !== null}

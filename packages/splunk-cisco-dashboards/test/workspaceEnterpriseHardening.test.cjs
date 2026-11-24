@@ -1169,7 +1169,7 @@ assert.match(
 );
 assert.match(
   profile,
-  /Tile defaults also [\s\S]*?apply to other workspaces that use the same tiles/,
+  /Tile defaults also\s+apply to other workspaces that use the same tiles/,
   "Factory reset must warn about changes to shared tile defaults",
 );
 assert.match(
