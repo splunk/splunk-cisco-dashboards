@@ -14,6 +14,7 @@ import json
 import re
 import urllib.parse
 from datetime import datetime, timezone
+from pathlib import Path
 
 import splunk.rest as rest
 from splunk.persistconn.application import PersistentServerConnectionApplication
@@ -339,6 +340,31 @@ def _response_payload(content):
         return {"message": str(content)[:1000]}
 
 
+def _read_searchbase_layer(layer):
+    from splunk.clilib import cli_common
+
+    path = Path(__file__).resolve().parents[1] / layer / "searchbase.conf"
+    try:
+        with path.open("rb") as source:
+            lines = cli_common.bom_aware_readlines(
+                source, cli_common.CONF_FILE_COMMENT_LINE_REGEX
+            )
+    except FileNotFoundError:
+        return {}
+    return cli_common.readConfLines(lines)
+
+
+def _same_viz_options(local_value, packaged_value):
+    try:
+        local = json.loads(local_value)
+        packaged = json.loads(packaged_value)
+    except (TypeError, ValueError):
+        return False
+    return isinstance(local, dict) and isinstance(packaged, dict) and (
+        json.dumps(local, sort_keys=True) == json.dumps(packaged, sort_keys=True)
+    )
+
+
 class WorkspaceMutationHandler(PersistentServerConnectionApplication):
     """Capability-gated proxy to app-local conf persistence.
 
@@ -353,7 +379,7 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
 
     def _proxy(
         self, request, conf_name, stanza_name, method, settings=None, query_args=None,
-        local_only=False,
+        local_only=False, key=None,
     ):
         system_token = request.get("system_authtoken")
         if not system_token:
@@ -362,6 +388,8 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
         path = "/servicesNS/nobody/{}/{}".format(APP_NAME, suffix.format(conf_name))
         if stanza_name:
             path = "{}/{}".format(path, urllib.parse.quote(stanza_name, safe=""))
+        if key:
+            path += "/" + urllib.parse.quote(key, safe="")
         get_args = {"output_mode": "json"}
         if local_only:
             get_args["local_only"] = "true"
@@ -399,24 +427,89 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
         ):
             return result
 
-        response, content = rest.simpleRequest(
-            "/services/server/info",
-            sessionKey=request["system_authtoken"],
-            getargs={"output_mode": "json"},
-            rawResult=True,
-        )
-        if response.status != 200:
-            return result
-        entries = _response_payload(content).get("entry", [])
-        version = entries[0].get("content", {}).get("version", "") if entries else ""
-        match = re.match(r"^(\d+)\.(\d+)", version)
-        if not match or tuple(map(int, match.groups())) < (10, 6):
+        if not self._supports_local_delete(request["system_authtoken"]):
             return {
                 "status": 400,
                 "payload": {"error": "Resetting packaged workspace overrides requires Splunk 10.6 or later."},
             }
-
         return self._proxy(request, WORKSPACE_CONF, stanza_name, "DELETE", local_only=True)
+
+    @staticmethod
+    def _supports_local_delete(system_token):
+        response, content = rest.simpleRequest(
+            "/services/server/info",
+            sessionKey=system_token,
+            getargs={"output_mode": "json"},
+            rawResult=True,
+        )
+        if response.status != 200:
+            return False
+        entries = _response_payload(content).get("entry", [])
+        version = entries[0].get("content", {}).get("version", "") if entries else ""
+        match = re.match(r"^(\d+)\.(\d+)", version)
+        return bool(match and tuple(map(int, match.groups())) >= (10, 6))
+
+    @staticmethod
+    def _can_manage_searchbase(request):
+        # Workspace management is delegated independently of Searchbase.
+        # Check the caller's identity before using any system token.
+        caller_token = request.get("session", {}).get("authtoken")
+        if not caller_token:
+            return False
+        response, content = rest.simpleRequest(
+            "/services/authentication/current-context",
+            sessionKey=caller_token,
+            getargs={"output_mode": "json"},
+            rawResult=True,
+        )
+        if response.status != 200:
+            return False
+        entries = _response_payload(content).get("entry", [])
+        context = entries[0].get("content", {}) if entries else {}
+        return (
+            "admin_all_objects" in context.get("capabilities", [])
+            or bool({"admin", "sc_admin"}.intersection(context.get("roles", [])))
+        )
+
+    def _cleanup_searchbase_viz_options(self, request):
+        if not self._can_manage_searchbase(request):
+            return {"status": 403, "payload": {"error": "Searchbase administration permission is required."}}
+        raw = _form_payload(request).get("stanzas", [""])[-1]
+        if len(raw) > MAX_LIST_BYTES:
+            raise ValueError("Searchbase cleanup list is too large.")
+        names = json.loads(raw)
+        if not isinstance(names, list) or len(names) > 512 or any(
+            not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}", name)
+            for name in names
+        ):
+            raise ValueError("Invalid Searchbase cleanup list.")
+
+        local = _read_searchbase_layer("local")
+        candidates = [name for name in dict.fromkeys(names) if "viz_options" in local.get(name, {})]
+        if not candidates:
+            return {"status": 200, "payload": {}}
+        system_token = request.get("system_authtoken")
+        if not system_token or not self._supports_local_delete(system_token):
+            return {
+                "status": 400,
+                "payload": {"error": "Removing local Searchbase overrides requires Splunk 10.6 or later."},
+            }
+
+        packaged = _read_searchbase_layer("default")
+        for name in candidates:
+            # Re-read immediately before removing the candidate so an edited
+            # stanza is checked against its latest on-disk value.
+            row = _read_searchbase_layer("local").get(name, {})
+            default_viz = packaged.get(name, {}).get("viz_options", "{}")
+            if not _same_viz_options(row.get("viz_options"), default_viz):
+                continue
+            key = None if name in packaged and set(row) == {"viz_options"} else "viz_options"
+            result = self._proxy(
+                request, "searchbase", name, "DELETE", local_only=True, key=key
+            )
+            if result["status"] not in (200, 204, 404):
+                return result
+        return {"status": 200, "payload": {}}
 
     def _ensure_template_background_quota(self, request, stanza_name, data):
         """Bound shared background count and bytes before a system-auth write."""
@@ -470,6 +563,10 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
             request = _json_payload(in_string)
             _endpoint, conf_name, stanza_name = _route(request)
             method = str(request.get("method", "")).upper()
+            if conf_name == WORKSPACE_CONF and stanza_name == "searchbase_viz_cleanup":
+                if method != "POST":
+                    return {"status": 405, "payload": {"error": "Method not allowed."}}
+                return self._cleanup_searchbase_viz_options(request)
             if method == "GET":
                 return self._proxy(request, conf_name, stanza_name, "GET")
             if method == "POST":

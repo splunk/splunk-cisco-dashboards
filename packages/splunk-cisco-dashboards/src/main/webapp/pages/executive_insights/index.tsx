@@ -6309,7 +6309,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           <p>
             This restores the published workspace and its shared tile defaults
             and clears your personal workspace settings. Tile defaults also
-            apply to other workspaces that use the same tiles. This cannot be undone.
+            apply to other workspaces that use the same tiles.
+          </p>
+          <p>
+            This removes local Searchbase overrides that become redundant.
+            Other settings in those stanzas are kept. This cannot be undone.
           </p>
           <span role="status" className={factoryResetStatus === "resetting" ? undefined : "sr-only"}>
             {factoryResetStatus === "resetting" ? "Resetting workspace…" : ""}

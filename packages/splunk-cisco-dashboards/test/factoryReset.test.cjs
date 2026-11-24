@@ -77,6 +77,7 @@ for (const workspace of workspaces) {
             drilldown_searches: "shared_drilldown",
         } });
         const writes = [];
+        const cleanups = [];
         const service = load("common/services/searchbaseTileConfigService.ts", {
             "@splunk/splunk-utils/fetch": fetchUtils,
             "./splunkSearchService": { getSearchAppContext: () => app },
@@ -90,6 +91,10 @@ for (const workspace of workspaces) {
                 assert.equal(init.method, "POST");
                 const name = url.split("/").at(-1);
                 const fields = new URLSearchParams(init.body);
+                if (name === "searchbase_viz_cleanup") {
+                    cleanups.push(JSON.parse(fields.get("stanzas")));
+                    return new Response(null, { status: 200 });
+                }
                 assert.deepEqual([...fields.keys()].sort(), ["output_mode", "viz_options"]);
                 writes.push(name);
                 entries.get(name).content.viz_options = fields.get("viz_options");
@@ -99,6 +104,8 @@ for (const workspace of workspaces) {
 
         await service.resetInsightsWorkspaceTileConfig(workspace);
         assert.deepEqual(writes, [owner, "rebind_target"]);
+        assert.ok(cleanups[0].includes(owner));
+        assert.ok(cleanups[0].includes("rebind_target"));
         const restored = JSON.parse(entries.get(owner).content.viz_options);
         assert.ok(restored.overview.some((definition) => definition.tileId === moved.tileId));
         assert.deepEqual(restored.mapFooter, ownerOptions.mapFooter);
@@ -110,7 +117,8 @@ for (const workspace of workspaces) {
         assert.equal(rebound.search, "| makeresults");
 
         await service.resetInsightsWorkspaceTileConfig(workspace);
-        assert.equal(writes.length, 2, "a repeated reset is a no-op");
+        assert.equal(writes.length, 2, "a repeated reset does not rewrite Searchbase");
+        assert.ok(cleanups[1].includes(owner), "a repeat can remove older redundant local copies");
         entries.delete(owner);
         await assert.rejects(
             service.resetInsightsWorkspaceTileConfig(workspace),

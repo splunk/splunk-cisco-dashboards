@@ -127,7 +127,13 @@ assert.match(
   "Raw shared workspace writes must stay restricted while the delegated handler retains UI access",
 );
 assert.match(tileConfigService, /configs\/conf-\$\{CONF_BASENAME\}/);
-assert.doesNotMatch(tileConfigService, /scd_insights_workspaces|scd_customer_topology/);
+assert.doesNotMatch(tileConfigService, /scd_customer_topology/);
+assert.match(tileConfigService, /scd_insights_workspaces\/searchbase_viz_cleanup/);
+assert.match(
+  handler,
+  /def _cleanup_searchbase_viz_options\(self, request\):\s*if not self\._can_manage_searchbase\(request\):\s*return \{"status": 403/,
+  "The cleanup route must verify Searchbase administration before using system authorization",
+);
 assert.match(
   backgroundButton,
   /useCanManageInsightsWorkspaces\(\)[\s\S]*?canManageSharedBackgrounds[\s\S]*?Add new background/,

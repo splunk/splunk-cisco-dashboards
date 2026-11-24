@@ -119,13 +119,13 @@ const buildStanzaUrl = (owner: string, appName: string, stanza?: string): string
 
 const extractErrorMessage = async (response: Response, fallback: string): Promise<string> => {
     try {
-        const body = (await response.json()) as { messages?: Array<{ text?: string }> };
+        const body = (await response.json()) as { messages?: Array<{ text?: string }>; error?: string };
         const detail = Array.isArray(body.messages)
             ? body.messages
                   .map((m) => (typeof m?.text === 'string' ? m.text : ''))
                   .filter(Boolean)
                   .join('; ')
-            : '';
+            : body.error ?? '';
         return detail ? `${fallback}: ${detail}` : `${fallback}: HTTP ${response.status}`;
     } catch {
         return `${fallback}: HTTP ${response.status}`;
@@ -646,6 +646,25 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
 const overviewEntries = (value: unknown): unknown[] =>
     Array.isArray(value) ? value : value && typeof value === 'object' ? [value] : [];
 
+const removeRedundantTileOverrides = async (stanzas: Set<string>): Promise<void> => {
+    if (stanzas.size === 0) return;
+    const body = new URLSearchParams({ stanzas: JSON.stringify([...stanzas]), output_mode: 'json' });
+    const response = await fetch(
+        `/en-US/splunkd/__raw/servicesNS/nobody/${APP_NAME}/scd_insights_workspaces/searchbase_viz_cleanup`,
+        createFetchInit({
+            method: 'POST',
+            body: body.toString(),
+            headers: { Accept: 'application/json' },
+        })
+    );
+    if (!response.ok) {
+        throw new SearchbaseTileConfigError(
+            await extractErrorMessage(response, "Couldn't remove redundant Searchbase overrides"),
+            response.status
+        );
+    }
+};
+
 /** Restore this workspace's overview entries without removing other stanza settings. */
 export const resetInsightsWorkspaceTileConfig = async (
     packagedWorkspace: InsightsWorkspace
@@ -682,6 +701,7 @@ export const resetInsightsWorkspaceTileConfig = async (
     const restorations = new Map<string, string>();
     const removals = new Map<string, string>();
     const seen = new Set<string>();
+    const cleanupCandidates = new Set<string>();
     for (const stanza of entry) {
         if (!STANZA_ID_PATTERN.test(stanza.name) || (stanza.acl?.app && stanza.acl.app !== appName)) {
             continue;
@@ -709,6 +729,7 @@ export const resetInsightsWorkspaceTileConfig = async (
         }
         const current = overviewEntries(options.overview);
         const selected = current.filter(inScope);
+        if (packaged.length || selected.length) cleanupCandidates.add(stanza.name);
         if (JSON.stringify(selected) === JSON.stringify(packaged)) continue;
         const restored = [
             ...current.filter((definition) => !inScope(definition)),
@@ -733,6 +754,7 @@ export const resetInsightsWorkspaceTileConfig = async (
         for (const [stanza, vizOptions] of [...restorations, ...removals]) {
             await writeStanzaKeys(stanza, { viz_options: vizOptions });
         }
+        if (appName === APP_NAME) await removeRedundantTileOverrides(cleanupCandidates);
     } finally {
         clearSearchbaseCache();
     }

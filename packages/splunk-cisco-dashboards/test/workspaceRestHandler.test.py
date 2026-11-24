@@ -396,6 +396,56 @@ class WorkspaceRestValidationTest(unittest.TestCase):
                     self.assertEqual(request.call_count, 2)
                     self.assertIn("Splunk 10.6", response["payload"]["error"])
 
+    def test_searchbase_cleanup_removes_only_redundant_local_settings(self):
+        defaults = {
+            name: {"viz_options": '{"lineWidth":2,"overview":[]}'}
+            for name in ("only_viz", "mixed", "changed", "outside_reset")
+        }
+        local = {
+            "only_viz": {"viz_options": '{"overview": [], "lineWidth": 2}'},
+            "mixed": {"viz_options": defaults["mixed"]["viz_options"], "search": "custom"},
+            "changed": {"viz_options": '{"lineWidth":5,"overview":[]}'},
+            "outside_reset": {"viz_options": defaults["outside_reset"]["viz_options"]},
+        }
+        ok = types.SimpleNamespace(status=200)
+        auth = json.dumps({"entry": [{"content": {"roles": [], "capabilities": ["admin_all_objects"]}}]}).encode()
+        version = b'{"entry":[{"content":{"version":"10.6.1.1"}}]}'
+
+        with patch.object(handler, "_read_searchbase_layer", side_effect=lambda layer: (
+            local if layer == "local" else defaults
+        )), patch.object(fake_rest, "simpleRequest", side_effect=[
+            (ok, auth), (ok, version), (ok, b"{}"), (ok, b"{}"),
+        ]) as request:
+            result = handler.WorkspaceMutationHandler(None, None).handle(json.dumps({
+                "method": "POST", "rest_path": "/scd_insights_workspaces/searchbase_viz_cleanup",
+                "payload": urllib.parse.urlencode({"stanzas": json.dumps(["only_viz","mixed","changed","missing"])}),
+                "system_authtoken": "system-token", "session": {"authtoken": "caller-token"},
+            }))
+
+        self.assertEqual(result["status"], 200)
+        self.assertEqual(request.call_args_list[0].kwargs["sessionKey"], "caller-token")
+        deletes = request.call_args_list[2:]
+        self.assertEqual([c.args[0].rsplit("/properties",1)[-1] for c in deletes], [
+            "/searchbase/only_viz", "/searchbase/mixed/viz_options",
+        ])
+        for call in deletes:
+            self.assertEqual(call.kwargs["method"], "DELETE")
+            self.assertEqual(call.kwargs["getargs"]["local_only"], "true")
+
+    def test_workspace_management_alone_does_not_authorize_searchbase_cleanup(self):
+        context = b'{"entry":[{"content":{"roles":["delegated"],"capabilities":["ssne_manage_insights_workspaces"]}}]}'
+        with patch.object(fake_rest, "simpleRequest", return_value=(
+            types.SimpleNamespace(status=200), context
+        )) as request, patch.object(handler, "_read_searchbase_layer") as read:
+            result = handler.WorkspaceMutationHandler(None, None).handle(json.dumps({
+                "method": "POST", "rest_path": "/scd_insights_workspaces/searchbase_viz_cleanup",
+                "payload": "stanzas=%5B%22only_viz%22%5D",
+                "system_authtoken": "system-token", "session": {"authtoken": "caller-token"},
+            }))
+        self.assertEqual(result["status"], 403)
+        self.assertEqual(request.call_count, 1)
+        read.assert_not_called()
+
     def test_workspace_delete_keeps_unrelated_errors(self):
         with patch.object(fake_rest, "simpleRequest", return_value=(
             types.SimpleNamespace(status=400), b'{"messages":[{"text":"Unrelated rejection"}]}'
