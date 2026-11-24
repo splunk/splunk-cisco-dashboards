@@ -214,6 +214,7 @@ interface DraftReview {
     validated?: boolean;
     saved?: SearchbaseRecord;
     error?: string;
+    copyStatus?: string;
 }
 
 interface ChatTurn extends AssistantTurn {
@@ -464,6 +465,32 @@ export default function AskAi({
         setConversation((turns) => turns.map((turn) => turn.id === turnId
             ? { ...turn, draftReview: { ...turn.draftReview, ...review } }
             : turn));
+    }
+
+    async function copyDraft(turnId: number, spl: string, button: HTMLElement) {
+        try {
+            const copied = await navigator.clipboard?.writeText(spl).then(() => true, () => false);
+            if (!copied) {
+                const previousFocus = document.activeElement;
+                const field = document.createElement('textarea');
+                field.value = spl;
+                field.style.position = 'fixed';
+                field.style.opacity = '0';
+                button.parentElement?.appendChild(field);
+                try {
+                    field.select();
+                    if (!document.execCommand('copy')) throw new Error('Copy failed');
+                } finally {
+                    field.remove();
+                    if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+                        previousFocus.focus({ preventScroll: true });
+                    }
+                }
+            }
+            updateDraftReview(turnId, { copyStatus: 'SPL copied.' });
+        } catch {
+            updateDraftReview(turnId, { copyStatus: 'Open View draft SPL to select and copy the query.' });
+        }
     }
 
     async function reviewDraft(turn: ChatTurn, save: boolean, button: HTMLElement) {
@@ -761,9 +788,23 @@ export default function AskAi({
                                         range, draftReview.saved?.dispatchContext)}>
                                     Open in Search
                                 </Link>
-                            ) : canValidate && (
+                            ) : canValidate ? (
                                 <Button label="Validate SPL" disabled={actionsDisabled}
                                     onClick={(event) => { void reviewDraft(turn, false, event.currentTarget); }} />
+                            ) : (
+                                <>
+                                    <Button appearance="secondary" label="Copy SPL"
+                                        aria-label={`Copy SPL for ${draft.title}`}
+                                        onClick={(event) => { void copyDraft(turn.id, draftSpl, event.currentTarget); }} />
+                                    <Link appearance="standalone" openInNewContext to={splunkSearchAppUrl('', range)}>
+                                        Open in Search
+                                    </Link>
+                                    {searchbaseInstalled === true && (
+                                        <Link appearance="standalone" openInNewContext to={`${splunkSearchbaseEditUrl()}#/add/`}>
+                                            Add in Searchbase
+                                        </Link>
+                                    )}
+                                </>
                             )}
                             {draftReview?.validated && !draftReview.saved && settings?.writable && (
                                 <Button appearance="secondary" label="Save to Searchbase" disabled={actionsDisabled}
@@ -776,15 +817,18 @@ export default function AskAi({
                                     void findMatches(prompt, true, draftSpl);
                                 }} />
                         </ActionRow>
+                        {!canValidate && !draftReview?.saved && (
+                            <p>{searchbaseInstalled === true
+                                ? 'Copy the SPL, then paste it into Search to review it or into Searchbase to save it manually.'
+                                : 'Copy the SPL, then paste it into Search to review it.'}</p>
+                        )}
+                        <SearchStatus role="status">{draftReview?.copyStatus}</SearchStatus>
                         {draftReview?.error && <Message type="error" role="alert">{draftReview.error}</Message>}
                         <CollapsiblePanel appearance="subtle" inset={false}
                             title={<>{viewLabel}<ScreenReaderContent> for {draft.title}</ScreenReaderContent></>}>
                             <pre tabIndex={0} aria-label={draftReview?.saved ? 'Saved search SPL' : 'Draft SPL'}>
                                 <code><SplSyntax spl={draftSpl} /></code>
                             </pre>
-                            {!draftReview?.validated && !canValidate && (
-                                <p>Review this SPL and its data sources in Search before running it.</p>
-                            )}
                         </CollapsiblePanel>
                     </>
                 ) : recommendation && (
